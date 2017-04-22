@@ -1,6 +1,21 @@
 pyPAHFIT
 ========
+
+.. image:: https://readthedocs.org/projects/pypahfit/badge/?version=latest
+   :target: http://pypahfit.readthedocs.io/en/latest/?badge=latest
+   :alt: Documentation Status
     
+.. image:: https://travis-ci.org/PAHFIT/pypahfit.svg?branch=master
+   :target: https://travis-ci.org/PAHFIT/pypahfit
+   :alt: CI Testing Status
+
+.. image:: https://coveralls.io/repos/github/PAHFIT/pypahfit/badge.svg?branch=master
+	   :target: https://coveralls.io/github/PAHFIT/pypahfit?branch=master
+
+.. image:: http://img.shields.io/badge/powered%20by-AstroPy-orange.svg?style=flat
+    :target: http://www.astropy.org
+    :alt: Powered by Astropy Badge
+	    
 This package provides python code to fit near- and mid-IR astronomical spectra
 focusing on dust and gas emission features from the interstellar medium.
 The original version of this code focused mainly on Spitzer IRS observations
@@ -12,6 +27,11 @@ Based on and inspired by the IDL code PAHFIT by JD Smith and Bruce Draine.
 See <http://tir.astro.utoledo.edu/jdsmith/research/pahfit.php>.
 
 This package is potentially an affiliated package of `AstroPy`_.
+
+Documentation
+-------------
+
+Hosted by readthedocs: <http://pypahfit.readthedocs.io/en/latest/>
 
 In Development!
 ---------------
