@@ -2,87 +2,72 @@ from __future__ import (absolute_import, print_function, division)
 
 import numpy as np
 
-import astropy.units as u
-from astropy.modeling import (Fittable1DModel,
-                              Parameter, InputParameterError)
+import matplotlib.pyplot as plt
+import matplotlib
 
-__all__ = ['PAHFit']
-
-
-class PAHFit(Fittable1DModel):
-    """
-    PAHFit model calcultion
-
-    Parameters
-    ----------
+from astropy.modeling.functional_models import Lorentz1D
 
 
-    Notes
-    -----
-    Base PAHFit model
-    proto-type - only blackbodies for continuum right now
+if __name__ == '__main__':
+    dust_features_cwave = np.array([5.27, 5.70, 6.22, 6.69,
+                                    7.42, 7.60, 7.85, 8.33,
+                                    8.61, 10.68, 11.23, 11.33,
+                                    11.99, 12.62, 12.69, 13.48,
+                                    14.04, 14.19, 15.9, 16.45,
+                                    17.04, 17.375, 17.87, 18.92,
+                                    33.1])
 
-    .. plot::
-        :include-source:
+    dust_features_fwhm = np.array([0.034, 0.035, 0.030, 0.07,
+                                   0.126, 0.044, 0.053, 0.05,
+                                   0.039, 0.02, 0.012, 0.032,
+                                   0.045, 0.042, 0.013, 0.04,
+                                   0.016, 0.025, 0.02, 0.014,
+                                   0.065, 0.012, 0.016, 0.019,
+                                   0.05])
+    n_df = len(dust_features_cwave)
+    dust_features_amps = np.full((n_df), 100.)
 
-        import numpy as np
-        import matplotlib.pyplot as plt
-        import astropy.units as u
+    h2_cwaves = np.array([5.5115, 6.1088, 6.9091, 8.0258,
+                          9.6649, 12.2785, 17.0346, 28.2207])
+    h2_names = np.array(["H2 S(7)", "H2 S(6)", "H2 S(5)", "H2 S(4)",
+                         "H2 S(3)", "H2 S(2)", "H2 S(1)", "H2 S(0)"])
+    n_h2 = len(h2_cwaves)
+    h2_amps = np.full((n_h2), 100.)
 
-        from pypahfit.PAHFit import PAHFit
+    ion_cwaves = np.array([6.985274, 8.99138, 10.5105, 12.813,
+                           15.555, 18.713, 25.91, 25.989,
+                           33.480, 34.8152, 35.349])
+    ion_names = np.array(["[ArII]", "[ArIII]", "[SIV]", "[NeII]",
+                          "[NeIII]", "[SIII] 18", "[OIV]", "[FeII]",
+                          "[SIII] 33", "[SiII]", "[FeII]"])
+    n_ion = len(ion_cwaves)
+    ion_amps = np.full((n_ion), 100.)
 
-        fig, ax = plt.subplots()
+    pmodel = Lorentz1D(amplitude=dust_features_amps[0],
+                       x_0=dust_features_cwave[0],
+                       fwhm=dust_features_fwhm[0])
+    for k in range(1, n_df):
+        pmodel = pmodel + Lorentz1D(amplitude=dust_features_amps[k],
+                                    x_0=dust_features_cwave[k],
+                                    fwhm=dust_features_fwhm[k])
+    for k in range(n_h2):
+        pmodel = pmodel + Guass
 
-        # generate the curves and plot them
-        x = np.arange(5.0,40.0,0.1)*u.micron
+    print(pmodel)
 
-        mir_model = PAHFit()
-        ax.plot(x,mir_model(x),label='total')
+    x = np.arange(5.0, 40.0, 0.1)
 
-        ax.legend(loc='best')
-        plt.show()
-    """
+    # plot result
+    fontsize = 18
+    font = {'size': fontsize}
+    matplotlib.rc('font', **font)
+    matplotlib.rc('lines', linewidth=2)
+    matplotlib.rc('axes', linewidth=2)
+    matplotlib.rc('xtick.major', width=2)
+    matplotlib.rc('ytick.major', width=2)
 
-    def __init__(self):
+    fig, many_ax = plt.subplots(figsize=(15, 10))
 
-        self._bb_temps = np.array([300., 200., 135., 90., 65.,
-                                  50., 40., 35.])
-        self._bb_amps_default = np.array([1.0, 1.0, 1.0, 1.0, 1.0,
-                                          1.0, 1.0, 1.0])
+    plt.plot(x, pmodel(x))
 
-        pnames = ["bb%i" % (k+1) for k in range(len(self._bb_temps))]
-        self._param_names = tuple(pnames)
-
-        super().__init__()
-
-        for k, pname in enumerate(self._param_names):
-            param = Parameter(pname, default=0.0, model=self)
-            param.__set__(self, self._bb_amps_default[k])
-
-    def __getattr__(self, attr):
-        if self._param_names and attr in self._param_names:
-            return Parameter(attr, default=0.0, model=self)
-
-        raise AttributeError(attr)
-
-    def __setattr__(self, attr, value):
-        # TODO: Support a means of specifying default values for coefficients
-        # Check for self._ndim first--if it hasn't been defined then the
-        # instance hasn't been initialized yet and self.param_names probably
-        # won't work.
-        # This has to vaguely duplicate the functionality of
-        # Parameter.__set__.
-        # TODO: I wonder if there might be a way around that though...
-        if attr[0] != '_' and self._param_names and attr in self._param_names:
-            param = Parameter(attr, default=0.0, model=self)
-            # This is a little hackish, but we can actually reuse the
-            # Parameter.__set__ method here
-            param.__set__(self, value)
-        else:
-            super().__setattr__(attr, value)
-
-    def evaluate(self, x, *bbparams):
-        """
-        Need docs
-        """
-        pass
+    plt.show()
