@@ -7,20 +7,18 @@
 from __future__ import print_function
 
 import numpy as np
-import astropy.io.fits as pyfits
 import matplotlib.pyplot as plt
 import argparse
 import matplotlib
 
-#print(plt.get_backend())
-
-import scipy.optimize as op
+# import scipy.optimize as op
 from lmfit import minimize, Parameters
 
 from astropy.table import Table
 
 # global variables
-temps = [3000.,2000.,1000.,800.,600.,450.,300.,200.,135.,90.,65.,50.,40.,35.]
+temps = [3000., 2000., 1000., 800., 600., 450., 300., 200., 135.,
+         90., 65., 50., 40., 35.]
 
 dust_features_cwave = np.array([5.27, 5.70, 6.22, 6.69,
                                 7.42, 7.60, 7.85, 8.33,
@@ -29,7 +27,7 @@ dust_features_cwave = np.array([5.27, 5.70, 6.22, 6.69,
                                 14.04, 14.19, 15.9, 16.45,
                                 17.04, 17.375, 17.87, 18.92,
                                 33.1])
-                                
+
 dust_features_fwhm = np.array([0.034, 0.035, 0.030, 0.07,
                                0.126, 0.044, 0.053, 0.05,
                                0.039, 0.02, 0.012, 0.032,
@@ -48,19 +46,23 @@ ion_cwaves = np.array([6.985274, 8.99138, 10.5105, 12.813,
                        33.480, 34.8152, 35.349])
 
 ion_names = np.array(["[ArII]", "[ArIII]", "[SIV]", "[NeII]",
-                      "[NeIII]", "[SIII] 18", "[OIV]", "[FeII]", 
+                      "[NeIII]", "[SIII] 18", "[OIV]", "[FeII]",
                       "[SIII] 33", "[SiII]", "[FeII]"])
+
 
 def ism_bb_MJysr(waves, T):
     return 3.97289e13/waves**3/(np.exp(1.4387752e4/waves/T)-1.)
 
+
 def ism_gaussian(waves, cwave, fwhm):
-    return np.exp(-((waves-cwave)**2)*2.7725887222397811/ 
-                  (fwhm*cwave)**2)
+    return np.exp(-((waves-cwave)**2)*2.7725887222397811
+                  / (fwhm*cwave)**2)
+
 
 def ism_lorentzian(waves, cwave, fwhm):
-  g = (fwhm*cwave/2.)**2
-  return g/((waves-cwave)**2+g)
+    g = (fwhm*cwave/2.)**2
+    return g/((waves-cwave)**2+g)
+
 
 def ismfunc_vec_params(params):
     p = params.valuesdict()
@@ -70,22 +72,24 @@ def ismfunc_vec_params(params):
     a4 = [p['h2_width' + str(k+1)] for k in range(len(h2_cwaves))]
     a5 = [p['ion_iten' + str(k+1)] for k in range(len(ion_cwaves))]
     a6 = [p['ion_width' + str(k+1)] for k in range(len(ion_cwaves))]
-    return np.concatenate([a1,a2,a3,a4,a5,a6])
+    return np.concatenate([a1, a2, a3, a4, a5, a6])
+
 
 def ismfunc_cont(a, waves):
     # backbodies
     ismmodel = np.zeros(len(waves))
     for i, ctemp in enumerate(temps):
         ismmodel += a[i]*((9.7/waves)**2)*ism_bb_MJysr(waves, ctemp)
-    
+
     return ismmodel
+
 
 def ismfunc(a, waves):
     # backbodies
     ismmodel = np.zeros(len(waves))
     for i, ctemp in enumerate(temps):
         ismmodel += a[i]*((9.7/waves)**2)*ism_bb_MJysr(waves, ctemp)
-    
+
     # dust features
     ioffset = len(temps)
     for i, cwave in enumerate(dust_features_cwave):
@@ -109,15 +113,18 @@ def ismfunc(a, waves):
 
     return ismmodel
 
+
 def ismfunc_cont_residuals(params, x, y, yerr, **kws):
     a = ismfunc_vec_params(params)
     model = ismfunc_cont(a, x)
     return (y - model)/yerr
 
+
 def ismfunc_residuals(params, x, y, yerr, **kws):
     a = ismfunc_vec_params(params)
     model = ismfunc(a, x)
     return (y - model)/yerr
+
 
 def ismfunc_plot(params, niter, resid, *args, **kws):
     if (niter % 50) == 0:
@@ -126,22 +133,23 @@ def ismfunc_plot(params, niter, resid, *args, **kws):
         kws['mod_resid'].set_ydata(args[1] - model)
         kws['many_ax'][1].relim()
         kws['many_ax'][1].autoscale_view()
-        kws['many_ax'][1].set_ylim(-50.,50.)
+        kws['many_ax'][1].set_ylim(-50., 50.)
         print(niter, 0.5*np.sum(resid**2)/len(args[0]))
-        #plt.show()        
         plt.draw()
         plt.pause(0.001)
+
 
 def lnlike(a, x, y, yerr):
     model = ismfunc(a, x)
     ans = -0.5*np.sum((y-model)**2/(yerr**2))
     return ans
 
+
 if __name__ == "__main__":
 
     # commandline parser
     parser = argparse.ArgumentParser()
-    parser.add_argument("filename",help="file with ISO SWS spectrum")
+    parser.add_argument("filename", help="file with ISO SWS spectrum")
     parser.add_argument("--png", help="save figure as a png file",
                         action="store_true")
     parser.add_argument("--eps", help="save figure as an eps file",
@@ -160,10 +168,10 @@ if __name__ == "__main__":
     yerr = a['unc'].data[indxs] + y*0.05
 
     # scipy optimze
-    #nll = lambda *args: -lnlike(*args)
-    #a = np.array([1.0, 1.0])*1e-7
-    #result = op.minimize(nll, a, args=(x, y, yerr))
-    #print(result["x"])
+    # nll = lambda *args: -lnlike(*args)
+    # a = np.array([1.0, 1.0])*1e-7
+    # result = op.minimize(nll, a, args=(x, y, yerr))
+    # print(result["x"])
 
     # lmfit setup
     params = Parameters()
@@ -174,38 +182,38 @@ if __name__ == "__main__":
             val = 1e-10
         else:
             val = 1e-7
-        params.add('bb' + str(k+1),value=val,min=0.0)
+        params.add('bb' + str(k+1), value=val, min=0.0)
 
     for k, cwave in enumerate(dust_features_cwave):
-        params.add('df' + str(k+1),value=100.,min=0.0)
+        params.add('df' + str(k+1), value=100., min=0.0)
 
     for k, cwave in enumerate(h2_cwaves):
-        params.add('h2_iten' + str(k+1),value=1e2,min=0.0)
-        params.add('h2_width' + str(k+1),value=cwave/3000.,
-                   min=cwave/6000.,max=cwave/1000.)
+        params.add('h2_iten' + str(k+1), value=1e2, min=0.0)
+        params.add('h2_width' + str(k+1), value=cwave/3000.,
+                   min=cwave/6000., max=cwave/1000.)
 
     for k, cwave in enumerate(ion_cwaves):
-        params.add('ion_iten' + str(k+1),value=1e2,min=0.0)
-        params.add('ion_width' + str(k+1),value=cwave/2500.,
-                   min=cwave/4500.,max=cwave/1000.)
-        
+        params.add('ion_iten' + str(k+1), value=1e2, min=0.0)
+        params.add('ion_width' + str(k+1), value=cwave/2500.,
+                   min=cwave/4500., max=cwave/1000.)
+
     # plot stuff
     fontsize = 18
-    font = {'size'   : fontsize}
+    font = {'size': fontsize}
     matplotlib.rc('font', **font)
     matplotlib.rc('lines', linewidth=2)
     matplotlib.rc('axes', linewidth=2)
     matplotlib.rc('xtick.major', width=2)
     matplotlib.rc('ytick.major', width=2)
 
-    fig, many_ax = plt.subplots(ncols=1, nrows=2, figsize=(15,10))
+    fig, many_ax = plt.subplots(ncols=1, nrows=2, figsize=(15, 10))
 
     # spectrum and current model
     ax = many_ax[0]
-    ax.plot(x,y)
+    ax.plot(x, y)
     ax.set_xscale('log')
     ax.set_yscale('log')
-    ax.set_xlim(2,50.)
+    ax.set_xlim(2, 50.)
     ax.set_xlabel(r'$\lambda$ [$\mu$m]')
     ax.set_ylabel('Flux [Jy]')
 
@@ -214,15 +222,14 @@ if __name__ == "__main__":
 
     # residuals
     ax = many_ax[1]
-    mod_resid, = ax.plot(x,y-model)
+    mod_resid, = ax.plot(x, y-model)
     ax.set_xscale('log')
-    ax.set_xlim(2,50.)
+    ax.set_xlim(2, 50.)
     ax.set_xlabel(r'$\lambda$ [$\mu$m]')
     ax.set_ylabel('Residuals [Jy]')
-    
-    plt.tight_layout()    
-    #plt.show()
-    
+
+    plt.tight_layout()
+
     plt.ion()
     plt.draw()
     plt.pause(0.001)
@@ -238,7 +245,7 @@ if __name__ == "__main__":
 
     # show or save
     basename = args.filename
-    basename.replace('.txt','')
+    basename.replace('.txt', '')
     if args.png:
         fig.savefig(basename+'.png')
     elif args.eps:
@@ -247,5 +254,3 @@ if __name__ == "__main__":
         fig.savefig(basename+'.pdf')
     else:
         plt.show()
-    
-    
