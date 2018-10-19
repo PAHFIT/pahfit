@@ -20,7 +20,7 @@ This package provides python code to fit near- and mid-IR astronomical spectra
 focusing on dust and gas emission features from the interstellar medium.
 The original version of this code focused mainly on Spitzer IRS observations
 (see below).
-Exising (e.g., AKARI) and planned (e.g., JWST) observations motivates this
+Existing (e.g., AKARI) and planned (e.g., JWST) observations motivates this
 expanded python version.
 
 Based on and inspired by the IDL code PAHFIT by JD Smith and Bruce Draine.
@@ -41,8 +41,12 @@ Contributions welcome (see below).
 
 Contributors
 ------------
-Karl Gordon
-(and hopefully others)
+Thomas Lai
+Alexandros Maragkoudakis 
+J.D. Smith 
+Karl Gordon 
+Henrik Spoon
+Els Peeters
 
 Contributing
 ------------
