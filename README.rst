@@ -1,4 +1,4 @@
-pyPAHFIT
+PAHFIT
 ========
 
 .. image:: https://readthedocs.org/projects/pypahfit/badge/?version=latest
