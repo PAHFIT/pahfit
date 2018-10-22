@@ -1,6 +1,7 @@
 from __future__ import (absolute_import, print_function, division)
 
 import numpy as np
+import pkg_resources
 
 import matplotlib.pyplot as plt
 import matplotlib
@@ -11,16 +12,39 @@ from astropy.modeling.fitting import LevMarLSQFitter
 from PAHFITBase import PAHFITBase
 
 
+def get_spitzer_fwhm(x):
+    """
+    Get the Spizer fwhm starting values based on module origin
+
+    Parameters
+    ----------
+    x: float
+        central wavelengths of the line(s)
+    """
+    # in micron
+    breaks = [0., 7.55, 14.6, 20.7, 1e6]
+    # in micron
+    widths = [0.053, 0.1, 0.14, 0.34]
+    fwhms = np.zeros((len(x)))
+    for k in range(len(breaks)-1):
+        indxs = np.where(np.logical_and(breaks[k] <= x, x < breaks[k+1]))
+        fwhms[indxs] = np.full((len(indxs)), widths[k])
+
+    return fwhms
+
+
 if __name__ == '__main__':
     # define the instrument resolution
     inst_res = 100.
 
     # the blackbodies for the continuum
-    bb_temps = [3000., 2000., 1000., 800., 600., 450., 300., 200., 135.,
-                90., 65., 50., 40., 35.]
+    # 5000 K BB is for the stellar continuum, rest for for the dust emission
+    bb_temps = [5000., 300., 200., 135., 90., 65., 50., 40., 35.]
     bb_amps = np.full((len(bb_temps)), 1.0e-10)
     bb_amps_limits = [(0.0, None) for k in range(len(bb_temps))]
-    bb_info = (bb_amps, bb_temps, bb_amps_limits)
+    bb_info = {'amps': bb_amps,
+               'temps': bb_temps,
+               'amps_limits': bb_amps_limits}
 
     # the dust features (mainly the PAH/aromatic features)
     df_cwave = np.array([5.27, 5.70, 6.22, 6.69,
@@ -43,13 +67,17 @@ if __name__ == '__main__':
     df_amps_limits = [(0.0, None) for k in range(n_df)]
     df_cwave_limits = [(cwave - 0.1, cwave + 0.1) for cwave in df_cwave]
     df_fwhm_limits = [(cfwhm*0.9, cfwhm*1.1) for cfwhm in df_fwhm]
-    dust_features = (df_amps, df_cwave, df_fwhm,
-                     df_amps_limits, df_cwave_limits, df_fwhm_limits)
+    dust_features = {'amps': df_amps,
+                     'x_0': df_cwave,
+                     'fwhms': df_fwhm,
+                     'amps_limits': df_amps_limits,
+                     'x_0_limits': df_cwave_limits,
+                     'fwhms_limits': df_fwhm_limits}
 
     # define the H2 features
     h2_cwaves = np.array([5.5115, 6.1088, 6.9091, 8.0258,
                           9.6649, 12.2785, 17.0346, 28.2207])
-    h2_fwhm = h2_cwaves/inst_res
+    h2_fwhm = get_spitzer_fwhm(h2_cwaves)
     h2_names = np.array(["H2 S(7)", "H2 S(6)", "H2 S(5)", "H2 S(4)",
                          "H2 S(3)", "H2 S(2)", "H2 S(1)", "H2 S(0)"])
     n_h2 = len(h2_cwaves)
@@ -57,26 +85,34 @@ if __name__ == '__main__':
     h2_amps_limits = [(0.0, None) for k in range(n_h2)]
     h2_cwaves_limits = [(cwave - 0.05, cwave + 0.05) for cwave in h2_cwaves]
     h2_fwhm_limits = [(cfwhm*0.5, cfwhm*1.5) for cfwhm in h2_fwhm]
-    h2_features = (h2_amps, h2_cwaves, h2_fwhm,
-                   h2_amps_limits, h2_cwaves_limits, h2_fwhm_limits,
-                   h2_names)
+    h2_features = {'amps': h2_amps,
+                   'x_0': h2_cwaves,
+                   'fwhms': h2_fwhm,
+                   'amps_limits': h2_amps_limits,
+                   'x_0_limits': h2_cwaves_limits,
+                   'fwhms_limits': h2_fwhm_limits,
+                   'names': h2_names}
 
     # define the ionic features
     ion_cwaves = np.array([6.985274, 8.99138, 10.5105, 12.813,
                            15.555, 18.713, 25.91, 25.989,
-                           33.480, 34.8152, 35.349])
-    ion_fwhm = ion_cwaves/inst_res
+                           33.480, 34.8152])
+    ion_fwhm = get_spitzer_fwhm(ion_cwaves)
     ion_names = np.array(["[ArII]", "[ArIII]", "[SIV]", "[NeII]",
                           "[NeIII]", "[SIII] 18", "[OIV]", "[FeII]",
-                          "[SIII] 33", "[SiII]", "[FeII]"])
+                          "[SIII] 33", "[SiII]"])
     n_ion = len(ion_cwaves)
     ion_amps = np.full((n_ion), 100.)
     ion_amps_limits = [(0.0, None) for k in range(n_ion)]
     ion_cwaves_limits = [(cwave - 0.05, cwave + 0.05) for cwave in ion_cwaves]
     ion_fwhm_limits = [(cfwhm*0.5, cfwhm*1.5) for cfwhm in ion_fwhm]
-    ion_features = (ion_amps, ion_cwaves, ion_fwhm,
-                    ion_amps_limits, ion_cwaves_limits, ion_fwhm_limits,
-                    ion_names)
+    ion_features = {'amps': ion_amps,
+                    'x_0': ion_cwaves,
+                    'fwhms': ion_fwhm,
+                    'amps_limits': ion_amps_limits,
+                    'x_0_limits': ion_cwaves_limits,
+                    'fwhms_limits': ion_fwhm_limits,
+                    'names': ion_names}
 
     pmodel = PAHFITBase(bb_info=bb_info,
                         dust_features=dust_features,
@@ -89,7 +125,9 @@ if __name__ == '__main__':
     # obs = Table()
     # obs.read('data/NGC5471_irs.fits')
     # print(obs)
-    hdul = fits.open('data/Nucleus_irs.fits')
+    data_path = pkg_resources.resource_filename('pahfit',
+                                                'data/')
+    hdul = fits.open('%s/Nucleus_irs.fits' % data_path)
     obs_x = hdul[1].data['WAVELENGTH']
     obs_y = hdul[1].data['FLUX']
     obs_unc = hdul[1].data['SIGMA']
@@ -99,11 +137,8 @@ if __name__ == '__main__':
     # fit the model to the data
     fit = LevMarLSQFitter()
     obs_fit = fit(pmodel.model, obs_x, obs_y, weights=1./obs_unc,
-                  maxiter=5000)
-    # print(fit.fit_info)
-    print(obs_fit.name)
-    print(obs_fit.param_names)
-    print(obs_fit.parameters)
+                  maxiter=1000)
+    print(fit.fit_info['message'])
 
     # plot result
     fontsize = 18
@@ -116,10 +151,9 @@ if __name__ == '__main__':
 
     fig, ax = plt.subplots(figsize=(15, 10))
 
-    ax.plot(obs_x, pmodel.model(obs_x))
-    ax.plot(obs_x, obs_fit(obs_x))
-    ax.plot(obs_x, obs_y)
-    ax.set_yscale('log')
+    pmodel.plot(ax, obs_x, obs_y, obs_fit)
+
+    ax.set_yscale('linear')
     ax.set_xscale('log')
 
     plt.show()
