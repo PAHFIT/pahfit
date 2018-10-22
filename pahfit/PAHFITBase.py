@@ -1,9 +1,8 @@
 from __future__ import (absolute_import, print_function, division)
 
-from astropy.modeling.functional_models import (Lorentz1D,
-                                                Gaussian1D)
+from astropy.modeling.functional_models import Gaussian1D
 
-from pahfit.component_models import (BlackBody1D, Drude1D)
+from pahfit.component_models import (BlackBody1D, Drude1D, S07_ext)
 
 __all__ = ['PAHFITBase']
 
@@ -171,6 +170,8 @@ class PAHFITBase():
         for cmodel in model_comps[1:]:
             self.model += cmodel
 
+        self.model *= S07_ext()
+
     def plot(self, ax, x, y, model):
         """
         Plot model using axis object.
@@ -196,6 +197,8 @@ class PAHFITBase():
                 cont_components.append(cmodel)
                 # plot as we go
                 ax.plot(x, cmodel(x)/x, 'r-')
+            if isinstance(cmodel, S07_ext):
+                ax.plot(x, cmodel(x)*max(y/x), 'k--')
         cont_model = cont_components[0]
         for cmodel in cont_components[1:]:
             cont_model += cmodel
