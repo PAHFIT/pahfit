@@ -16,15 +16,11 @@ PAHFIT
     :target: http://www.astropy.org
     :alt: Powered by Astropy Badge
 	    
-This package provides python code to fit near- and mid-IR astronomical spectra
-focusing on dust and gas emission features from the interstellar medium.
-The original version of this code focused mainly on Spitzer IRS observations
-(see below).
-Existing (e.g., AKARI) and planned (e.g., JWST) observations motivates this
-expanded python version.
+``PAHFIT`` is a decomposition model and tool for astronomical infrared spectra, focusing on dust and gas emission features from the interstellar medium (see `Smith, J.D.T., Draine B.T., et al., 2007, ApJ, 656, 770 <http://tir.astro.utoledo.edu/jdsmith/research/pahfit.php>`_). 
 
-Based on and inspired by the IDL code PAHFIT by JD Smith and Bruce Draine.
-See <http://tir.astro.utoledo.edu/jdsmith/research/pahfit.php>.
+This package provides an updated python implementation of ``PAHFIT``.  While the original versions of ``PAHFIT`` (``v1.x``) were written in IDL and focused mainly on Spitzer/IRS spectroscopic observations, the newer python-based versions (``>=v2.0``) will expand instrument coverage to other existing (e.g., AKARI) and planned (e.g., JWST) facilities, and will offer a more flexible modeling framework suitable for modeling a wider range of astrophysical sources.
+
+Based on and inspired by the IDL code ``PAHFIT`` by JD Smith and Bruce Draine.
 
 This package is potentially an affiliated package of `AstroPy`_.
 
@@ -41,12 +37,12 @@ Contributions welcome (see below).
 
 Contributors
 ------------
-Thomas Lai
-Alexandros Maragkoudakis 
-J.D. Smith 
-Karl Gordon 
-Henrik Spoon
-Els Peeters
+* Thomas Lai
+* Alexandros Maragkoudakis 
+* J.D. Smith 
+* Karl Gordon 
+* Henrik Spoon
+* Els Peeters
 
 Contributing
 ------------
@@ -63,7 +59,7 @@ the astropy `contributing`_ and `developer`_ documentation.
 
 Feedback and feature requests?   Is there something missing you would like
 to see?  Please open an issue or send an email to  `@karllark`.
-dust_extinction follows the `Astropy Code of Conduct`_ and strives to provide a
+PAHFIT follows the `Astropy Code of Conduct`_ and strives to provide a
 welcoming community to all of our users and contributors.
 
 License
