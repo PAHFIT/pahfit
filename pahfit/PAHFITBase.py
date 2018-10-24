@@ -190,15 +190,19 @@ class PAHFITBase():
         ax.plot(x, model(x)/x, 'g-')
         ax.plot(x, y/x, 'ks', fillstyle='none')
 
+        # get the extinction model (probably a better way to do this)
+        for cmodel in model:
+            if isinstance(cmodel, S07_ext):
+                ax.plot(x, cmodel(x)*max(y/x), 'k--')
+                ext_model = cmodel(x)
+
         # create the continum compound model (base for plotting lines)
         cont_components = []
         for cmodel in model:
             if isinstance(cmodel, BlackBody1D):
                 cont_components.append(cmodel)
                 # plot as we go
-                ax.plot(x, cmodel(x)/x, 'r-')
-            if isinstance(cmodel, S07_ext):
-                ax.plot(x, cmodel(x)*max(y/x), 'k--')
+                ax.plot(x, cmodel(x)*ext_model/x, 'r-')
         cont_model = cont_components[0]
         for cmodel in cont_components[1:]:
             cont_model += cmodel
@@ -207,13 +211,13 @@ class PAHFITBase():
         # now plot the dust and gas lines
         for cmodel in model:
             if isinstance(cmodel, Gaussian1D):
-                ax.plot(x, (cont_y + cmodel(x))/x,
+                ax.plot(x, (cont_y + cmodel(x))*ext_model/x,
                         color='tab:purple')
             if isinstance(cmodel, Drude1D):
-                ax.plot(x, (cont_y + cmodel(x))/x,
+                ax.plot(x, (cont_y + cmodel(x))*ext_model/x,
                         color='tab:blue')
 
-        ax.plot(x, cont_y/x, 'k-')
+        ax.plot(x, cont_y*ext_model/x, 'k-')
 
         ax.set_xlabel(r'$\lambda$ [$\mu m$]')
         ax.set_ylabel(r'$\nu F_{\nu}$')
