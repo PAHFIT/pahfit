@@ -119,12 +119,11 @@ if __name__ == '__main__':
                         h2_features=h2_features,
                         ion_features=ion_features)
 
-    # print(pmodel.model.amplitude_0.bounds)
+    # pick the fitter
+    fit = LevMarLSQFitter()
 
+    # Example 1
     # read in an example spectrum (from M101)
-    # obs = Table()
-    # obs.read('data/NGC5471_irs.fits')
-    # print(obs)
     data_path = pkg_resources.resource_filename('pahfit',
                                                 'data/')
     hdul = fits.open('%s/Nucleus_irs.fits' % data_path)
@@ -133,10 +132,18 @@ if __name__ == '__main__':
     obs_unc = hdul[1].data['SIGMA']
     obs_npts = hdul[1].data['NPTS']
     hdul.close()
+    weights = 1./obs_unc
 
-    # fit the model to the data
-    fit = LevMarLSQFitter()
-    obs_fit = fit(pmodel.model, obs_x, obs_y, weights=1./obs_unc,
+    # Example 2 (from Thomas - not sure the galaxy)
+    # import pandas as pd
+    # df = pd.read_table(data_path+'1120229'+'.txt',
+    #                    header=None,
+    #                    names=['w', 'f', 'f_l', 'f_h'])
+    # obs_x = df.w.values
+    # obs_y = df.f.values
+    # weights = None
+
+    obs_fit = fit(pmodel.model, obs_x, obs_y, weights=weights,
                   maxiter=1000)
     print(fit.fit_info['message'])
 
