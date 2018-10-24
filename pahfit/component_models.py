@@ -7,7 +7,7 @@ from astropy.modeling import Fittable1DModel
 from astropy.modeling import Parameter
 
 
-__all__ = ['BlackBody1D', 'Drude1D', 'S07_ext']
+__all__ = ['BlackBody1D', 'Drude1D', 'SD07_attenuation']
 
 
 class BlackBody1D(Fittable1DModel):
@@ -85,7 +85,8 @@ class Drude1D(Fittable1DModel):
     # @staticmethod
     # def fit_deriv(x, amplitude, x_0, fwhm):
         # """
-        # One dimensional Lorentzian model derivative with respect to parameters
+        # One dimensional Lorentzian model derivative with respect
+        # to parameters
         # """
 
         # d_amplitude = (fwhm/x_0) ** 2 / ((x/x_0 - x_0/x) ** 2 +
@@ -125,32 +126,30 @@ class Drude1D(Fittable1DModel):
                             ('amplitude', outputs_unit['y'])])
 
 
-class S07_ext(Fittable1DModel):
+class SD07_attenuation(Fittable1DModel):
     """
-    Smith & Draine (2007) kvt extinction model calculation
+    Smith & Draine (2007) kvt attenuation model calculation.
+    Calculation is for a fully mixed geometrically model.
+    Uses an extinction curve based on the silicate profiles from
+    Kemper, Vreind, & Tielens (2004, apJ, 609, 826).
+    Constructed as a weighted sum of two components: silicate profiles,
+    and an exponent 1.7 power-law.
+
+    Attenuation curve for a mixed case calculated from
+    .. math::
+        Att(x) = \\frac{1 - e^{-\\tau_{x}}}{\\tau_{x}}
 
     Parameters
     ----------
     kvt_amp : float
       amplitude
-
-    Notes
-    -----
-    S07 extinction model
-
-    From Kemper, Vriend, & Tielens (2004)
-
-    Applicable for Mid-Infrared
-
-    A custom extinction curve constructed by two components:
-    silicate profile & exponent 1.7 power-law.
     """
     inputs = ('x',)
     outputs = ('y',)
 
     # Attenuation tau
-    Tau_si = Parameter(description="kvt term: amplitude",
-                       default=0.01, min=0.0, max=10)
+    tau_si = Parameter(description="kvt term: amplitude",
+                       default=1.0, min=0.0, max=10)
 
     @staticmethod
     def kvt(in_x):
@@ -197,7 +196,9 @@ class S07_ext(Fittable1DModel):
 
         return y
 
-    def evaluate(self, in_x, Tau_si):
-        ext = np.exp(-Tau_si * self.kvt(in_x))
-
-        return ext
+    def evaluate(self, in_x, tau_si):
+        if tau_si == 0.0:
+            return np.full((len(in_x)), 0.0)
+        else:
+            tau_x = tau_si*self.kvt(in_x)
+            return (1.0 - np.exp(-1.0*tau_x))/tau_x
