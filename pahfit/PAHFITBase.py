@@ -16,6 +16,21 @@ class PAHFITBase():
     For example, the original IDL version of PAHFIT was valid for
     Spitzer/IRS spectra (5-38 micron) and observations of parts or all of
     external galaxies.
+
+    Mainly sets up the astropy.modeling compond model
+    that includes all the different components including
+    blackbodies for the continuum, lorentizians for the dust
+    emission features, and Gaussians for the gas emission features.
+
+    Parameters
+    ----------
+    bb_info : dict
+        dict with {'amps', 'temps', 'amps_limits'}, each a vector
+    dust_features,
+    h2_features,
+    ion_features : dict
+        dict with {amps, x_0, fwhm,
+                   amps_limits, x_0_limits, fwhms_limits}, each a vector
     """
 
     def __init__(self,
@@ -26,24 +41,6 @@ class PAHFITBase():
         """
         Setup a varient based on inputs.  Generates an astropy.modeling
         compound model.
-
-        Parameters
-        ----------
-        bb_info : type
-            Description of parameter `bb_info`.
-        dust_features : type
-            Description of parameter `dust_features`.
-        h2_features : type
-            Description of parameter `h2_features`.
-        ion_features : type
-            Description of parameter `ion_features`.
-
-        Returns
-        -------
-        astropy.modeling compond model
-            Model that includes all the different components including
-            blackbodies for the continuum, lorentizians for the dust
-            emission features, and Gaussians for the gas emission features.
 
         Note
         ----
