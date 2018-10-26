@@ -7,7 +7,7 @@ from astropy.modeling import Fittable1DModel
 from astropy.modeling import Parameter
 
 
-__all__ = ['BlackBody1D', 'Drude1D', 'SD07_attenuation']
+__all__ = ['BlackBody1D', 'Drude1D', 'S07_attenuation']
 
 
 class BlackBody1D(Fittable1DModel):
@@ -126,9 +126,9 @@ class Drude1D(Fittable1DModel):
                             ('amplitude', outputs_unit['y'])])
 
 
-class SD07_attenuation(Fittable1DModel):
+class S07_attenuation(Fittable1DModel):
     """
-    Smith & Draine (2007) kvt attenuation model calculation.
+    Smith, Draine, et al. (2007) kvt attenuation model calculation.
     Calculation is for a fully mixed geometrically model.
     Uses an extinction curve based on the silicate profiles from
     Kemper, Vreind, & Tielens (2004, apJ, 609, 826).
