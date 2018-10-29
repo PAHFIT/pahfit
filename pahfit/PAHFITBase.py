@@ -3,7 +3,7 @@ from __future__ import (absolute_import, print_function, division)
 from astropy.modeling.functional_models import Gaussian1D
 
 from pahfit.component_models import (BlackBody1D, Drude1D,
-                                     SD07_attenuation)
+                                     S07_attenuation)
 
 __all__ = ['PAHFITBase']
 
@@ -168,7 +168,8 @@ class PAHFITBase():
         for cmodel in model_comps[1:]:
             self.model += cmodel
 
-        self.model *= SD07_attenuation()
+        # need to make the type of attenuation model a passed variable
+        self.model *= S07_attenuation()
 
     def plot(self, ax, x, y, model):
         """
@@ -190,7 +191,7 @@ class PAHFITBase():
 
         # get the extinction model (probably a better way to do this)
         for cmodel in model:
-            if isinstance(cmodel, SD07_attenuation):
+            if isinstance(cmodel, S07_attenuation):
                 ax.plot(x, cmodel(x)*max(y/x), 'k--')
                 ext_model = cmodel(x)
 
