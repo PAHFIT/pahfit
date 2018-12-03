@@ -57,6 +57,7 @@ if __name__ == '__main__':
     print(fit.fit_info['message'])
 
     # plot result
+    print('Test branch')
     fontsize = 18
     font = {'size': fontsize}
     matplotlib.rc('font', **font)
