@@ -10,14 +10,14 @@ __all__ = ['PAHFITBase']
 
 class PAHFITBase():
     """
-    Base class for PAHFIT variants.  Each varient nomially specifies the valid
-    wavelength range, instrument, and type of astronomnical objects.
+    Base class for PAHFIT variants. Each variant nominally specifies the valid
+    wavelength range, instrument, and type of astronomical objects.
 
     For example, the original IDL version of PAHFIT was valid for
     Spitzer/IRS spectra (5-38 micron) and observations of parts or all of
     external galaxies.
 
-    Mainly sets up the astropy.modeling compond model
+    Mainly sets up the astropy.modeling compound model
     that includes all the different components including
     blackbodies for the continuum, lorentizians for the dust
     emission features, and Gaussians for the gas emission features.
