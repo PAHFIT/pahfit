@@ -1,20 +1,20 @@
 PAHFIT
 ======
 
-.. image:: https://readthedocs.org/projects/pypahfit/badge/?version=latest
-   :target: http://pypahfit.readthedocs.io/en/latest/?badge=latest
+.. image:: https://readthedocs.org/projects/pahfit/badge/?version=latest
+   :target: http://pahfit.readthedocs.io/en/latest/?badge=latest
    :alt: Documentation Status
 
-.. image:: https://travis-ci.org/PAHFIT/pypahfit.svg?branch=master
-   :target: https://travis-ci.org/PAHFIT/pypahfit
+.. image:: https://travis-ci.org/PAHFIT/pahfit.svg?branch=master
+   :target: https://travis-ci.org/PAHFIT/pahfit
    :alt: CI Testing Status
 
 .. image:: https://ci.appveyor.com/api/projects/status/3wi0ibux1yabc1dj/branch/master?svg=true
    :target: https://ci.appveyor.com/project/KarlGordon/pahfit/branch/master
    :alt: Windows CI Testing Status
 
-.. image:: https://coveralls.io/repos/github/PAHFIT/pypahfit/badge.svg?branch=master
-	   :target: https://coveralls.io/github/PAHFIT/pypahfit?branch=master
+.. image:: https://coveralls.io/repos/github/PAHFIT/pahfit/badge.svg?branch=master
+	   :target: https://coveralls.io/github/PAHFIT/pahfit?branch=master
 
 .. image:: http://img.shields.io/badge/powered%20by-AstroPy-orange.svg?style=flat
     :target: http://www.astropy.org
