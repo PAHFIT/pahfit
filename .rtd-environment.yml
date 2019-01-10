@@ -1,12 +1,14 @@
-name: pypahfit
+name: pahfit
 
 channels:
     - astropy
 
 dependencies:
+    - python>=3.5
     - astropy
     - Cython
     - matplotlib
     - numpy
+    - sphinx-astropy
 #   - pip:
 #       - dependency_from_pip
