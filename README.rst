@@ -20,7 +20,7 @@ PAHFIT
     :target: http://www.astropy.org
     :alt: Powered by Astropy Badge
 
-..image:: https://img.shields.io/lgtm/grade/python/g/PAHFIT/pahfit.svg?logo=lgtm&logoWidth=18
+.. image:: https://img.shields.io/lgtm/grade/python/g/PAHFIT/pahfit.svg?logo=lgtm&logoWidth=18
     :target: https://lgtm.com/projects/g/PAHFIT/pahfit/context:python
     :alt: Language grade
 
