@@ -39,7 +39,7 @@ class PAHFITBase():
                  h2_features,
                  ion_features):
         """
-        Setup a varient based on inputs.  Generates an astropy.modeling
+        Setup a variant based on inputs.  Generates an astropy.modeling
         compound model.
 
         Note
@@ -225,11 +225,12 @@ class PAHFITBase():
         # print(obs_fit.param_names)
         # print(obs_fit.parameters)
 
-    def save(self, filename):
+    def save(self, obs_fit, filename):
         """
         Save the model parameters to a file.
         Format TBD
         """
+
         pass
 
     def read(self, filename):
