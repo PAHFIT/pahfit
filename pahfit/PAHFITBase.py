@@ -2,8 +2,9 @@ from __future__ import (absolute_import, print_function, division)
 
 from astropy.modeling.functional_models import Gaussian1D
 
-from pahfit.component_models import (BlackBody1D, Drude1D,
+from component_models import (BlackBody1D, Drude1D,
                                      S07_attenuation)
+from astropy.io import fits
 
 __all__ = ['PAHFITBase']
 
@@ -230,8 +231,79 @@ class PAHFITBase():
         Save the model parameters to a file.
         Format TBD
         """
+        # Instantiating lists
+        bb_temp, bb_amp = ([] for i in range(2))
+        pah_amp, pah_x_0, pah_fwhm = ([] for i in range(3))
+        line_name, line_amp, line_mean, line_std = ([] for i in range(4))
+        att = []
+        # TODO: find the variable that sets the components number (currently 55).
+        for i in range(55):
+            # Getting object name
+            comp_name = (obs_fit[i].__class__.__name__)
 
-        pass
+            if comp_name == 'BlackBody1D':
+                bb_temp.append(obs_fit[i].temperature.value)
+                bb_amp.append(obs_fit[i].amplitude.value)
+
+            elif comp_name == 'Drude1D':
+                pah_amp.append(obs_fit[i].amplitude.value)
+                pah_x_0.append(obs_fit[i].x_0.value)
+                pah_fwhm.append(obs_fit[i].fwhm.value)
+
+            elif comp_name == 'Gaussian1D':
+                line_name.append(obs_fit[i].name)
+                line_amp.append(obs_fit[i].amplitude.value)
+                line_mean.append(obs_fit[i].mean.value)
+                line_std.append(obs_fit[i].stddev.value)
+
+            elif comp_name == 'S07_attenuation':
+                att.append(obs_fit[i].tau_si.value)
+
+        # Creating columns for tables
+        bb_col1 = fits.Column(name='temperature', format='E', array=bb_temp)
+        bb_col2 = fits.Column(name='amplitude', format='E', array=bb_amp)
+
+        pah_col1 = fits.Column(name='amplitude', format='E', array=pah_amp)
+        pah_col2 = fits.Column(name='x_0', format='E', array=pah_x_0)
+        pah_col3 = fits.Column(name='fwhm', format='E', array=pah_fwhm)
+
+        line_col1 = fits.Column(name='name', format='A10', array=line_name)
+        line_col2 = fits.Column(name='amplitude', format='E', array=line_amp)
+        line_col3 = fits.Column(name='mean', format='E', array=line_mean)
+        line_col4 = fits.Column(name='stddev', format='E', array=line_std)
+
+        tau_si_col = fits.Column(name='tau_si', format='E', array=att)
+
+        # Creating (empty) Primary HDU
+        # TODO: populate Primary HDU
+        hdu_pr = fits.PrimaryHDU()
+
+        # Creating BinTableHDU for BlackBody1D
+        coldefs1 = fits.ColDefs([bb_col1, bb_col2])
+        hdu_bb = fits.BinTableHDU.from_columns(coldefs1)
+        hdu_bb.header.set('EXTNAME', 'BlackBody1D')
+
+        # Creating BinTableHDU for Drude1D
+        coldefs2 = fits.ColDefs([pah_col1, pah_col2, pah_col3])
+        hdu_pah = fits.BinTableHDU.from_columns(coldefs2)
+        hdu_pah.header.set('EXTNAME', 'Drude1D')
+
+        # Creating BinTableHDU for Gaussian1D
+        coldefs3 = fits.ColDefs([line_col1, line_col2, line_col3, line_col4])
+        hdu_line = fits.BinTableHDU.from_columns(coldefs3)
+        hdu_line.header.set('EXTNAME', 'Gaussian1D')
+
+        # Creating BinTableHDU for S07_attenuation
+        coldefs4 = fits.ColDefs([tau_si_col])
+        hdu_att = fits.BinTableHDU.from_columns(coldefs4)
+        hdu_att.header.set('EXTNAME', 'S07_attenuation')
+
+        # Joining extensions to a list of HDUs.
+        hdul = fits.HDUList([hdu_pr, hdu_bb, hdu_pah, hdu_line, hdu_att])
+
+        # Writing fits to disk.
+        hdul.writeto('{}_output.fits'.format(filename), overwrite=True)
+
 
     def read(self, filename):
         """

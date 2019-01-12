@@ -57,9 +57,9 @@ if __name__ == '__main__':
     obs_fit = fit(pmodel.model, obs_x, obs_y, weights=weights,
                   maxiter=1000)
     print(fit.fit_info['message'])
-    print(obs_fit)
-    print(obs_fit[0].amplitude.value)
-    print(obs_fit[1].temperature.value)
+
+    # save results to fits file
+    pmodel.save(obs_fit, name)
 
     # plot result
     fontsize = 18
@@ -77,5 +77,5 @@ if __name__ == '__main__':
     ax.set_yscale('linear')
     ax.set_xscale('log')
 
-    # plt.show()
+    plt.show()
     plt.savefig('{}.pdf'.format(name), bbox_inches='tight')
