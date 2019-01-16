@@ -36,7 +36,7 @@ if __name__ == '__main__':
     data_path = pkg_resources.resource_filename('pahfit',
                                                 'data/')
     data = 'Nucleus_irs.fits'
-    name, dummy = data.split('.fits')
+    name = data.split('.')[0]
     hdul = fits.open('{}{}'.format(data_path, data))
     obs_x = hdul[1].data['WAVELENGTH']
     obs_y = hdul[1].data['FLUX']
@@ -59,7 +59,9 @@ if __name__ == '__main__':
     print(fit.fit_info['message'])
 
     # save results to fits file
-    pmodel.save(obs_fit, name)
+    # define output format (ascii, fits, csv, etc.)
+    outform = 'fits'
+    pmodel.save(obs_fit, name, outform)
 
     # plot result
     fontsize = 18

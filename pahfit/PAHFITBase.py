@@ -4,7 +4,10 @@ from astropy.modeling.functional_models import Gaussian1D
 
 from component_models import (BlackBody1D, Drude1D,
                                      S07_attenuation)
-from astropy.io import fits
+
+from astropy.table import Table
+
+import numpy as np
 
 __all__ = ['PAHFITBase']
 
@@ -119,7 +122,7 @@ class PAHFITBase():
                         'x_0': x_0_limits[0],
                         'stddev': (fwhms_limits[0][0]/2.355,
                                    fwhms_limits[0][1]/2.355)})
-            for k in range(n_h2):
+            for k in range(1, n_h2):
                 h2_model = h2_model + Gaussian1D(
                     name=names[k],
                     amplitude=amps[k],
@@ -152,7 +155,7 @@ class PAHFITBase():
                         'x_0': x_0_limits[0],
                         'stddev': (fwhms_limits[0][0]/2.355,
                                    fwhms_limits[0][1]/2.355)})
-            for k in range(n_ion):
+            for k in range(1, n_ion):
                 ion_model = ion_model + Gaussian1D(
                     name=names[k],
                     amplitude=amps[k],
@@ -226,84 +229,180 @@ class PAHFITBase():
         # print(obs_fit.param_names)
         # print(obs_fit.parameters)
 
-    def save(self, obs_fit, filename):
+    def save(self, obs_fit, filename, outform):
         """
         Save the model parameters to a file.
         Format TBD
         """
         # Instantiating lists
-        bb_temp, bb_amp = ([] for i in range(2))
-        pah_amp, pah_x_0, pah_fwhm = ([] for i in range(3))
-        line_name, line_amp, line_mean, line_std = ([] for i in range(4))
-        att = []
-        # TODO: find the variable that sets the components number (currently 55).
-        for i in range(55):
+        Name, Form, Fixed = ([] for i in range(3))
+        amp, amp_min, amp_max = ([] for i in range(3))
+        x_0, x_0_min, x_0_max = ([] for i in range(3))
+        fwhm, fwhm_min, fwhm_max = ([] for i in range(3))
+        mean, stddev, stddev_min, stddev_max = ([] for i in range(4))
+
+        # Instantiating mask lists
+        x_0_mask, x_0_min_mask, x_0_max_mask = ([] for i in range(3))
+        fwhm_mask, fwhm_min_mask, fwhm_max_mask = ([] for i in range(3))
+        mean_mask, stddev_mask, stddev_min_mask, stddev_max_mask = ([] for i in range(4))
+
+        # Dust feature component index
+        DFi = 0
+
+        for component in obs_fit:
             # Getting object name
-            comp_name = (obs_fit[i].__class__.__name__)
+            comp_name = (component.__class__.__name__)
 
             if comp_name == 'BlackBody1D':
-                bb_temp.append(obs_fit[i].temperature.value)
-                bb_amp.append(obs_fit[i].amplitude.value)
+                Name.append('BB{}'.format(int(component.temperature.value)))
+                Form.append(comp_name)
+                Fixed.append(component.temperature.fixed)
+                amp.append(component.amplitude.value)
+                amp_min.append(component.amplitude.bounds[0])
+                amp_max.append(component.amplitude.bounds[1])
+                x_0.append(np.nan)
+                x_0_min.append(np.nan)
+                x_0_max.append(np.nan)
+                x_0_mask.append(True)
+                x_0_min_mask.append(True)
+                x_0_max_mask.append(True)
+                fwhm.append(np.nan)
+                fwhm_min.append(np.nan)
+                fwhm_max.append(np.nan)
+                fwhm_mask.append(True)
+                fwhm_min_mask.append(True)
+                fwhm_max_mask.append(True)
+                mean.append(np.nan)
+                mean_mask.append(True)
+                stddev.append(np.nan)
+                stddev_min.append(np.nan)
+                stddev_max.append(np.nan)
+                stddev_mask.append(True)
+                stddev_min_mask.append(True)
+                stddev_max_mask.append(True)
 
             elif comp_name == 'Drude1D':
-                pah_amp.append(obs_fit[i].amplitude.value)
-                pah_x_0.append(obs_fit[i].x_0.value)
-                pah_fwhm.append(obs_fit[i].fwhm.value)
+                DFi += 1
+                Name.append('DF{}'.format(DFi))
+                Form.append(comp_name)
+                Fixed.append(False)
+                amp.append(component.amplitude.value)
+                amp_min.append(component.amplitude.bounds[0])
+                amp_max.append(component.amplitude.bounds[1])
+                x_0.append(component.x_0.value)
+                x_0_min.append(component.x_0.bounds[0])
+                x_0_max.append(component.x_0.bounds[1])
+                x_0_mask.append(False)
+                x_0_min_mask.append(False)
+                x_0_max_mask.append(False)
+                fwhm.append(component.fwhm.value)
+                fwhm_min.append(component.fwhm.bounds[0])
+                fwhm_max.append(component.fwhm.bounds[1])
+                fwhm_mask.append(False)
+                fwhm_min_mask.append(False)
+                fwhm_max_mask.append(False)
+                mean.append(np.nan)
+                mean_mask.append(True)
+                stddev.append(np.nan)
+                stddev_min.append(np.nan)
+                stddev_max.append(np.nan)
+                stddev_mask.append(True)
+                stddev_min_mask.append(True)
+                stddev_max_mask.append(True)
 
             elif comp_name == 'Gaussian1D':
-                line_name.append(obs_fit[i].name)
-                line_amp.append(obs_fit[i].amplitude.value)
-                line_mean.append(obs_fit[i].mean.value)
-                line_std.append(obs_fit[i].stddev.value)
+                Name.append(component.name)
+                Form.append(comp_name)
+                Fixed.append(False)
+                amp.append(component.amplitude.value)
+                amp_min.append(component.amplitude.bounds[0])
+                amp_max.append(component.amplitude.bounds[1])
+                x_0.append(np.nan)
+                x_0_min.append(np.nan)
+                x_0_max.append(np.nan)
+                x_0_mask.append(True)
+                x_0_min_mask.append(True)
+                x_0_max_mask.append(True)
+                fwhm.append(component.fwhm)
+                fwhm_min.append(np.nan)
+                fwhm_max.append(np.nan)
+                fwhm_mask.append(False)
+                fwhm_min_mask.append(True)
+                fwhm_max_mask.append(True)
+                mean.append(component.mean.value)
+                mean_mask.append(False)
+                stddev.append(component.stddev.value)
+                stddev_min.append(component.stddev.bounds[0])
+                stddev_max.append(component.stddev.bounds[1])
+                stddev_mask.append(False)
+                stddev_min_mask.append(False)
+                stddev_max_mask.append(False)
 
             elif comp_name == 'S07_attenuation':
-                att.append(obs_fit[i].tau_si.value)
+                Name.append('tau_si')
+                Form.append(comp_name)
+                Fixed.append(False)
+                amp.append(component.tau_si.value)
+                amp_min.append(component.tau_si.bounds[0])
+                amp_max.append(component.tau_si.bounds[1])
+                x_0.append(np.nan)
+                x_0_min.append(np.nan)
+                x_0_max.append(np.nan)
+                x_0_mask.append(True)
+                x_0_min_mask.append(True)
+                x_0_max_mask.append(True)
+                fwhm.append(np.nan)
+                fwhm_min.append(np.nan)
+                fwhm_max.append(np.nan)
+                fwhm_mask.append(True)
+                fwhm_min_mask.append(True)
+                fwhm_max_mask.append(True)
+                mean.append(np.nan)
+                mean_mask.append(True)
+                stddev.append(np.nan)
+                stddev_min.append(np.nan)
+                stddev_max.append(np.nan)
+                stddev_mask.append(True)
+                stddev_min_mask.append(True)
+                stddev_max_mask.append(True)
 
-        # Creating columns for tables
-        bb_col1 = fits.Column(name='temperature', format='E', array=bb_temp)
-        bb_col2 = fits.Column(name='amplitude', format='E', array=bb_amp)
+        # Table column names
+        colnames = ['Name', 'Form', 'Fixed',
+                    'amp', 'amp_min', 'amp_max',
+                    'x_0', 'x_0_min', 'x_0_max',
+                    'fwhm', 'fwhm_min', 'fwhm_max',
+                    'mean', 'stddev', 'stddev_min', 'stddev_max']
 
-        pah_col1 = fits.Column(name='amplitude', format='E', array=pah_amp)
-        pah_col2 = fits.Column(name='x_0', format='E', array=pah_x_0)
-        pah_col3 = fits.Column(name='fwhm', format='E', array=pah_fwhm)
+        # Creating Table
+        t = Table([Name, Form, Fixed,
+                   amp, amp_min, amp_max,
+                   x_0, x_0_min, x_0_max,
+                   fwhm, fwhm_min, fwhm_max,
+                   mean, stddev, stddev_min, stddev_max],
+                  dtype=('U25', 'U25', 'U25',
+                         'f8', 'f8', 'f8',
+                         'f8', 'f8', 'f8',
+                         'f8', 'f8', 'f8',
+                         'f8', 'f8', 'f8', 'f8'),
+                  names=colnames, masked=True)
 
-        line_col1 = fits.Column(name='name', format='A10', array=line_name)
-        line_col2 = fits.Column(name='amplitude', format='E', array=line_amp)
-        line_col3 = fits.Column(name='mean', format='E', array=line_mean)
-        line_col4 = fits.Column(name='stddev', format='E', array=line_std)
+        # Assigning masks
+        t['x_0'].mask = x_0_mask
+        t['x_0_min'].mask = x_0_min_mask
+        t['x_0_max'].mask = x_0_max_mask
 
-        tau_si_col = fits.Column(name='tau_si', format='E', array=att)
+        t['fwhm'].mask = fwhm_mask
+        t['fwhm_min'].mask = fwhm_min_mask
+        t['fwhm_max'].mask = fwhm_max_mask
 
-        # Creating (empty) Primary HDU
-        # TODO: populate Primary HDU
-        hdu_pr = fits.PrimaryHDU()
+        t['mean'].mask = mean_mask
 
-        # Creating BinTableHDU for BlackBody1D
-        coldefs1 = fits.ColDefs([bb_col1, bb_col2])
-        hdu_bb = fits.BinTableHDU.from_columns(coldefs1)
-        hdu_bb.header.set('EXTNAME', 'BlackBody1D')
+        t['stddev'].mask = stddev_mask
+        t['stddev_min'].mask = stddev_min_mask
+        t['stddev_max'].mask = stddev_max_mask
 
-        # Creating BinTableHDU for Drude1D
-        coldefs2 = fits.ColDefs([pah_col1, pah_col2, pah_col3])
-        hdu_pah = fits.BinTableHDU.from_columns(coldefs2)
-        hdu_pah.header.set('EXTNAME', 'Drude1D')
-
-        # Creating BinTableHDU for Gaussian1D
-        coldefs3 = fits.ColDefs([line_col1, line_col2, line_col3, line_col4])
-        hdu_line = fits.BinTableHDU.from_columns(coldefs3)
-        hdu_line.header.set('EXTNAME', 'Gaussian1D')
-
-        # Creating BinTableHDU for S07_attenuation
-        coldefs4 = fits.ColDefs([tau_si_col])
-        hdu_att = fits.BinTableHDU.from_columns(coldefs4)
-        hdu_att.header.set('EXTNAME', 'S07_attenuation')
-
-        # Joining extensions to a list of HDUs.
-        hdul = fits.HDUList([hdu_pr, hdu_bb, hdu_pah, hdu_line, hdu_att])
-
-        # Writing fits to disk.
-        hdul.writeto('{}_output.fits'.format(filename), overwrite=True)
-
+        # Writing output table
+        t.write('{}_output.{}'.format(filename, outform), format=outform, overwrite=True)
 
     def read(self, filename):
         """
