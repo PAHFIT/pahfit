@@ -231,8 +231,18 @@ class PAHFITBase():
 
     def save(self, obs_fit, filename, outform):
         """
-        Save the model parameters to a file.
-        Format TBD
+        Save the model parameters to a user defined file format.
+
+        Parameters
+        ----------
+        obs_fit : PAHFITBase model
+            Model giving all the components and parameters.
+        filename : string
+            String used to name the output file.
+            Currently using the input data file name.
+        outform : string
+            Sets the output file format (ascii, fits, csv, etc.).
+
         """
         # Instantiating lists
         Name, Form, Fixed = ([] for i in range(3))
