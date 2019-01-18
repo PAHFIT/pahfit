@@ -2,22 +2,26 @@ from __future__ import (absolute_import, print_function, division)
 
 from astropy.modeling.functional_models import Gaussian1D
 
-from pahfit.component_models import (BlackBody1D, Drude1D,
+from component_models import (BlackBody1D, Drude1D,
                                      S07_attenuation)
+
+from astropy.table import Table
+
+import numpy as np
 
 __all__ = ['PAHFITBase']
 
 
 class PAHFITBase():
     """
-    Base class for PAHFIT variants.  Each varient nomially specifies the valid
-    wavelength range, instrument, and type of astronomnical objects.
+    Base class for PAHFIT variants. Each variant nominally specifies the valid
+    wavelength range, instrument, and type of astronomical objects.
 
     For example, the original IDL version of PAHFIT was valid for
     Spitzer/IRS spectra (5-38 micron) and observations of parts or all of
     external galaxies.
 
-    Mainly sets up the astropy.modeling compond model
+    Mainly sets up the astropy.modeling compound model
     that includes all the different components including
     blackbodies for the continuum, lorentizians for the dust
     emission features, and Gaussians for the gas emission features.
@@ -39,7 +43,7 @@ class PAHFITBase():
                  h2_features,
                  ion_features):
         """
-        Setup a varient based on inputs.  Generates an astropy.modeling
+        Setup a variant based on inputs.  Generates an astropy.modeling
         compound model.
 
         Note
@@ -118,7 +122,7 @@ class PAHFITBase():
                         'x_0': x_0_limits[0],
                         'stddev': (fwhms_limits[0][0]/2.355,
                                    fwhms_limits[0][1]/2.355)})
-            for k in range(n_h2):
+            for k in range(1, n_h2):
                 h2_model = h2_model + Gaussian1D(
                     name=names[k],
                     amplitude=amps[k],
@@ -151,7 +155,7 @@ class PAHFITBase():
                         'x_0': x_0_limits[0],
                         'stddev': (fwhms_limits[0][0]/2.355,
                                    fwhms_limits[0][1]/2.355)})
-            for k in range(n_ion):
+            for k in range(1, n_ion):
                 ion_model = ion_model + Gaussian1D(
                     name=names[k],
                     amplitude=amps[k],
@@ -225,12 +229,190 @@ class PAHFITBase():
         # print(obs_fit.param_names)
         # print(obs_fit.parameters)
 
-    def save(self, filename):
+    def save(self, obs_fit, filename, outform):
         """
-        Save the model parameters to a file.
-        Format TBD
+        Save the model parameters to a user defined file format.
+
+        Parameters
+        ----------
+        obs_fit : PAHFITBase model
+            Model giving all the components and parameters.
+        filename : string
+            String used to name the output file.
+            Currently using the input data file name.
+        outform : string
+            Sets the output file format (ascii, fits, csv, etc.).
+
         """
-        pass
+        # Instantiating lists
+        Name, Form, Fixed = ([] for i in range(3))
+        amp, amp_min, amp_max = ([] for i in range(3))
+        x_0, x_0_min, x_0_max = ([] for i in range(3))
+        fwhm, fwhm_min, fwhm_max = ([] for i in range(3))
+        mean, stddev, stddev_min, stddev_max = ([] for i in range(4))
+
+        # Instantiating mask lists
+        x_0_mask, x_0_min_mask, x_0_max_mask = ([] for i in range(3))
+        fwhm_mask, fwhm_min_mask, fwhm_max_mask = ([] for i in range(3))
+        mean_mask, stddev_mask, stddev_min_mask, stddev_max_mask = ([] for i in range(4))
+
+        # Dust feature component index
+        DFi = 0
+
+        for component in obs_fit:
+            # Getting object name
+            comp_name = (component.__class__.__name__)
+
+            if comp_name == 'BlackBody1D':
+                Name.append('BB{}'.format(int(component.temperature.value)))
+                Form.append(comp_name)
+                Fixed.append(component.temperature.fixed)
+                amp.append(component.amplitude.value)
+                amp_min.append(component.amplitude.bounds[0])
+                amp_max.append(component.amplitude.bounds[1])
+                x_0.append(np.nan)
+                x_0_min.append(np.nan)
+                x_0_max.append(np.nan)
+                x_0_mask.append(True)
+                x_0_min_mask.append(True)
+                x_0_max_mask.append(True)
+                fwhm.append(np.nan)
+                fwhm_min.append(np.nan)
+                fwhm_max.append(np.nan)
+                fwhm_mask.append(True)
+                fwhm_min_mask.append(True)
+                fwhm_max_mask.append(True)
+                mean.append(np.nan)
+                mean_mask.append(True)
+                stddev.append(np.nan)
+                stddev_min.append(np.nan)
+                stddev_max.append(np.nan)
+                stddev_mask.append(True)
+                stddev_min_mask.append(True)
+                stddev_max_mask.append(True)
+
+            elif comp_name == 'Drude1D':
+                DFi += 1
+                Name.append('DF{}'.format(DFi))
+                Form.append(comp_name)
+                Fixed.append(False)
+                amp.append(component.amplitude.value)
+                amp_min.append(component.amplitude.bounds[0])
+                amp_max.append(component.amplitude.bounds[1])
+                x_0.append(component.x_0.value)
+                x_0_min.append(component.x_0.bounds[0])
+                x_0_max.append(component.x_0.bounds[1])
+                x_0_mask.append(False)
+                x_0_min_mask.append(False)
+                x_0_max_mask.append(False)
+                fwhm.append(component.fwhm.value)
+                fwhm_min.append(component.fwhm.bounds[0])
+                fwhm_max.append(component.fwhm.bounds[1])
+                fwhm_mask.append(False)
+                fwhm_min_mask.append(False)
+                fwhm_max_mask.append(False)
+                mean.append(np.nan)
+                mean_mask.append(True)
+                stddev.append(np.nan)
+                stddev_min.append(np.nan)
+                stddev_max.append(np.nan)
+                stddev_mask.append(True)
+                stddev_min_mask.append(True)
+                stddev_max_mask.append(True)
+
+            elif comp_name == 'Gaussian1D':
+                Name.append(component.name)
+                Form.append(comp_name)
+                Fixed.append(False)
+                amp.append(component.amplitude.value)
+                amp_min.append(component.amplitude.bounds[0])
+                amp_max.append(component.amplitude.bounds[1])
+                x_0.append(np.nan)
+                x_0_min.append(np.nan)
+                x_0_max.append(np.nan)
+                x_0_mask.append(True)
+                x_0_min_mask.append(True)
+                x_0_max_mask.append(True)
+                fwhm.append(component.fwhm)
+                fwhm_min.append(np.nan)
+                fwhm_max.append(np.nan)
+                fwhm_mask.append(False)
+                fwhm_min_mask.append(True)
+                fwhm_max_mask.append(True)
+                mean.append(component.mean.value)
+                mean_mask.append(False)
+                stddev.append(component.stddev.value)
+                stddev_min.append(component.stddev.bounds[0])
+                stddev_max.append(component.stddev.bounds[1])
+                stddev_mask.append(False)
+                stddev_min_mask.append(False)
+                stddev_max_mask.append(False)
+
+            elif comp_name == 'S07_attenuation':
+                Name.append('tau_si')
+                Form.append(comp_name)
+                Fixed.append(False)
+                amp.append(component.tau_si.value)
+                amp_min.append(component.tau_si.bounds[0])
+                amp_max.append(component.tau_si.bounds[1])
+                x_0.append(np.nan)
+                x_0_min.append(np.nan)
+                x_0_max.append(np.nan)
+                x_0_mask.append(True)
+                x_0_min_mask.append(True)
+                x_0_max_mask.append(True)
+                fwhm.append(np.nan)
+                fwhm_min.append(np.nan)
+                fwhm_max.append(np.nan)
+                fwhm_mask.append(True)
+                fwhm_min_mask.append(True)
+                fwhm_max_mask.append(True)
+                mean.append(np.nan)
+                mean_mask.append(True)
+                stddev.append(np.nan)
+                stddev_min.append(np.nan)
+                stddev_max.append(np.nan)
+                stddev_mask.append(True)
+                stddev_min_mask.append(True)
+                stddev_max_mask.append(True)
+
+        # Table column names
+        colnames = ['Name', 'Form', 'Fixed',
+                    'amp', 'amp_min', 'amp_max',
+                    'x_0', 'x_0_min', 'x_0_max',
+                    'fwhm', 'fwhm_min', 'fwhm_max',
+                    'mean', 'stddev', 'stddev_min', 'stddev_max']
+
+        # Creating Table
+        t = Table([Name, Form, Fixed,
+                   amp, amp_min, amp_max,
+                   x_0, x_0_min, x_0_max,
+                   fwhm, fwhm_min, fwhm_max,
+                   mean, stddev, stddev_min, stddev_max],
+                  dtype=('U25', 'U25', 'U25',
+                         'f8', 'f8', 'f8',
+                         'f8', 'f8', 'f8',
+                         'f8', 'f8', 'f8',
+                         'f8', 'f8', 'f8', 'f8'),
+                  names=colnames, masked=True)
+
+        # Assigning masks
+        t['x_0'].mask = x_0_mask
+        t['x_0_min'].mask = x_0_min_mask
+        t['x_0_max'].mask = x_0_max_mask
+
+        t['fwhm'].mask = fwhm_mask
+        t['fwhm_min'].mask = fwhm_min_mask
+        t['fwhm_max'].mask = fwhm_max_mask
+
+        t['mean'].mask = mean_mask
+
+        t['stddev'].mask = stddev_mask
+        t['stddev_min'].mask = stddev_min_mask
+        t['stddev_max'].mask = stddev_max_mask
+
+        # Writing output table
+        t.write('{}_output.{}'.format(filename, outform), format=outform, overwrite=True)
 
     def read(self, filename):
         """

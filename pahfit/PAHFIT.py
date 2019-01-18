@@ -35,7 +35,9 @@ if __name__ == '__main__':
     # read in an example spectrum (from M101)
     data_path = pkg_resources.resource_filename('pahfit',
                                                 'data/')
-    hdul = fits.open('%s/Nucleus_irs.fits' % data_path)
+    data = 'Nucleus_irs.fits'
+    name = data.split('.')[0]
+    hdul = fits.open('{}{}'.format(data_path, data))
     obs_x = hdul[1].data['WAVELENGTH']
     obs_y = hdul[1].data['FLUX']
     obs_unc = hdul[1].data['SIGMA']
@@ -56,6 +58,11 @@ if __name__ == '__main__':
                   maxiter=1000)
     print(fit.fit_info['message'])
 
+    # save results to fits file
+    # define output format (ascii, fits, csv, etc.)
+    outform = 'fits'
+    pmodel.save(obs_fit, name, outform)
+
     # plot result
     fontsize = 18
     font = {'size': fontsize}
@@ -73,3 +80,4 @@ if __name__ == '__main__':
     ax.set_xscale('log')
 
     plt.show()
+    plt.savefig('{}.pdf'.format(name), bbox_inches='tight')

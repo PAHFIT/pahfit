@@ -22,7 +22,7 @@ class InstPackSpitzerIRSSLLL():
     @staticmethod
     def fwhm(x):
         """
-        Get the Spizer fwhm starting values based on module origin
+        Get the Spitzer fwhm starting values based on module origin
 
         Parameters
         ----------
