@@ -414,14 +414,19 @@ class PAHFITBase():
         # Writing output table
         t.write('{}_output.{}'.format(filename, outform), format=outform, overwrite=True)
 
-    def read(self, filename, ext):
+    def read(self, filename):
         """
         Read the model parameters from a file.
 
         Parameters
         ----------
+        filename : string
+            The name of the input file containing fit results.
 
         """
+        # Getting file extension
+        ext = filename.split('.')[1]
+
         # Reading the input file as table
         t = Table.read(filename, format=ext)
 
