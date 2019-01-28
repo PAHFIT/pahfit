@@ -51,6 +51,7 @@ Contributors
 * Karl Gordon
 * Henrik Spoon
 * Els Peeters
+* Karin Sandstrom
 
 License
 -------
