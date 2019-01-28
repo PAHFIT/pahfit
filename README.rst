@@ -1,30 +1,34 @@
 PAHFIT
-========
+======
 
-.. image:: https://readthedocs.org/projects/pypahfit/badge/?version=latest
-   :target: http://pypahfit.readthedocs.io/en/latest/?badge=latest
+.. image:: https://readthedocs.org/projects/pahfit/badge/?version=latest
+   :target: http://pahfit.readthedocs.io/en/latest/?badge=latest
    :alt: Documentation Status
-    
-.. image:: https://travis-ci.org/PAHFIT/pypahfit.svg?branch=master
-   :target: https://travis-ci.org/PAHFIT/pypahfit
+
+.. image:: https://travis-ci.org/PAHFIT/pahfit.svg?branch=master
+   :target: https://travis-ci.org/PAHFIT/pahfit
    :alt: CI Testing Status
 
-.. image:: https://coveralls.io/repos/github/PAHFIT/pypahfit/badge.svg?branch=master
-	   :target: https://coveralls.io/github/PAHFIT/pypahfit?branch=master
+.. image:: https://ci.appveyor.com/api/projects/status/3wi0ibux1yabc1dj/branch/master?svg=true
+   :target: https://ci.appveyor.com/project/KarlGordon/pahfit/branch/master
+   :alt: Windows CI Testing Status
+
+.. image:: https://coveralls.io/repos/github/PAHFIT/pahfit/badge.svg?branch=master
+	   :target: https://coveralls.io/github/PAHFIT/pahfit?branch=master
 
 .. image:: http://img.shields.io/badge/powered%20by-AstroPy-orange.svg?style=flat
     :target: http://www.astropy.org
     :alt: Powered by Astropy Badge
-	    
-This package provides python code to fit near- and mid-IR astronomical spectra
-focusing on dust and gas emission features from the interstellar medium.
-The original version of this code focused mainly on Spitzer IRS observations
-(see below).
-Existing (e.g., AKARI) and planned (e.g., JWST) observations motivates this
-expanded python version.
 
-Based on and inspired by the IDL code PAHFIT by JD Smith and Bruce Draine.
-See <http://tir.astro.utoledo.edu/jdsmith/research/pahfit.php>.
+.. image:: https://img.shields.io/lgtm/grade/python/g/PAHFIT/pahfit.svg?logo=lgtm&logoWidth=18
+    :target: https://lgtm.com/projects/g/PAHFIT/pahfit/context:python
+    :alt: Language grade
+
+``PAHFIT`` is a decomposition model and tool for astronomical infrared spectra, focusing on dust and gas emission features from the interstellar medium (see `Smith, J.D.T., Draine B.T., et al., 2007, ApJ, 656, 770 <http://tir.astro.utoledo.edu/jdsmith/research/pahfit.php>`_).
+
+This package provides an updated python implementation of ``PAHFIT``.  While the original versions of ``PAHFIT`` (``v1.x``) were written in IDL and focused mainly on Spitzer/IRS spectroscopic observations, the newer python-based versions (``>=v2.0``) will expand instrument coverage to other existing (e.g., AKARI) and planned (e.g., JWST) facilities, and will offer a more flexible modeling framework suitable for modeling a wider range of astrophysical sources.
+
+Based on and inspired by the IDL code ``PAHFIT`` by JD Smith and Bruce Draine.
 
 This package is potentially an affiliated package of `AstroPy`_.
 
@@ -41,12 +45,22 @@ Contributions welcome (see below).
 
 Contributors
 ------------
-Thomas Lai
-Alexandros Maragkoudakis 
-J.D. Smith 
-Karl Gordon 
-Henrik Spoon
-Els Peeters
+* Thomas Lai
+* Alexandros Maragkoudakis
+* J.D. Smith
+* Karl Gordon
+* Henrik Spoon
+* Els Peeters
+* Karin Sandstrom
+
+License
+-------
+
+This project is Copyright (c) PAHFit Developers and licensed under
+the terms of the GNU GPL v3+ license. This package is based upon
+the `Astropy package template <https://github.com/astropy/package-template>`_
+which is licensed under the BSD 3-clause licence. See the licenses folder for
+more information.
 
 Contributing
 ------------
@@ -63,14 +77,37 @@ the astropy `contributing`_ and `developer`_ documentation.
 
 Feedback and feature requests?   Is there something missing you would like
 to see?  Please open an issue or send an email to  `@karllark`.
-dust_extinction follows the `Astropy Code of Conduct`_ and strives to provide a
+PAHFIT follows the `Astropy Code of Conduct`_ and strives to provide a
 welcoming community to all of our users and contributors.
 
-License
--------
+We love contributions! pahfit is open source,
+built on open source, and we'd love to have you hang out in our community.
 
-This code is licensed under a 3-clause BSD style license (see the
-``LICENSE`` file).
+**Imposter syndrome disclaimer**: We want your help. No, really.
+
+There may be a little voice inside your head that is telling you that you're not
+ready to be an open source contributor; that your skills aren't nearly good
+enough to contribute. What could you possibly offer a project like this one?
+
+We assure you - the little voice in your head is wrong. If you can write code at
+all, you can contribute code to open source. Contributing to open source
+projects is a fantastic way to advance one's coding skills. Writing perfect code
+isn't the measure of a good developer (that would disqualify all of us!); it's
+trying to create something, making mistakes, and learning from those
+mistakes. That's how we all improve, and we are happy to help others learn.
+
+Being an open source contributor doesn't just mean writing code, either. You can
+help out by writing documentation, tests, or even giving feedback about the
+project (and yes - that includes giving feedback about the contribution
+process). Some of these contributions may be the most valuable to the project as
+a whole, because you're coming to the project with fresh eyes, so you can see
+the errors and assumptions that seasoned contributors have glossed over.
+
+*This disclaimer was originally written by
+`Adrienne Lowe <https://github.com/adriennefriend>`_ for a
+`PyCon talk <https://www.youtube.com/watch?v=6Uj746j9Heo>`_, and was adapted by
+pahfit based on its use in the README file for the
+`MetPy project <https://github.com/Unidata/MetPy>`_.*
 
 .. _AstroPy: http://www.astropy.org/
 .. _contributing: http://docs.astropy.org/en/stable/index.html#contributing
