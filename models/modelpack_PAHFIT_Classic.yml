@@ -1,0 +1,50 @@
+---
+# PAHFIT Model Pack, see https://github.com/PAHFIT/pahfit/wiki/File-Formats for more information
+
+##########################
+# Line Emission Features #
+##########################
+lineFeatures:
+  features:
+    - name: default
+      constraint: '5%'
+    - name: 'H2 S(7)':
+      wavelength: 5.5115
+      tie: 'intensity(h2_s6)*0.45'
+    - name: 'H2 S(6)':
+      wavelength: 6.1088
+    - name: 'H2 S(5)':
+      wavelength: 6.9091
+    - name: '[ArII]':
+      wavelength: 6.985274
+    - name: 'H2 S(4)':
+      wavelength: 8.0258
+    - name: '[ArIII]':
+      wavelength: 8.99138
+    - name: 'H2 S(3)':
+      wavelength: 9.6649
+    - name: '[SIV]':
+      wavelength: 10.5105
+    - name: 'H2 S(2)':
+      wavelength: 12.2785
+    - name: '[NeII]':
+      wavelength: 12.813
+    - name: '[NeIII]':
+      wavelength: 15.555
+    - name: 'H2 S(1)':
+      wavelength: 17.0346
+    - name: '[SIII] 18':
+      wavelength: 18.713
+    - name: '[OIV]':
+      wavelength: 25.91
+    - name: '[FeII]':
+      wavelength: 25.989
+    - name: 'H2 S(0)':
+      wavelength: 28.2207
+    - name: '[SIII] 33':
+      wavelength: 33.480
+    - name: '[SiII]':
+      wavelength: 34.8152
+    - name: '[FeII]':
+      wavelength: 35.349
+constraints:

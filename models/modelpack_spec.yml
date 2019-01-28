@@ -71,7 +71,7 @@ starlight:
     StarlightTempRange:
       - 'temperature(StarlightTemp)'
       - range
-      - 500
+        - 500
 dustContinuum:
   features:
     - name: 'ContLow1'
