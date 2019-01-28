@@ -1,0 +1,117 @@
+---
+# PAHFIT Model Pack, see https://github.com/PAHFIT/pahfit/wiki/File-Formats for more information
+
+##########################
+# Line Emission Features #
+##########################
+lineFeatures:
+  features:
+    - name: 'Line1Name':
+      wavelength: 10.1112
+      fwhm: 0.05                # Optional, fractional, w.r.t central wavelength
+      intensity: 0.2            # Optional, units issue?
+    - name: 'Line2Name':
+      wavelength: 20.2122
+  constraints:
+    TieLines1and2Power:       # Any (unique) name
+      - 'power(Line1Name)'    # any feature parameter, plus "power" (integrated intensity)
+      - ge
+      - 0.45
+      - *
+      - 'power(Line2Name)'
+    Fix12Waves:
+      - 'wavelength(Line2Name)'
+      - eq
+      - 'wavelength(Line1Name)'
+      - +
+      - 2.3105
+
+##########################
+# Dust Features          #
+##########################
+dustFeatures:
+  features:
+    - name: '7.7μm PAH Complex'
+      - name: 'PAH 7.4μm'
+        wavelength: 7.42
+        fwhm: 0.126
+        intensity: 1.1
+      - name: 'PAH 7.6μm'
+        wavelength: 7.60
+        fwhm: 0.44
+      - name: 'PAH 7.85μm'
+        wavelength: 7.85
+        fwhm: 0.53
+      - name: '8.6μm PAH Complex' # Note: a *nested* Complex
+        - name: 'PAH 8.33μm'
+          wavelength: 8.33
+          fwhm: 0.05
+        - name: 'PAH 8.61μm'
+          wavelength: 8.61
+          fwhm: 0.039
+  constraints:
+    AllPAHWaves:
+      - 'wavelength'
+      - range
+        - 5%                    # low and high range
+    PAH76Special:
+      - 'wavelength(PAH 7.6μm)'
+      - range
+        - 3%                    # Low range
+        - 7%                    # high range
+
+##########################
+# Continuum Features     #
+##########################
+starlight:
+  features:
+    - name: 'StarlightTemp'
+      temperature: 5100.
+  constraints:
+    StarlightTempRange:
+      - 'temperature(StarlightTemp)'
+      - range
+      - 500
+dustContinuum:
+  features:
+    - name: 'ContLow1'
+      temperature: 35.
+    - name: 'ContLow2'
+      temperature: 40.
+    - name: 'ContLow3'
+      temperature: 50.
+    - name: 'ContMid1'
+      temperature: 65.
+    - name: 'ContMid2'
+      temperature: 90.
+    - name: 'ContMid3'
+      temperature: 135.
+    - name: 'ContHigh1'
+      temperature: 200.
+    - name: 'ContHigh2'
+      temperature: 300.
+
+
+##########################
+# Attenuation Model      #
+##########################
+attenuation:
+  features:
+    - name: 'tauSilicate'
+    - name: 'tauIce'
+  constraints:
+    NonNegativeSilicate:
+      - 'value(tauSilicate)'    # The generic "value" parameter for features without multiple values
+      - ge
+      - 0.
+    NonNegativeIce:
+      - 'value(tauIce)'
+      - ge
+      - 0.
+    TieIceandSilicates:
+      - 'value(tauIce)'
+      - le
+      - 0.25
+      - *
+      - 'value(tauSilicate)'
+
