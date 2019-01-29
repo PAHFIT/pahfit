@@ -6,11 +6,8 @@
 ##########################
 lineFeatures:
   features:
-    - name: default
-      constraint: '5%'
     - name: 'H2 S(7)':
       wavelength: 5.5115
-      tie: 'intensity(h2_s6)*0.45'
     - name: 'H2 S(6)':
       wavelength: 6.1088
     - name: 'H2 S(5)':
@@ -47,4 +44,11 @@ lineFeatures:
       wavelength: 34.8152
     - name: '[FeII]':
       wavelength: 35.349
-constraints:
+  constraints:
+    LinesNonNegative:
+      - 'intensity'
+      
+    LineWavelengthUncertainty: # Normally would go in an instrument pack!
+      - 'wavelength'
+      - range
+      - 0.05
