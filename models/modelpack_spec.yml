@@ -8,11 +8,14 @@ lineFeatures:
   features:
     - name: 'Line1Name':
       wavelength: 10.1112
-      fwhm: 0.05                # Optional, fractional, w.r.t central wavelength
+      fwhm: 0.05                # Optional, fractional, w.r.t central wavelength, set by instrument pack
       intensity: 0.2            # Optional, units issue?
     - name: 'Line2Name':
       wavelength: 20.2122
   constraints:
+    LinesNonNegative:
+      - 'intensity'
+      - limits: [0.,null]
     TieLines1and2Power:       # Any (unique) name
       - 'power(Line1Name)'    # any feature parameter, plus "power" (integrated intensity)
       - ge
@@ -20,9 +23,9 @@ lineFeatures:
       - *
       - 'power(Line2Name)'
     Fix12Waves:
-      - 'wavelength(Line2Name)'
+      - 'Line2Name.wavelength'
       - eq
-      - 'wavelength(Line1Name)'
+      - 'Line1Name.wavelength'
       - +
       - 2.3105
 
@@ -31,34 +34,93 @@ lineFeatures:
 ##########################
 dustFeatures:
   features:
-    - name: '7.7μm PAH Complex'
-      - name: 'PAH 7.4μm'
+  - name: 'PAH 5.3μm'
+    wavelength: 5.27
+    fwhm: 0.034
+  - name: 'PAH 5.7μm'
+    wavelength: 5.70
+    fwhm: 0.035
+  - name: 'PAH 6.2μm'
+    wavelength: 6.22
+    fwhm: 0.030
+  - name: 'PAH 6.7μm'
+    wavelength: 6.69
+    fwhm: 0.07
+  - name: '7.7μm PAH Complex' # A feature Complex, has key "features"
+    features:
+      - name: 'PAH 7.7low'
         wavelength: 7.42
         fwhm: 0.126
-        intensity: 1.1
-      - name: 'PAH 7.6μm'
+      - name: 'PAH 7.7mid'
         wavelength: 7.60
         fwhm: 0.44
-      - name: 'PAH 7.85μm'
+      - name: 'PAH 7.7high'
         wavelength: 7.85
         fwhm: 0.53
-      - name: '8.6μm PAH Complex' # Note: a *nested* Complex
-        - name: 'PAH 8.33μm'
-          wavelength: 8.33
-          fwhm: 0.05
-        - name: 'PAH 8.61μm'
-          wavelength: 8.61
-          fwhm: 0.039
+      - name: '8.6μm PAH Complex' # A nested complex, also has key "features"
+        features:
+          - name: 'PAH 8.6low'
+            wavelength: 8.33
+            fwhm: 0.05
+          - name: 'PAH 8.6high'
+            wavelength: 8.61
+            fwhm: 0.039
+  - name: 'PAH 10.7μm'
+    wavelength: 10.68
+    fwhm: 0.02
+  - name: '11.3μm PAH Complex'
+    features:
+      - name: 'PAH 11.3low'
+        wavelength: 11.23
+        fwhm: 0.012
+      - name: 'PAH 11.3broad'
+        wavelength: 11.33
+        fwhm: 0.032
+  - name: 'PAH 12μm'
+    wavelength: 11.99
+    fwhm: 0.045
+  - name: 'PAH 12.6μm'
+    wavelength: 12.62
+    fwhm: 0.042
+  - name: 'PAH 12.7μm'
+    wavelength 12.69
+    fwhm: 0.013
+  - name: 'PAH 13.5μm' 
+    wavelengt: 13.48
+    fwhm: 0.04
+  - name: 'PAH 14μm'
+    wavelength 14.04
+    fwhm: 0.016
+  - name: 'PAH 14.2μm'
+    wavelength 14.19
+    fwhm: 0.025
+  - name: 'PAH 15.9μm' 
+    wavelength: 15.9
+    fwhm: 0.02
+  - name: '17μm PAH Complex'
+    features:
+    - name: 'PAH 17low'
+      wavelength 16.45
+      fwhm: 0.014
+    - name: 'PAH 17broad'
+      wavelength: 17.04
+      fwhm: 0.065
+    - name: 'PAH 17mid'
+      wavelength: 17.375
+      fwhm: 0.012
+    - name: 'PAH 17high'
+      wavelength: 17.87
+      fwhm: 0.016
+  - name: 'PAH 33.1μm'
+    wavelength: 33.1
+    fwhm: 0.05
   constraints:
-    AllPAHWaves:
+    PAHNonNegative:
+      - 'intensity'
+      - limits: [0.,null]
+    PAHWaveRange:
       - 'wavelength'
-      - range
-        - 5%                    # low and high range
-    PAH76Special:
-      - 'wavelength(PAH 7.6μm)'
-      - range
-        - 3%                    # Low range
-        - 7%                    # high range
+      - range: 5%                    # low and high range
 
 ##########################
 # Continuum Features     #
@@ -69,9 +131,8 @@ starlight:
       temperature: 5100.
   constraints:
     StarlightTempRange:
-      - 'temperature(StarlightTemp)'
-      - range
-        - 500
+      - 'temperature'
+      - range: 500
 dustContinuum:
   features:
     - name: 'ContLow1'
@@ -101,17 +162,17 @@ attenuation:
     - name: 'tauIce'
   constraints:
     NonNegativeSilicate:
-      - 'value(tauSilicate)'    # The generic "value" parameter for features without multiple values
+      - 'tauSilicate.tau'    # The generic "value" parameter for features without multiple values
       - ge
       - 0.
     NonNegativeIce:
-      - 'value(tauIce)'
+      - 'tauIce.tau'
       - ge
       - 0.
     TieIceandSilicates:
-      - 'value(tauIce)'
+      - 'tauIce.tau'
       - le
       - 0.25
       - *
-      - 'value(tauSilicate)'
+      - 'tauSilicate.tau'
 
