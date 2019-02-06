@@ -1,0 +1,188 @@
+---
+# PAHFIT Classic Model Pack
+# Implements the IDL-based PAHFIT v1.4 model
+
+##########################
+# Line Emission Features #
+##########################
+lineFeatures:
+  features:
+    - name: 'H2 S(7)':
+      wavelength: 5.5115
+    - name: 'H2 S(6)':
+      wavelength: 6.1088
+    - name: 'H2 S(5)':
+      wavelength: 6.9091
+    - name: '[ArII]':
+      wavelength: 6.985274
+    - name: 'H2 S(4)':
+      wavelength: 8.0258
+    - name: '[ArIII]':
+      wavelength: 8.99138
+    - name: 'H2 S(3)':
+      wavelength: 9.6649
+    - name: '[SIV]':
+      wavelength: 10.5105
+    - name: 'H2 S(2)':
+      wavelength: 12.2785
+    - name: '[NeII]':
+      wavelength: 12.813
+    - name: '[NeIII]':
+      wavelength: 15.555
+    - name: 'H2 S(1)':
+      wavelength: 17.0346
+    - name: '[SIII] 18':
+      wavelength: 18.713
+    - name: '[OIV]':
+      wavelength: 25.91
+    - name: '[FeII]':
+      wavelength: 25.989
+    - name: 'H2 S(0)':
+      wavelength: 28.2207
+    - name: '[SIII] 33':
+      wavelength: 33.480
+    - name: '[SiII]':
+      wavelength: 34.8152
+    - name: '[FeII]':
+      wavelength: 35.349
+  constraints:
+    LinesNonNegative:
+      - 'intensity'
+      - limits: [0.,null]
+    LineWavelengthUncertainty: # Normally would go in an instrument pack!
+      - 'wavelength'
+      - range: .05              # +- 0.05microns
+
+##########################
+# Dust Features          #
+##########################
+dustFeatures:
+  features:
+  - name: 'PAH 5.3μm'
+    wavelength: 5.27
+    fwhm: 0.034
+  - name: 'PAH 5.7μm'
+    wavelength: 5.70
+    fwhm: 0.035
+  - name: 'PAH 6.2μm'
+    wavelength: 6.22
+    fwhm: 0.030
+  - name: 'PAH 6.7μm'
+    wavelength: 6.69
+    fwhm: 0.07
+  - name: '7.7μm PAH Complex' # A feature Complex, has key "features"
+    features:
+      - name: 'PAH 7.7low'
+        wavelength: 7.42
+        fwhm: 0.126
+      - name: 'PAH 7.7mid'
+        wavelength: 7.60
+        fwhm: 0.44
+      - name: 'PAH 7.7high'
+        wavelength: 7.85
+        fwhm: 0.53
+      - name: '8.6μm PAH Complex' # A nested complex, also has key "features"
+        features:
+          - name: 'PAH 8.6low'
+            wavelength: 8.33
+            fwhm: 0.05
+          - name: 'PAH 8.6high'
+            wavelength: 8.61
+            fwhm: 0.039
+  - name: 'PAH 10.7μm'
+    wavelength: 10.68
+    fwhm: 0.02
+  - name: '11.3μm PAH Complex'
+    features:
+      - name: 'PAH 11.3low'
+        wavelength: 11.23
+        fwhm: 0.012
+      - name: 'PAH 11.3broad'
+        wavelength: 11.33
+        fwhm: 0.032
+  - name: 'PAH 12μm'
+    wavelength: 11.99
+    fwhm: 0.045
+  - name: 'PAH 12.6μm'
+    wavelength: 12.62
+    fwhm: 0.042
+  - name: 'PAH 12.7μm'
+    wavelength: 12.69
+    fwhm: 0.013
+  - name: 'PAH 13.5μm' 
+    wavelength: 13.48
+    fwhm: 0.04
+  - name: 'PAH 14μm'
+    wavelength 14.04
+    fwhm: 0.016
+  - name: 'PAH 14.2μm'
+    wavelength 14.19
+    fwhm: 0.025
+  - name: 'PAH 15.9μm' 
+    wavelength: 15.9
+    fwhm: 0.02
+  - name: '17μm PAH Complex'
+    features:
+    - name: 'PAH 17low'
+      wavelength 16.45
+      fwhm: 0.014
+    - name: 'PAH 17broad'
+      wavelength: 17.04
+      fwhm: 0.065
+    - name: 'PAH 17mid'
+      wavelength: 17.375
+      fwhm: 0.012
+    - name: 'PAH 17high'
+      wavelength: 17.87
+      fwhm: 0.016
+  - name: 'PAH 33.1μm'
+    wavelength: 33.1
+    fwhm: 0.05
+  constraints:
+    PAHNonNegative:
+      - 'intensity'
+      - limits: [0.,null]
+    PAHWavelengthRange: # May be superseded by an instrument pack!
+      - 'wavelength'
+      - range: 5%       
+
+##########################
+# Continuum Features     #
+##########################
+starlight:
+  features:
+    - name: 'StarlightTemp'
+      temperature: 5000.
+dustContinuum:
+  features:
+    - name: 'ContLow1'
+      temperature: 35.
+    - name: 'ContLow2'
+      temperature: 40.
+    - name: 'ContLow3'
+      temperature: 50.
+    - name: 'ContMid1'
+      temperature: 65.
+    - name: 'ContMid2'
+      temperature: 90.
+    - name: 'ContMid3'
+      temperature: 135.
+    - name: 'ContHigh1'
+      temperature: 200.
+    - name: 'ContHigh2'
+      temperature: 300.
+
+##########################
+# Attenuation Model      #
+##########################
+attenuation:
+  features:
+    - name: 'tauSilicate'
+    - name: 'beta'
+      beta: 0.1
+    - name: 'screen'
+      useScreen: false
+  constraints:
+    NonNegativeSilicate:
+      - 'tau'    
+      - limits: [0,null]
