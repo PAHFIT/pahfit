@@ -469,12 +469,12 @@ class PAHFITBase():
         df_fwhm_limits = [(i,j) for i,j in zip(df_fwhm_min, df_fwhm_max)]
 
         # Creating the dust_features dict
-        self.dust_features = {'amps': df_amps,
-                              'x_0': df_cwave,
-                              'fwhms': df_fwhm,
-                              'amps_limits': df_amps_limits,
-                              'x_0_limits': df_cwave_limits,
-                              'fwhms_limits': df_fwhm_limits}
+        dust_features = {'amps': df_amps,
+                         'x_0': df_cwave,
+                         'fwhms': df_fwhm,
+                         'amps_limits': df_amps_limits,
+                         'x_0_limits': df_cwave_limits,
+                         'fwhms_limits': df_fwhm_limits}
 
         # Obtaining the H2 components
         h2_amps = np.take(t['amp'], h2_ind)
@@ -523,3 +523,8 @@ class PAHFITBase():
                        'x_0_limits': ion_cwave_limits,
                        'fwhms_limits': ion_fwhm_limits,
                        'names': ion_names}
+
+        # Create output tuple
+        readout = (bb_info, dust_features, h2_features, ion_features)
+
+        return readout
