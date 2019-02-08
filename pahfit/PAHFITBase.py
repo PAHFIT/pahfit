@@ -423,6 +423,11 @@ class PAHFITBase():
         filename : string
             The name of the input file containing fit results.
 
+        Returns
+        -------
+        readout : tuple
+            Tuple containing dictionaries of all components from the input file.
+
         """
         # Getting file extension
         ext = filename.split('.')[1]
@@ -525,6 +530,6 @@ class PAHFITBase():
                        'names': ion_names}
 
         # Create output tuple
-        readout = (bb_info, dust_features, h2_features, ion_features)
+        readout = (bb_info, dust_features, h2_features, ion_features, at_ind)
 
         return readout
