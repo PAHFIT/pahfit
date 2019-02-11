@@ -417,10 +417,119 @@ class PAHFITBase():
     def read(self, filename):
         """
         Read the model parameters from a file.
-        Format TBD
-        This could be the location of how the data files giving the
-        model packs are read.  Could also include an optional name of
-        such a file for the init function and make all the inputs
-        optional.  Probably cleaner that way.
+
+        Parameters
+        ----------
+        filename : string
+            The name of the input file containing fit results.
+
+        Returns
+        -------
+        readout : tuple
+            Tuple containing dictionaries of all components from the input file.
+
         """
-        pass
+        # Getting file extension
+        ext = filename.split('.')[1]
+
+        # Reading the input file as table
+        t = Table.read(filename, format=ext)
+
+        # Getting indices for the different components
+        bb_ind = np.concatenate(np.argwhere(t['Form'] == 'BlackBody1D'))
+        df_ind = np.concatenate(np.argwhere(t['Form'] == 'Drude1D'))
+        ga_ind = np.concatenate(np.argwhere(t['Form'] == 'Gaussian1D'))
+        names = [str(i) for i in np.take(t['Name'], ga_ind)]
+        h2_temp = np.concatenate(np.where(np.char.find(names, 'H2')>=0))
+        ion_temp = np.concatenate(np.where(np.char.find(names, 'H2')==-1))
+        h2_ind = np.take(ga_ind, h2_temp)
+        ion_ind = np.take(ga_ind, ion_temp)
+
+        at_ind = np.concatenate(np.argwhere(t['Form'] == 'S07_attenuation'))
+
+        # Obtaining the blackbody components
+        bb_temps = np.take(t['Name'], bb_ind)
+        bb_amps = np.take(t['amp'], bb_ind)
+        bb_amp_min = np.take(t['amp_min'], bb_ind)
+        bb_amp_max = np.take(t['amp_max'], bb_ind)
+        bb_amps_limits = [(i,j) for i,j in zip(bb_amp_min, bb_amp_max)]
+
+        # Creating the blackbody dict
+        bb_info = {'amps': bb_amps,
+                   'temps': bb_temps,
+                   'amps_limits': bb_amps_limits}
+
+        # Obtaining the dust features components
+        df_amps = np.take(t['amp'], df_ind)
+        df_amp_min = np.take(t['amp_min'], df_ind)
+        df_amp_max = np.take(t['amp_max'], df_ind)
+        df_amps_limits = [(i,j) for i,j in zip(df_amp_min, df_amp_max)]
+        df_cwave = np.take(t['x_0'], df_ind)
+        df_cwave_min = np.take(t['x_0_min'], df_ind)
+        df_cwave_max = np.take(t['x_0_max'], df_ind)
+        df_cwave_limits = [(i,j) for i,j in zip(df_cwave_min, df_cwave_max)]
+        df_fwhm = np.take(t['fwhm'], df_ind)
+        df_fwhm_min = np.take(t['fwhm_min'], df_ind)
+        df_fwhm_max = np.take(t['fwhm_max'], df_ind)
+        df_fwhm_limits = [(i,j) for i,j in zip(df_fwhm_min, df_fwhm_max)]
+
+        # Creating the dust_features dict
+        dust_features = {'amps': df_amps,
+                         'x_0': df_cwave,
+                         'fwhms': df_fwhm,
+                         'amps_limits': df_amps_limits,
+                         'x_0_limits': df_cwave_limits,
+                         'fwhms_limits': df_fwhm_limits}
+
+        # Obtaining the H2 components
+        h2_amps = np.take(t['amp'], h2_ind)
+        h2_amp_min = np.take(t['amp_min'], h2_ind)
+        h2_amp_max = np.take(t['amp_max'], h2_ind)
+        h2_amps_limits = [(i,j) for i,j in zip(h2_amp_min, h2_amp_max)]
+        h2_cwave = np.take(t['x_0'], h2_ind)
+        h2_cwave_min = np.take(t['x_0_min'], h2_ind)
+        h2_cwave_max = np.take(t['x_0_max'], h2_ind)
+        h2_cwave_limits = [(i,j) for i,j in zip(h2_cwave_min, h2_cwave_max)]
+        h2_fwhm = np.take(t['fwhm'], h2_ind)
+        h2_fwhm_min = np.take(t['fwhm_min'], h2_ind)
+        h2_fwhm_max = np.take(t['fwhm_max'], h2_ind)
+        h2_fwhm_limits = [(i,j) for i,j in zip(h2_fwhm_min, h2_fwhm_max)]
+        h2_names = np.take(t['Name'], h2_ind)
+
+        # Creating the H2 dict
+        h2_features = {'amps': h2_amps,
+                       'x_0': h2_cwave,
+                       'fwhms': h2_fwhm,
+                       'amps_limits': h2_amps_limits,
+                       'x_0_limits': h2_cwave_limits,
+                       'fwhms_limits': h2_fwhm_limits,
+                       'names': h2_names}
+
+        # Obtaining the ion components
+        ion_amps = np.take(t['amp'], ion_ind)
+        ion_amp_min = np.take(t['amp_min'], ion_ind)
+        ion_amp_max = np.take(t['amp_max'], ion_ind)
+        ion_amps_limits = [(i,j) for i,j in zip(ion_amp_min, ion_amp_max)]
+        ion_cwave = np.take(t['x_0'], ion_ind)
+        ion_cwave_min = np.take(t['x_0_min'], ion_ind)
+        ion_cwave_max = np.take(t['x_0_max'], ion_ind)
+        ion_cwave_limits = [(i,j) for i,j in zip(ion_cwave_min, ion_cwave_max)]
+        ion_fwhm = np.take(t['fwhm'], ion_ind)
+        ion_fwhm_min = np.take(t['fwhm_min'], ion_ind)
+        ion_fwhm_max = np.take(t['fwhm_max'], ion_ind)
+        ion_fwhm_limits = [(i,j) for i,j in zip(ion_fwhm_min, ion_fwhm_max)]
+        ion_names = np.take(t['Name'], ion_ind)
+
+        # Creating the ion dict
+        ion_features = {'amps': ion_amps,
+                       'x_0': ion_cwave,
+                       'fwhms': ion_fwhm,
+                       'amps_limits': ion_amps_limits,
+                       'x_0_limits': ion_cwave_limits,
+                       'fwhms_limits': ion_fwhm_limits,
+                       'names': ion_names}
+
+        # Create output tuple
+        readout = (bb_info, dust_features, h2_features, ion_features, at_ind)
+
+        return readout
