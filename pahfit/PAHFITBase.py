@@ -46,8 +46,8 @@ class PAHFITBase():
         Setup a variant based on inputs.  Generates an astropy.modeling
         compound model.
 
-        Note
-        ----
+        Notes
+        -----
         Would be great to rename the parameters such that they uniquely
         identify the component (dust, gas, specific line, etc.).  This is
         possible - say a discussion on the stsci slack channel - James Davies?

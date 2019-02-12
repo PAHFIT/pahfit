@@ -109,7 +109,7 @@ release = package.__version__
 
 html_theme_options = {
     'logotext1': 'PAH',  # white,  semi-bold
-    'logotext2': 'Fit',  # orange, light
+    'logotext2': 'FIT',  # orange, light
     'logotext3': ':docs'   # white,  light
     }
 

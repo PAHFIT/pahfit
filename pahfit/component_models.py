@@ -42,36 +42,35 @@ class Drude1D(Fittable1DModel):
     fwhm : float
         Full width at half maximum
 
-    See Also
-    --------
-    Gaussian1D, Box1D, MexicanHat1D, Lorentz1D
-
-    Notes
-    -----
-    Model formula:
-    .. math::
-        f(x) = \\frac{A \\gamma^{2}}{(x/x_0 - x_0/x)^{2} + \\gamma^{2}}
-
     Examples
     --------
+
     .. plot::
         :include-source:
+
         import numpy as np
         import matplotlib.pyplot as plt
-        from models import Drude1D
-        plt.figure()
-        s1 = Drude1D()
-        r = np.arange(-5, 5, .01)
-        for factor in range(1, 4):
-            s1.amplitude = factor
-            plt.plot(r, s1(r), color=str(0.25 * factor), lw=2)
-        plt.axis([-5, 5, -1, 4])
+
+        from pahfit.component_models import Drude1D
+
+        fig, ax = plt.subplots()
+
+        # generate the curves and plot them
+        x = np.arange(7.5 , 12.5 , 0.1)
+
+        dmodel = Drude1D(amplitude=1.0, fwhm=0.5, x_0=10.0)
+        ax.plot(x, dmodel(x))
+
+        ax.set_xlabel(r'$x$ [$\mu m$]')
+        ax.set_ylabel(r'$Intensity$')
+
+        ax.legend(loc='best')
         plt.show()
     """
 
-    amplitude = Parameter(default=1)
-    x_0 = Parameter(default=0)
-    fwhm = Parameter(default=1)
+    amplitude = Parameter(default=1.)
+    x_0 = Parameter(default=10.)
+    fwhm = Parameter(default=1.)
 
     @staticmethod
     def evaluate(x, amplitude, x_0, fwhm):
@@ -137,6 +136,7 @@ class S07_attenuation(Fittable1DModel):
 
     Attenuation curve for a mixed case calculated from
     .. math::
+
         Att(x) = \\frac{1 - e^{-\\tau_{x}}}{\\tau_{x}}
 
     Parameters
