@@ -1,5 +1,3 @@
-from __future__ import (absolute_import, print_function, division)
-
 from astropy.modeling.functional_models import Gaussian1D
 
 from pahfit.component_models import (BlackBody1D, Drude1D,
@@ -74,8 +72,6 @@ class PAHFITBase():
             model_comps.append(cont_model)
 
         # dust features should be a Drude profile
-        # using Lorentizian for prototyping
-        # need to define the appropriate Drude1D astropy.model
         self.dust_features = dust_features
         if dust_features is not None:
             amps = dust_features['amps']
