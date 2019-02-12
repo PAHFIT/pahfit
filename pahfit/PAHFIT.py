@@ -8,8 +8,8 @@ import matplotlib
 from astropy.io import fits
 from astropy.modeling.fitting import LevMarLSQFitter
 
-from PAHFITBase import PAHFITBase
-from PAHFIT_Spitzer_Exgal import (InstPackSpitzerIRSSLLL, SciPackExGal)
+from pahfit.PAHFITBase import PAHFITBase
+from pahfit.PAHFIT_Spitzer_Exgal import (InstPackSpitzerIRSSLLL, SciPackExGal)
 
 
 if __name__ == '__main__':
