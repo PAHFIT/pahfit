@@ -1,5 +1,3 @@
-from __future__ import (absolute_import, print_function, division)
-
 from astropy.modeling.functional_models import Gaussian1D
 
 from pahfit.component_models import (BlackBody1D, Drude1D,
@@ -23,7 +21,7 @@ class PAHFITBase():
 
     Mainly sets up the astropy.modeling compound model
     that includes all the different components including
-    blackbodies for the continuum, lorentizians for the dust
+    blackbodies for the continuum, drudes for the dust
     emission features, and Gaussians for the gas emission features.
 
     Parameters
@@ -46,8 +44,8 @@ class PAHFITBase():
         Setup a variant based on inputs.  Generates an astropy.modeling
         compound model.
 
-        Note
-        ----
+        Notes
+        -----
         Would be great to rename the parameters such that they uniquely
         identify the component (dust, gas, specific line, etc.).  This is
         possible - say a discussion on the stsci slack channel - James Davies?
@@ -74,8 +72,6 @@ class PAHFITBase():
             model_comps.append(cont_model)
 
         # dust features should be a Drude profile
-        # using Lorentizian for prototyping
-        # need to define the appropriate Drude1D astropy.model
         self.dust_features = dust_features
         if dust_features is not None:
             amps = dust_features['amps']
@@ -242,7 +238,6 @@ class PAHFITBase():
             Currently using the input data file name.
         outform : string
             Sets the output file format (ascii, fits, csv, etc.).
-
         """
         # Instantiating lists
         Name, Form, Fixed = ([] for i in range(3))
@@ -430,7 +425,6 @@ class PAHFITBase():
         readout : tuple
             Tuple containing dictionaries of all components from
             the input file.
-
         """
         # Getting file extension
         ext = filename.split('.')[1]
