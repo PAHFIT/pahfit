@@ -1,4 +1,4 @@
-2.0 (unreleased)
+2.0.dev (unreleased)
 ================
 
 - merged two prototype codes into one
