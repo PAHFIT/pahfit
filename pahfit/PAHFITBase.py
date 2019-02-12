@@ -23,7 +23,7 @@ class PAHFITBase():
 
     Mainly sets up the astropy.modeling compound model
     that includes all the different components including
-    blackbodies for the continuum, lorentizians for the dust
+    blackbodies for the continuum, drudes for the dust
     emission features, and Gaussians for the gas emission features.
 
     Parameters
@@ -242,7 +242,6 @@ class PAHFITBase():
             Currently using the input data file name.
         outform : string
             Sets the output file format (ascii, fits, csv, etc.).
-
         """
         # Instantiating lists
         Name, Form, Fixed = ([] for i in range(3))
@@ -430,7 +429,6 @@ class PAHFITBase():
         readout : tuple
             Tuple containing dictionaries of all components from
             the input file.
-
         """
         # Getting file extension
         ext = filename.split('.')[1]
