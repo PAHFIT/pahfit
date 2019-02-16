@@ -1,4 +1,5 @@
 import pkg_resources
+import argparse
 
 import matplotlib.pyplot as plt
 import matplotlib
@@ -10,7 +11,39 @@ from pahfit.PAHFITBase import PAHFITBase
 from pahfit.PAHFIT_Spitzer_Exgal import (InstPackSpitzerIRSSLLL, SciPackExGal)
 
 
+def initialize_parser():
+    """
+    Command line parser for PAHFIT
+
+    Returns
+    -------
+    parser : argparse object
+    """
+    plottypes = ['png', 'jpg', 'jpeg', 'pdf', 'ps', 'eps', 'rgba',
+                 'svg', 'tiff', 'tif', 'pgf', 'svgz', 'raw']
+    savetypes = ['fits', 'hdf5', 'votable', 'xml',
+                 'ascii.ecsv', 'ascii.fixed_width', 'ascii.ipac', 'ascii.cds']
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-f', '--savefig', action='store',
+                        default='pdf', choices=plottypes,
+                        help='Save figure to a file of specified type \
+                            Must be one \
+                            of: "{}"'.format('", "'.join(plottypes))
+                        )
+    parser.add_argument('-o', '--saveoutput', action='store',
+                        default='ascii.fixed_width', choices=savetypes,
+                        help='Save fit results to a file of specified type \
+                            Must be one \
+                            of: "{}"'.format('", "'.join(savetypes))
+                        )
+    return parser
+
+
 if __name__ == '__main__':
+
+    parser = initialize_parser()
+    args = parser.parse_args()
+
     # would be good to use argparse to allow for command line input
     # of the observed spectra.  Need to standardize the expected format
     # to allow this.
@@ -57,9 +90,7 @@ if __name__ == '__main__':
     print(fit.fit_info['message'])
 
     # save results to fits file
-    # define output format (ascii, fits, csv, etc.)
-    outform = 'fits'
-    pmodel.save(obs_fit, name, outform)
+    pmodel.save(obs_fit, name, args.saveoutput)
 
     # plot result
     fontsize = 18
@@ -77,5 +108,7 @@ if __name__ == '__main__':
     ax.set_yscale('linear')
     ax.set_xscale('log')
 
+    # show
     plt.show()
-    plt.savefig('{}.pdf'.format(name), bbox_inches='tight')
+    # and save
+    fig.savefig('{}.{}'.format(name, args.savefig), bbox_inches='tight')
