@@ -2,7 +2,7 @@ import pkg_resources
 import argparse
 
 import matplotlib.pyplot as plt
-import matplotlib
+import matplotlib as mpl
 
 from astropy.io import fits
 from astropy.modeling.fitting import LevMarLSQFitter
@@ -21,8 +21,7 @@ def initialize_parser():
     """
     plottypes = ['png', 'jpg', 'jpeg', 'pdf', 'ps', 'eps', 'rgba',
                  'svg', 'tiff', 'tif', 'pgf', 'svgz', 'raw']
-    savetypes = ['fits', 'hdf5', 'votable', 'xml',
-                 'ascii.ecsv', 'ascii.fixed_width', 'ascii.ipac', 'ascii.cds']
+    savetypes = ['fits', 'votable', 'ipac', 'ascii.ecsv']
     parser = argparse.ArgumentParser()
     parser.add_argument('-f', '--savefig', action='store',
                         default='pdf', choices=plottypes,
@@ -31,7 +30,7 @@ def initialize_parser():
                             of: "{}"'.format('", "'.join(plottypes))
                         )
     parser.add_argument('-o', '--saveoutput', action='store',
-                        default='ascii.fixed_width', choices=savetypes,
+                        default='ipac', choices=savetypes,
                         help='Save fit results to a file of specified type \
                             Must be one \
                             of: "{}"'.format('", "'.join(savetypes))
@@ -54,10 +53,9 @@ if __name__ == '__main__':
     # science pack
     sci_pack = SciPackExGal(spitzer_sl_ll_pack)
 
-    pmodel = PAHFITBase(bb_info=sci_pack.bb_info,
-                        dust_features=sci_pack.dust_features,
-                        h2_features=sci_pack.h2_features,
-                        ion_features=sci_pack.ion_features)
+    param_info = (sci_pack.bb_info, sci_pack.dust_features,
+                  sci_pack.h2_features, sci_pack.ion_features)
+    pmodel = PAHFITBase(param_info=param_info)
 
     # pick the fitter
     fit = LevMarLSQFitter()
@@ -95,11 +93,11 @@ if __name__ == '__main__':
     # plot result
     fontsize = 18
     font = {'size': fontsize}
-    matplotlib.rc('font', **font)
-    matplotlib.rc('lines', linewidth=2)
-    matplotlib.rc('axes', linewidth=2)
-    matplotlib.rc('xtick.major', width=2)
-    matplotlib.rc('ytick.major', width=2)
+    mpl.rc('font', **font)
+    mpl.rc('lines', linewidth=2)
+    mpl.rc('axes', linewidth=2)
+    mpl.rc('xtick.major', width=2)
+    mpl.rc('ytick.major', width=2)
 
     fig, ax = plt.subplots(figsize=(15, 10))
 
@@ -108,7 +106,10 @@ if __name__ == '__main__':
     ax.set_yscale('linear')
     ax.set_xscale('log')
 
+    # use the whitespace better
+    fig.tight_layout()
+
     # show
     plt.show()
     # and save
-    fig.savefig('{}.{}'.format(name, args.savefig), bbox_inches='tight')
+    fig.savefig('{}.{}'.format(name, args.savefig))

@@ -79,10 +79,12 @@ class SciPackExGal():
         # rest for for the dust emission
         bb_temps = [5000., 300., 200., 135., 90., 65., 50., 40., 35.]
         bb_amps = np.full((len(bb_temps)), 1.0e-10)
+        bb_temps_limits = [(0.0, None) for k in range(len(bb_temps))]
         bb_amps_limits = [(0.0, None) for k in range(len(bb_temps))]
         self.bb_info = {
             'amps': bb_amps,
             'temps': bb_temps,
+            'temps_limits': bb_temps_limits,
             'amps_limits': bb_amps_limits}
 
         # the dust features (mainly the PAH/aromatic features)

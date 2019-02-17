@@ -148,8 +148,8 @@ class S07_attenuation(Fittable1DModel):
     outputs = ('y',)
 
     # Attenuation tau
-    tau_si = Parameter(description="kvt term: amplitude",
-                       default=1.0, min=0.0, max=10)
+    tau_sil = Parameter(description="kvt term: amplitude",
+                        default=1.0, min=0.0, max=10)
 
     @staticmethod
     def kvt(in_x):
