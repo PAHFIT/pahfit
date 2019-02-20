@@ -9,7 +9,7 @@ import matplotlib as mpl
 from astropy.io import fits
 from astropy.modeling.fitting import LevMarLSQFitter
 
-from pahfit.PAHFITBase import PAHFITBase
+from pahfit.base import PAHFITBase
 from pahfit.PAHFIT_Spitzer_Exgal import (InstPackSpitzerIRSSLLL, SciPackExGal)
 
 
