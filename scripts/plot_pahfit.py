@@ -54,6 +54,12 @@ if __name__ == "__main__":
     hdul.close()
     weights = 1./obs_unc
 
+    packfilename = pkg_resources.resource_filename(
+        'pahfit',
+        'packs/scipack_ExGal_SpitzerIRSSLLL.ipac')
+    pmodel = PAHFITBase(filename=packfilename)
+    print(packfilename)
+
     # read in the PAHFIT results
     pmodel = PAHFITBase(filename=args.filename)
 

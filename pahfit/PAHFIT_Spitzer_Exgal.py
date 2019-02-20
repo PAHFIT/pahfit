@@ -78,14 +78,17 @@ class SciPackExGal():
         # 5000 K BB is for the stellar continuum,
         # rest for for the dust emission
         bb_temps = [5000., 300., 200., 135., 90., 65., 50., 40., 35.]
-        bb_amps = np.full((len(bb_temps)), 1.0e-10)
-        bb_temps_limits = [(0.0, None) for k in range(len(bb_temps))]
-        bb_amps_limits = [(0.0, None) for k in range(len(bb_temps))]
+        n_bb = len(bb_temps)
+        bb_names = ['BB{}'.format(k) for k in range(n_bb)]
+        bb_amps = np.full(n_bb, 1.0e-10)
         self.bb_info = {
+            'names': bb_names,
             'amps': bb_amps,
             'temps': bb_temps,
-            'temps_limits': bb_temps_limits,
-            'amps_limits': bb_amps_limits}
+            'temps_limits': [(0.0, None) for k in range(n_bb)],
+            'amps_limits': [(0.0, None) for k in range(n_bb)],
+            'temps_fixed': [True for k in range(n_bb)],
+            'amps_fixed': [False for k in range(n_bb)]}
 
         # the dust features (mainly the PAH/aromatic features)
         df_cwave = np.array([5.27, 5.70, 6.22, 6.69,
@@ -104,17 +107,21 @@ class SciPackExGal():
                                  0.05])
         df_fwhm = df_frac_fwhm*df_cwave
         n_df = len(df_cwave)
+        df_names = ['DF{}'.format(k) for k in range(n_df)]
         df_amps = np.full((n_df), 100.)
-        df_amps_limits = [(0.0, None) for k in range(n_df)]
         df_cwave_limits = [(cwave - 0.1, cwave + 0.1) for cwave in df_cwave]
         df_fwhm_limits = [(cfwhm*0.9, cfwhm*1.1) for cfwhm in df_fwhm]
         self.dust_features = {
+            'names': df_names,
             'amps': df_amps,
             'x_0': df_cwave,
             'fwhms': df_fwhm,
-            'amps_limits': df_amps_limits,
+            'amps_limits': [(0.0, None) for k in range(n_df)],
             'x_0_limits': df_cwave_limits,
-            'fwhms_limits': df_fwhm_limits}
+            'fwhms_limits': df_fwhm_limits,
+            'amps_fixed': [False for k in range(n_df)],
+            'x_0_fixed': [False for k in range(n_df)],
+            'fwhms_fixed': [False for k in range(n_df)]}
 
         # define the H2 features
         h2_cwaves = np.array([5.5115, 6.1088, 6.9091, 8.0258,
@@ -127,17 +134,20 @@ class SciPackExGal():
                              "H2 S(3)", "H2 S(2)", "H2 S(1)", "H2 S(0)"])
         n_h2 = len(h2_cwaves)
         h2_amps = np.full((n_h2), 100.)
-        h2_amps_limits = [(0.0, None) for k in range(n_h2)]
         h2_cwaves_limits = [(cwave - 0.05, cwave + 0.05)
                             for cwave in h2_cwaves]
         h2_fwhm_limits = [(cfwhm*0.5, cfwhm*1.5) for cfwhm in h2_fwhm]
-        self.h2_features = {'amps': h2_amps,
-                            'x_0': h2_cwaves,
-                            'fwhms': h2_fwhm,
-                            'amps_limits': h2_amps_limits,
-                            'x_0_limits': h2_cwaves_limits,
-                            'fwhms_limits': h2_fwhm_limits,
-                            'names': h2_names}
+        self.h2_features = {
+            'names': h2_names,
+            'amps': h2_amps,
+            'x_0': h2_cwaves,
+            'fwhms': h2_fwhm,
+            'amps_limits': [(0.0, None) for k in range(n_h2)],
+            'x_0_limits': h2_cwaves_limits,
+            'fwhms_limits': h2_fwhm_limits,
+            'amps_fixed': [False for k in range(n_h2)],
+            'x_0_fixed': [False for k in range(n_h2)],
+            'fwhms_fixed': [False for k in range(n_h2)]}
 
         # define the ionic features
         ion_cwaves = np.array([6.985274, 8.99138, 10.5105, 12.813,
@@ -152,15 +162,24 @@ class SciPackExGal():
                               "[SIII] 33", "[SiII]"])
         n_ion = len(ion_cwaves)
         ion_amps = np.full((n_ion), 100.)
-        ion_amps_limits = [(0.0, None) for k in range(n_ion)]
         ion_cwaves_limits = [(cwave - 0.05, cwave + 0.05) for
                              cwave in ion_cwaves]
         ion_fwhm_limits = [(cfwhm*0.5, cfwhm*1.5) for cfwhm in ion_fwhm]
         self.ion_features = {
+            'names': ion_names,
             'amps': ion_amps,
             'x_0': ion_cwaves,
             'fwhms': ion_fwhm,
-            'amps_limits': ion_amps_limits,
+            'amps_limits': [(0.0, None) for k in range(n_ion)],
             'x_0_limits': ion_cwaves_limits,
             'fwhms_limits': ion_fwhm_limits,
-            'names': ion_names}
+            'amps_fixed': [False for k in range(n_ion)],
+            'x_0_fixed': [False for k in range(n_ion)],
+            'fwhms_fixed': [False for k in range(n_ion)]}
+
+        self.att_info = {
+            'names': ['S07_att'],
+            'amps': [1.0],
+            'amps_limits': [(0.0, 10.0)],
+            'amps_fixed': [False]
+        }

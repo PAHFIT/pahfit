@@ -91,6 +91,9 @@ class PAHFITBase():
         filename giving the pack that contains all the
         info described for param_info
 
+    tformat: string
+        table format of filename (compatible with astropy Table.read)
+
     param_info: tuple of dics
         The dictonaries contain info for each type of component.  Each
         component of the dictonaries is a vector.
@@ -104,7 +107,8 @@ class PAHFITBase():
 
     def __init__(self,
                  param_info=None,
-                 filename=None):
+                 filename=None,
+                 tformat=None):
         """
         Setup a variant based on inputs.  Generates an astropy.modeling
         compound model.
@@ -122,7 +126,7 @@ class PAHFITBase():
 
         # read in the parameter info from a file
         if filename is not None:
-            param_info = self.read(filename)
+            param_info = self.read(filename, tformat=tformat)
 
         bb_info = param_info[0]
         dust_features = param_info[1]
@@ -142,7 +146,7 @@ class PAHFITBase():
                         'amplitude': bb_info['amps_limits'][0]},
                 fixed={'temperature': bb_info['temps_fixed'][0],
                        'amplitude': bb_info['amps_fixed'][0]})
-            for k in range(len(bb_info['names'])):
+            for k in range(1, len(bb_info['names'])):
                 self.model += BlackBody1D(
                     name=bb_info['names'][k],
                     temperature=bb_info['temps'][k],
@@ -169,57 +173,37 @@ class PAHFITBase():
 
         self.h2_features = h2_features
         if h2_features is not None:
-            names = h2_features['names']
-            amps = h2_features['amps']
-            x_0 = h2_features['x_0']
-            fwhms = h2_features['fwhms']
-            amps_limits = h2_features['amps_limits']
-            x_0_limits = h2_features['x_0_limits']
-            fwhms_limits = h2_features['fwhms_limits']
-            amps_fixed = h2_features['amps_fixed']
-            x_0_fixed = h2_features['x_0_fixed']
-            fwhms_fixed = h2_features['fwhms_fixed']
-            n_h2 = len(amps)
-            for k in range(n_h2):
+            for k in range(len(h2_features['names'])):
                 self.model += Gaussian1D(
-                    name=names[k],
-                    amplitude=amps[k],
-                    mean=x_0[k],
-                    stddev=fwhms[k]/2.355,
-                    bounds={'amplitude': amps_limits[k],
-                            'mean': x_0_limits[k],
-                            'stddev': (fwhms_limits[k][0]/2.355,
-                                       fwhms_limits[k][1]/2.355)},
-                    fixed={'amplitude': amps_fixed[k],
-                           'x_0': x_0_fixed[k],
-                           'stddev': fwhms_fixed[k]})
+                    name=h2_features['names'][k],
+                    amplitude=h2_features['amps'][k],
+                    mean=h2_features['x_0'][k],
+                    stddev=h2_features['fwhms'][k]/2.355,
+                    bounds={'amplitude': h2_features['amps_limits'][k],
+                            'mean': h2_features['x_0_limits'][k],
+                            'stddev': (
+                                h2_features['fwhms_limits'][k][0]/2.355,
+                                h2_features['fwhms_limits'][k][1]/2.355)},
+                    fixed={'amplitude': h2_features['amps_fixed'][k],
+                           'mean': h2_features['x_0_fixed'][k],
+                           'stddev': h2_features['fwhms_fixed'][k]})
 
         self.ion_features = ion_features
         if ion_features is not None:
-            names = ion_features['names']
-            amps = ion_features['amps']
-            x_0 = ion_features['x_0']
-            fwhms = ion_features['fwhms']
-            amps_limits = ion_features['amps_limits']
-            x_0_limits = ion_features['x_0_limits']
-            fwhms_limits = ion_features['fwhms_limits']
-            amps_fixed = ion_features['amps_fixed']
-            x_0_fixed = ion_features['x_0_fixed']
-            fwhms_fixed = ion_features['fwhms_fixed']
-            n_ion = len(amps)
-            for k in range(n_ion):
+            for k in range(len(ion_features['names'])):
                 self.model += Gaussian1D(
-                    name=names[k],
-                    amplitude=amps[k],
-                    mean=x_0[k],
-                    stddev=fwhms[k]/2.355,
-                    bounds={'amplitude': amps_limits[k],
-                            'x_0': x_0_limits[k],
-                            'stddev': (fwhms_limits[k][0]/2.355,
-                                       fwhms_limits[k][1]/2.355)},
-                    fixed={'amplitude': amps_fixed[k],
-                           'x_0': x_0_fixed[k],
-                           'stddev': fwhms_fixed[k]})
+                    name=ion_features['names'][k],
+                    amplitude=ion_features['amps'][k],
+                    mean=ion_features['x_0'][k],
+                    stddev=ion_features['fwhms'][k]/2.355,
+                    bounds={'amplitude': ion_features['amps_limits'][k],
+                            'mean': ion_features['x_0_limits'][k],
+                            'stddev': (
+                                ion_features['fwhms_limits'][k][0]/2.355,
+                                ion_features['fwhms_limits'][k][1]/2.355)},
+                    fixed={'amplitude': ion_features['amps_fixed'][k],
+                           'mean': ion_features['x_0_fixed'][k],
+                           'stddev': ion_features['fwhms_fixed'][k]})
 
         # apply the attenuation to *all* the components
         self.model *= S07_attenuation(name=att_info['names'][0],
@@ -278,10 +262,6 @@ class PAHFITBase():
 
         ax.set_xlabel(r'$\lambda$ [$\mu m$]')
         ax.set_ylabel(r'$\nu F_{\nu}$')
-
-        # print(obs_fit.name)
-        # print(obs_fit.param_names)
-        # print(obs_fit.parameters)
 
     def save(self, obs_fit, filename, outform):
         """
@@ -373,7 +353,7 @@ class PAHFITBase():
         out_table.write('{}_output.{}'.format(filename, outform),
                         format=outform, overwrite=True)
 
-    def read(self, filename):
+    def read(self, filename, tformat=None):
         """
         Read the model parameters from a file.
 
@@ -382,17 +362,21 @@ class PAHFITBase():
         filename : string
             The name of the input file containing fit results.
 
+        tformat: string
+            table format of filename (compatible with astropy Table.read)
+
         Returns
         -------
         readout : tuple
             Tuple containing dictionaries of all components from
             the input file.
         """
-        # Getting file extension
-        ext = filename.split('.')[1]
+        # get the table format
+        if tformat is None:
+            tformat = filename.split('.')[1]
 
         # Reading the input file as table
-        t = Table.read(filename, format=ext)
+        t = Table.read(filename, format=tformat)
 
         # Getting indices for the different components
         bb_ind = np.concatenate(np.argwhere(t['Form'] == 'BlackBody1D'))

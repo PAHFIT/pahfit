@@ -89,7 +89,7 @@ Reference API
 
 Base class for PAHFIT
 
-.. automodapi:: pahfit.PAHFITBase
+.. automodapi:: pahfit.base
 
 Component models not provided by astropy.models.
 

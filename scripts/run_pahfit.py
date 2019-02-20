@@ -25,6 +25,7 @@ def initialize_parser():
                  'svg', 'tiff', 'tif', 'pgf', 'svgz', 'raw']
     savetypes = ['fits', 'votable', 'ipac', 'ascii.ecsv']
     parser = argparse.ArgumentParser()
+    parser.add_argument('packfile', help='name of PAHFIT pack file')
     parser.add_argument('-f', '--savefig', action='store',
                         default='pdf', choices=plottypes,
                         help='Save figure to a file of specified type \
@@ -56,8 +57,14 @@ if __name__ == '__main__':
     sci_pack = SciPackExGal(spitzer_sl_ll_pack)
 
     param_info = (sci_pack.bb_info, sci_pack.dust_features,
-                  sci_pack.h2_features, sci_pack.ion_features)
-    pmodel = PAHFITBase(param_info=param_info)
+                  sci_pack.h2_features, sci_pack.ion_features,
+                  sci_pack.att_info)
+
+    opmodel = PAHFITBase(param_info=param_info)
+    opmodel.save(opmodel.model, 'Pack_ExGal_SpitzerIRSSLLL', args.saveoutput)
+
+    # pmodel = PAHFITBase(filename=args.packfile)
+    pmodel = opmodel
 
     # pick the fitter
     fit = LevMarLSQFitter()
