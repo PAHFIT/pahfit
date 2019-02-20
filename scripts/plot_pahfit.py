@@ -1,10 +1,14 @@
 #!/usr/bin/env python
 
+import pkg_resources
 import argparse
+
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 
-from pahfit.PAHFITBase import PAHFITBase
+from astropy.io import fits
+
+from pahfit.base import PAHFITBase
 
 
 def initialize_parser():
@@ -36,6 +40,20 @@ if __name__ == "__main__":
 
     # read an observed spectrum
 
+    # Example 1
+    # read in an example spectrum (from M101)
+    data_path = pkg_resources.resource_filename('pahfit',
+                                                'data/')
+    data = 'Nucleus_irs.fits'
+    name = data.split('.')[0]
+    hdul = fits.open('{}{}'.format(data_path, data))
+    obs_x = hdul[1].data['WAVELENGTH']
+    obs_y = hdul[1].data['FLUX']
+    obs_unc = hdul[1].data['SIGMA']
+    obs_npts = hdul[1].data['NPTS']
+    hdul.close()
+    weights = 1./obs_unc
+
     # read in the PAHFIT results
     pmodel = PAHFITBase(filename=args.filename)
 
@@ -50,7 +68,7 @@ if __name__ == "__main__":
 
     fig, ax = plt.subplots(figsize=(15, 10))
 
-    pmodel.plot(ax, obs_x, obs_y, obs_fit)
+    pmodel.plot(ax, obs_x, obs_y, pmodel.model)
 
     ax.set_yscale('linear')
     ax.set_xscale('log')

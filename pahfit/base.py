@@ -10,6 +10,67 @@ import numpy as np
 __all__ = ['PAHFITBase']
 
 
+def _ingest_limits(min_vals, max_vals):
+    """
+    Ingest the limits read from a file and generate the appropriate
+    internal format (list of tuples).  Needed to handle the case
+    where a limit is not desired as numpy arrays cannot have elements
+    of None, instead a value of nan is used.
+
+    Limits that are not set are designated as 'nan' in files and
+    these are changed to the python None to be compatible with
+    the astropy.modeling conventation.
+
+    Parameters
+    ----------
+    min_vals,
+    max_vals : numpy.array
+        min/max values of the limits for a parameter
+        nan designates no limit
+
+    Returns
+    -------
+    plimits : list of tuples
+        tuples give the min/max limits for a parameter
+    """
+    plimits = []
+    for cmin, cmax in zip(min_vals, max_vals):
+        if np.isnan(cmin):
+            cmin = None
+        if np.isnan(cmax):
+            cmax = None
+        plimits.append((cmin, cmax))
+
+    return plimits
+
+
+def _ingest_fixed(fixed_vals):
+    """
+    Ingest the fixed value read from a file and generate the appropriate
+    internal format (list of booleans).  Needed as booleans are
+    represented in files as True/False strings.
+
+    Parameters
+    ----------
+    min_vals : numpy.array (string)
+        fixed designations
+
+    Returns
+    -------
+    pfixed : numpy.array (boolean)
+        True/False designation for parameters
+    """
+    pfixed = []
+    for cfixed in fixed_vals:
+        if cfixed == 'True':
+            cfixed = True
+        if cfixed == 'False':
+            cfixed = False
+        pfixed.append(cfixed)
+
+    return pfixed
+
+
 class PAHFITBase():
     """
     Base class for PAHFIT variants. Each variant nominally specifies the valid
@@ -26,13 +87,19 @@ class PAHFITBase():
 
     Parameters
     ----------
-    bb_info : dict
-        dict with {'amps', 'temps', 'amps_limits'}, each a vector
-    dust_features,
-    h2_features,
-    ion_features : dict
-        dict with {amps, x_0, fwhm,
-                   amps_limits, x_0_limits, fwhms_limits}, each a vector
+    filename: string
+        filename giving the pack that contains all the
+        info described for param_info
+
+    param_info: tuple of dics
+        The dictonaries contain info for each type of component.  Each
+        component of the dictonaries is a vector.
+        bb_info -
+        dict with {name, temps, temps_limits, temps_fixed,
+        amps, amps_limits, amps_fixed}, each a vector
+        dust_features, h2_features, ion_features -
+        dict with {name amps, amps_limits, amps_fixed,
+        x_0, x_0_limits, x_0_fixed, fwhms, fwhms_limits, fwhm_fixed}.
     """
 
     def __init__(self,
@@ -61,77 +128,60 @@ class PAHFITBase():
         dust_features = param_info[1]
         h2_features = param_info[2]
         ion_features = param_info[3]
+        att_info = param_info[4]
+
         # setup the model
-        model_comps = []
         self.bb_info = bb_info
         if bb_info is not None:
-            amps = bb_info['amps']
-            temps = bb_info['temps']
-            amps_limits = bb_info['amps_limits']
-            n_bb = len(amps)
-            cont_model = BlackBody1D(temperature=temps[0],
-                                     amplitude=amps[0],
-                                     fixed={'temperature': True})
-            cont_model.amplitude.bounds = amps_limits[0]
-            for k in range(1, n_bb):
-                new_model = BlackBody1D(temperature=temps[k],
-                                        amplitude=amps[k],
-                                        fixed={'temperature': True})
-                new_model.amplitude.bounds = amps_limits[k]
-                cont_model = cont_model + new_model
+            # 1st component defines the overall model variable
+            self.model = BlackBody1D(
+                name=bb_info['names'][0],
+                temperature=bb_info['temps'][0],
+                amplitude=bb_info['amps'][0],
+                bounds={'temperature': bb_info['temps_limits'][0],
+                        'amplitude': bb_info['amps_limits'][0]},
+                fixed={'temperature': bb_info['temps_fixed'][0],
+                       'amplitude': bb_info['amps_fixed'][0]})
+            for k in range(len(bb_info['names'])):
+                self.model += BlackBody1D(
+                    name=bb_info['names'][k],
+                    temperature=bb_info['temps'][k],
+                    amplitude=bb_info['amps'][k],
+                    bounds={'temperature': bb_info['temps_limits'][k],
+                            'amplitude': bb_info['amps_limits'][k]},
+                    fixed={'temperature': bb_info['temps_fixed'][k],
+                           'amplitude': bb_info['amps_fixed'][k]})
 
-            self.cont_model = cont_model
-            model_comps.append(cont_model)
-
-        # dust features should be a Drude profile
         self.dust_features = dust_features
         if dust_features is not None:
-            amps = dust_features['amps']
-            x_0 = dust_features['x_0']
-            fwhms = dust_features['fwhms']
-            amps_limits = dust_features['amps_limits']
-            x_0_limits = dust_features['x_0_limits']
-            fwhms_limits = dust_features['fwhms_limits']
-            n_df = len(amps)
-            df_model = Drude1D(amplitude=amps[0],
-                               x_0=x_0[0],
-                               fwhm=fwhms[0],
-                               bounds={'amplitude': amps_limits[0],
-                                       'x_0': x_0_limits[0],
-                                       'fwhm': fwhms_limits[0]})
-            for k in range(1, n_df):
-                df_model = df_model + Drude1D(
-                    amplitude=amps[k],
-                    x_0=x_0[k],
-                    fwhm=fwhms[k],
-                    bounds={'amplitude': amps_limits[k],
-                            'x_0': x_0_limits[k],
-                            'fwhm': fwhms_limits[k]})
-
-            self.df_model = df_model
-            model_comps.append(df_model)
+            for k in range(len(dust_features['names'])):
+                self.model += Drude1D(
+                    name=dust_features['names'][k],
+                    amplitude=dust_features['amps'][k],
+                    x_0=dust_features['x_0'][k],
+                    fwhm=dust_features['fwhms'][k],
+                    bounds={'amplitude': dust_features['amps_limits'][k],
+                            'x_0': dust_features['x_0_limits'][k],
+                            'fwhm': dust_features['fwhms_limits'][k]},
+                    fixed={'amplitude': dust_features['amps_fixed'][k],
+                           'x_0': dust_features['x_0_fixed'][k],
+                           'stddev': dust_features['fwhms_fixed'][k]})
 
         self.h2_features = h2_features
         if h2_features is not None:
+            names = h2_features['names']
             amps = h2_features['amps']
             x_0 = h2_features['x_0']
             fwhms = h2_features['fwhms']
             amps_limits = h2_features['amps_limits']
             x_0_limits = h2_features['x_0_limits']
             fwhms_limits = h2_features['fwhms_limits']
-            names = h2_features['names']
+            amps_fixed = h2_features['amps_fixed']
+            x_0_fixed = h2_features['x_0_fixed']
+            fwhms_fixed = h2_features['fwhms_fixed']
             n_h2 = len(amps)
-            h2_model = Gaussian1D(
-                name=names[0],
-                amplitude=amps[0],
-                mean=x_0[0],
-                stddev=fwhms[0]/2.355,
-                bounds={'amplitude': amps_limits[0],
-                        'mean': x_0_limits[0],
-                        'stddev': (fwhms_limits[0][0]/2.355,
-                                   fwhms_limits[0][1]/2.355)})
-            for k in range(1, n_h2):
-                h2_model = h2_model + Gaussian1D(
+            for k in range(n_h2):
+                self.model += Gaussian1D(
                     name=names[k],
                     amplitude=amps[k],
                     mean=x_0[k],
@@ -139,32 +189,26 @@ class PAHFITBase():
                     bounds={'amplitude': amps_limits[k],
                             'mean': x_0_limits[k],
                             'stddev': (fwhms_limits[k][0]/2.355,
-                                       fwhms_limits[k][1]/2.355)})
-
-            self.h2_model = h2_model
-            model_comps.append(h2_model)
+                                       fwhms_limits[k][1]/2.355)},
+                    fixed={'amplitude': amps_fixed[k],
+                           'x_0': x_0_fixed[k],
+                           'stddev': fwhms_fixed[k]})
 
         self.ion_features = ion_features
         if ion_features is not None:
+            names = ion_features['names']
             amps = ion_features['amps']
             x_0 = ion_features['x_0']
             fwhms = ion_features['fwhms']
             amps_limits = ion_features['amps_limits']
             x_0_limits = ion_features['x_0_limits']
             fwhms_limits = ion_features['fwhms_limits']
-            names = ion_features['names']
+            amps_fixed = ion_features['amps_fixed']
+            x_0_fixed = ion_features['x_0_fixed']
+            fwhms_fixed = ion_features['fwhms_fixed']
             n_ion = len(amps)
-            ion_model = Gaussian1D(
-                name=names[0],
-                amplitude=amps[0],
-                mean=x_0[0],
-                stddev=fwhms[0]/2.355,
-                bounds={'amplitude': amps_limits[0],
-                        'x_0': x_0_limits[0],
-                        'stddev': (fwhms_limits[0][0]/2.355,
-                                   fwhms_limits[0][1]/2.355)})
-            for k in range(1, n_ion):
-                ion_model = ion_model + Gaussian1D(
+            for k in range(n_ion):
+                self.model += Gaussian1D(
                     name=names[k],
                     amplitude=amps[k],
                     mean=x_0[k],
@@ -172,16 +216,18 @@ class PAHFITBase():
                     bounds={'amplitude': amps_limits[k],
                             'x_0': x_0_limits[k],
                             'stddev': (fwhms_limits[k][0]/2.355,
-                                       fwhms_limits[k][1]/2.355)})
-            self.ion_model = ion_model
-            model_comps.append(ion_model)
+                                       fwhms_limits[k][1]/2.355)},
+                    fixed={'amplitude': amps_fixed[k],
+                           'x_0': x_0_fixed[k],
+                           'stddev': fwhms_fixed[k]})
 
-        self.model = model_comps[0]
-        for cmodel in model_comps[1:]:
-            self.model += cmodel
-
-        # need to make the type of attenuation model a passed variable
-        self.model *= S07_attenuation(name='tau_sil')
+        # apply the attenuation to *all* the components
+        self.model *= S07_attenuation(name=att_info['names'][0],
+                                      tau_sil=att_info['amps'][0],
+                                      bounds={'tau_sil':
+                                              att_info['amps_limits'][0]},
+                                      fixed={'tau_sil':
+                                             att_info['amps_fixed'][0]})
 
     def plot(self, ax, x, y, model):
         """
@@ -361,99 +407,72 @@ class PAHFITBase():
         h2_ind = np.take(ga_ind, h2_temp)
         ion_ind = np.take(ga_ind, ion_temp)
 
-        # Obtaining the blackbody components
-        bb_names = np.take(t['Name'], bb_ind)
-        bb_amps = np.take(t['amp'], bb_ind)
-        bb_amp_min = np.take(t['amp_min'], bb_ind)
-        bb_amp_max = np.take(t['amp_max'], bb_ind)
-        bb_amp_fixed = np.take(t['amp_fixed'], bb_ind)
-        bb_amps_limits = [(i, j) for i, j in zip(bb_amp_min, bb_amp_max)]
-
         # Creating the blackbody dict
         bb_info = {'names': np.array(t['Name'][bb_ind].data),
                    'temps': np.array(t['temp'][bb_ind].data),
+                   'temps_limits': _ingest_limits(t['temp_min'][bb_ind].data,
+                                                  t['temp_max'][bb_ind].data),
+                   'temps_fixed': _ingest_fixed(t['temp_fixed'][bb_ind].data),
                    'amps': np.array(t['amp'][bb_ind].data),
-                   'amps_limits': list(zip(t['amp_min'][bb_ind].data,
-                                           t['amp_max'][bb_ind].data)),
-                   'amps_fixed': np.array(t['amp_fixed'][bb_ind].data)}
-        print(bb_info)
-        exit()
-
-        # Obtaining the dust features components
-        df_amps = np.take(t['amp'], df_ind)
-        df_amp_min = np.take(t['amp_min'], df_ind)
-        df_amp_max = np.take(t['amp_max'], df_ind)
-        df_amps_limits = [(i, j) for i, j in zip(df_amp_min, df_amp_max)]
-        df_cwave = np.take(t['x_0'], df_ind)
-        df_cwave_min = np.take(t['x_0_min'], df_ind)
-        df_cwave_max = np.take(t['x_0_max'], df_ind)
-        df_cwave_limits = [(i, j) for i, j in zip(df_cwave_min, df_cwave_max)]
-        df_fwhm = np.take(t['fwhm'], df_ind)
-        df_fwhm_min = np.take(t['fwhm_min'], df_ind)
-        df_fwhm_max = np.take(t['fwhm_max'], df_ind)
-        df_fwhm_limits = [(i, j) for i, j in zip(df_fwhm_min, df_fwhm_max)]
+                   'amps_limits': _ingest_limits(t['amp_min'][bb_ind].data,
+                                                 t['amp_max'][bb_ind].data),
+                   'amps_fixed': _ingest_fixed(t['amp_fixed'][bb_ind].data)}
 
         # Creating the dust_features dict
-        dust_features = {'amps': df_amps,
-                         'x_0': df_cwave,
-                         'fwhms': df_fwhm,
-                         'amps_limits': df_amps_limits,
-                         'x_0_limits': df_cwave_limits,
-                         'fwhms_limits': df_fwhm_limits}
-
-        # Obtaining the H2 components
-        h2_amps = np.take(t['amp'], h2_ind)
-        h2_amp_min = np.take(t['amp_min'], h2_ind)
-        h2_amp_max = np.take(t['amp_max'], h2_ind)
-        h2_amps_limits = [(i, j) for i, j in zip(h2_amp_min, h2_amp_max)]
-        h2_cwave = np.take(t['x_0'], h2_ind)
-        h2_cwave_min = np.take(t['x_0_min'], h2_ind)
-        h2_cwave_max = np.take(t['x_0_max'], h2_ind)
-        h2_cwave_limits = [(i, j) for i, j in zip(h2_cwave_min, h2_cwave_max)]
-        h2_fwhm = np.take(t['fwhm'], h2_ind)
-        h2_fwhm_min = np.take(t['fwhm_min'], h2_ind)
-        h2_fwhm_max = np.take(t['fwhm_max'], h2_ind)
-        h2_fwhm_limits = [(i, j) for i, j in zip(h2_fwhm_min, h2_fwhm_max)]
-        h2_names = np.take(t['Name'], h2_ind)
+        df_info = {'names': np.array(t['Name'][df_ind].data),
+                   'x_0': np.array(t['x_0'][df_ind].data),
+                   'x_0_limits': _ingest_limits(t['x_0_min'][df_ind].data,
+                                                t['x_0_max'][df_ind].data),
+                   'x_0_fixed': _ingest_fixed(t['x_0_fixed'][df_ind].data),
+                   'amps': np.array(t['amp'][df_ind].data),
+                   'amps_limits': _ingest_limits(t['amp_min'][df_ind].data,
+                                                 t['amp_max'][df_ind].data),
+                   'amps_fixed': _ingest_fixed(t['amp_fixed'][df_ind].data),
+                   'fwhms': np.array(t['fwhm'][df_ind].data),
+                   'fwhms_limits': _ingest_limits(t['fwhm_min'][df_ind].data,
+                                                  t['fwhm_max'][df_ind].data),
+                   'fwhms_fixed': _ingest_fixed(t['fwhm_fixed'][df_ind].data)}
 
         # Creating the H2 dict
-        h2_features = {'amps': h2_amps,
-                       'x_0': h2_cwave,
-                       'fwhms': h2_fwhm,
-                       'amps_limits': h2_amps_limits,
-                       'x_0_limits': h2_cwave_limits,
-                       'fwhms_limits': h2_fwhm_limits,
-                       'names': h2_names}
-
-        # Obtaining the ion components
-        ion_amps = np.take(t['amp'], ion_ind)
-        ion_amp_min = np.take(t['amp_min'], ion_ind)
-        ion_amp_max = np.take(t['amp_max'], ion_ind)
-        ion_amps_limits = [(i, j) for i, j in zip(ion_amp_min, ion_amp_max)]
-        ion_cwave = np.take(t['x_0'], ion_ind)
-        ion_cwave_min = np.take(t['x_0_min'], ion_ind)
-        ion_cwave_max = np.take(t['x_0_max'], ion_ind)
-        ion_cwave_limits = [(i, j)
-                            for i, j in zip(ion_cwave_min, ion_cwave_max)]
-        ion_fwhm = np.take(t['fwhm'], ion_ind)
-        ion_fwhm_min = np.take(t['fwhm_min'], ion_ind)
-        ion_fwhm_max = np.take(t['fwhm_max'], ion_ind)
-        ion_fwhm_limits = [(i, j) for i, j in zip(ion_fwhm_min, ion_fwhm_max)]
-        ion_names = np.take(t['Name'], ion_ind)
+        h2_info = {'names': np.array(t['Name'][h2_ind].data),
+                   'x_0': np.array(t['x_0'][h2_ind].data),
+                   'x_0_limits': _ingest_limits(t['x_0_min'][h2_ind].data,
+                                                t['x_0_max'][h2_ind].data),
+                   'x_0_fixed': _ingest_fixed(t['x_0_fixed'][h2_ind].data),
+                   'amps': np.array(t['amp'][h2_ind].data),
+                   'amps_limits': _ingest_limits(t['amp_min'][h2_ind].data,
+                                                 t['amp_max'][h2_ind].data),
+                   'amps_fixed': _ingest_fixed(t['amp_fixed'][h2_ind].data),
+                   'fwhms': np.array(t['fwhm'][h2_ind].data),
+                   'fwhms_limits': _ingest_limits(t['fwhm_min'][h2_ind].data,
+                                                  t['fwhm_max'][h2_ind].data),
+                   'fwhms_fixed': _ingest_fixed(t['fwhm_fixed'][h2_ind].data)}
 
         # Creating the ion dict
-        ion_features = {'amps': ion_amps,
-                        'x_0': ion_cwave,
-                        'fwhms': ion_fwhm,
-                        'amps_limits': ion_amps_limits,
-                        'x_0_limits': ion_cwave_limits,
-                        'fwhms_limits': ion_fwhm_limits,
-                        'names': ion_names}
+        ion_info = {'names': np.array(t['Name'][ion_ind].data),
+                    'x_0': np.array(t['x_0'][ion_ind].data),
+                    'x_0_limits': _ingest_limits(t['x_0_min'][ion_ind].data,
+                                                 t['x_0_max'][ion_ind].data),
+                    'x_0_fixed': _ingest_fixed(t['x_0_fixed'][ion_ind].data),
+                    'amps': np.array(t['amp'][ion_ind].data),
+                    'amps_limits': _ingest_limits(t['amp_min'][ion_ind].data,
+                                                  t['amp_max'][ion_ind].data),
+                    'amps_fixed': _ingest_fixed(t['amp_fixed'][ion_ind].data),
+                    'fwhms': np.array(t['fwhm'][ion_ind].data),
+                    'fwhms_limits': _ingest_limits(
+                        t['fwhm_min'][ion_ind].data,
+                        t['fwhm_max'][ion_ind].data),
+                    'fwhms_fixed': _ingest_fixed(
+                        t['fwhm_fixed'][ion_ind].data)}
 
         # Create the attenuation dict
-        TBD
+        att_info = {'names': np.array(t['Name'][at_ind].data),
+                    'amps': np.array(t['amp'][at_ind].data),
+                    'amps_limits': _ingest_limits(t['amp_min'][at_ind].data,
+                                                  t['amp_max'][at_ind].data),
+                    'amps_fixed': _ingest_fixed(t['amp_fixed'][at_ind].data)}
 
         # Create output tuple
-        readout = (bb_info, dust_features, h2_features, ion_features, at_ind)
+        readout = (bb_info, df_info, h2_info, ion_info, att_info)
 
         return readout
