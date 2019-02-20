@@ -58,7 +58,6 @@ if __name__ == "__main__":
         'pahfit',
         'packs/scipack_ExGal_SpitzerIRSSLLL.ipac')
     pmodel = PAHFITBase(filename=packfilename)
-    print(packfilename)
 
     # read in the PAHFIT results
     pmodel = PAHFITBase(filename=args.filename)

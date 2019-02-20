@@ -10,7 +10,6 @@ from astropy.io import fits
 from astropy.modeling.fitting import LevMarLSQFitter
 
 from pahfit.base import PAHFITBase
-from pahfit.PAHFIT_Spitzer_Exgal import (InstPackSpitzerIRSSLLL, SciPackExGal)
 
 
 def initialize_parser():
@@ -30,14 +29,13 @@ def initialize_parser():
                         default='pdf', choices=plottypes,
                         help='Save figure to a file of specified type \
                             Must be one \
-                            of: "{}"'.format('", "'.join(plottypes))
-                        )
+                            of: "{}"'.format('", "'.join(plottypes)))
     parser.add_argument('-o', '--saveoutput', action='store',
                         default='ipac', choices=savetypes,
                         help='Save fit results to a file of specified type \
                             Must be one \
-                            of: "{}"'.format('", "'.join(savetypes))
-                        )
+                            of: "{}"'.format('", "'.join(savetypes)))
+
     return parser
 
 
@@ -46,25 +44,8 @@ if __name__ == '__main__':
     parser = initialize_parser()
     args = parser.parse_args()
 
-    # would be good to use argparse to allow for command line input
-    # of the observed spectra.  Need to standardize the expected format
-    # to allow this.
-
-    # instrument pack
-    spitzer_sl_ll_pack = InstPackSpitzerIRSSLLL()
-
-    # science pack
-    sci_pack = SciPackExGal(spitzer_sl_ll_pack)
-
-    param_info = (sci_pack.bb_info, sci_pack.dust_features,
-                  sci_pack.h2_features, sci_pack.ion_features,
-                  sci_pack.att_info)
-
-    opmodel = PAHFITBase(param_info=param_info)
-    opmodel.save(opmodel.model, 'Pack_ExGal_SpitzerIRSSLLL', args.saveoutput)
-
-    # pmodel = PAHFITBase(filename=args.packfile)
-    pmodel = opmodel
+    # read in the pack file
+    pmodel = PAHFITBase(filename=args.packfile)
 
     # pick the fitter
     fit = LevMarLSQFitter()
