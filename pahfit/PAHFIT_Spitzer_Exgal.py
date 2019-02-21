@@ -14,7 +14,7 @@ class InstPackSpitzerIRSSLLL():
     def __init__(self):
         # what telescope/instrument/modes are covered by this pack
         self.telescope = 'Spitzer'
-        self.instrumet = 'IRS'
+        self.instrument = 'IRS'
         self.modes = ['SL', 'LL']
 
     @staticmethod
