@@ -47,7 +47,7 @@ def _ingest_limits(min_vals, max_vals):
 def _ingest_fixed(fixed_vals):
     """
     Ingest the fixed value read from a file and generate the appropriate
-    internal format (list of booleans).  Needed as booleans are
+    internal format (list of booleans).  Needed as booleans but
     represented in files as True/False strings.
 
     Parameters
@@ -77,8 +77,8 @@ class PAHFITBase():
     wavelength range, instrument, and type of astronomical objects.
 
     For example, the original IDL version of PAHFIT was valid for
-    Spitzer/IRS spectra (5-38 micron) and observations of parts or all of
-    external galaxies.
+    Spitzer/IRS SL/LL spectra (5-38 micron) and observations of parts or all
+    of external galaxies.
 
     Mainly sets up the astropy.modeling compound model
     that includes all the different components including
@@ -112,12 +112,6 @@ class PAHFITBase():
         """
         Setup a variant based on inputs.  Generates an astropy.modeling
         compound model.
-
-        Notes
-        -----
-        Would be great to rename the parameters such that they uniquely
-        identify the component (dust, gas, specific line, etc.).  This is
-        possible - say a discussion on the stsci slack channel - James Davies?
         """
         # check that param_info or filename is set
         if filename is None and param_info is None:

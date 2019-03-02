@@ -2,7 +2,7 @@
 PAHFIT
 ######
 
-``pahfit`` is a python package to is a decomposition model and tool
+``pahfit`` is a python package providing a decomposition model
 for astronomical infrared spectra, focusing on dust and gas emission
 features from the interstellar medium.
 

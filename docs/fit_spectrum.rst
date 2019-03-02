@@ -45,8 +45,8 @@ Example Output
 
 The best fit model as well as the constraints for each PAHFIT model component
 are saved in the output file.  For the example above, the output file in IPAC
-table format is below.  A value of 'null' means that parameter not used
-by that component and a value of 'nan' means that there is no constraint
+table format is below.  A value of `null` means that parameter not used
+by that component and a value of `nan` means that there is no constraint
 for that specified type of constraint.
 
 .. note:: Note that the output format is identical to the
