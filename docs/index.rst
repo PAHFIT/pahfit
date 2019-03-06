@@ -2,7 +2,7 @@
 PAHFIT
 ######
 
-``pahfit`` is a python package to is a decomposition model and tool
+``pahfit`` is a python package providing a decomposition model
 for astronomical infrared spectra, focusing on dust and gas emission
 features from the interstellar medium.
 
@@ -30,6 +30,7 @@ User Documentation
 
    Background <background.rst>
    Fitting a spectrum <fit_spectrum.rst>
+   Plotting a fit <plot_result.rst>
 
 Installation
 ============
@@ -89,7 +90,7 @@ Reference API
 
 Base class for PAHFIT
 
-.. automodapi:: pahfit.PAHFITBase
+.. automodapi:: pahfit.base
 
 Component models not provided by astropy.models.
 

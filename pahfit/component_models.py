@@ -13,7 +13,7 @@ __all__ = ['BlackBody1D', 'Drude1D', 'S07_attenuation']
 class BlackBody1D(Fittable1DModel):
     """
     Current astropy BlackBody1D does not play well with Lorentz1D and Gauss1D
-    maybe...need to check again...possibly a units issue
+    maybe, need to check again, possibly a units issue
     """
     inputs = ('x',)
     outputs = ('y',)
@@ -148,8 +148,8 @@ class S07_attenuation(Fittable1DModel):
     outputs = ('y',)
 
     # Attenuation tau
-    tau_si = Parameter(description="kvt term: amplitude",
-                       default=1.0, min=0.0, max=10)
+    tau_sil = Parameter(description="kvt term: amplitude",
+                        default=1.0, min=0.0, max=10)
 
     @staticmethod
     def kvt(in_x):

@@ -119,6 +119,16 @@ matrix:
         - os: linux
           env: MAIN_CMD='flake8 pahfit --count --show-source --statistics $FLAKE8_OPT' SETUP_CMD=''
 
+        # Try numpy pre-release
+        - os: linux
+          env: NUMPY_VERSION=prerelease
+               EVENT_TYPE='pull_request push cron'
+
+        # Try the astropy pre-release
+        - os: linux
+          env: ASTROPY_VERSION=development
+               EVENT_TYPE='pull_request push cron'
+
 install:
 
     # We now use the ci-helpers package to set up our testing environment.
