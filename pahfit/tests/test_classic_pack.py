@@ -23,7 +23,7 @@ def test_classic_pack():
     # read in the file and get the param_info
     nparam_info = pmodel.read(packfilename, tformat='ipac')
 
-    # check check the different dictonaries are equivalent
+    # check the different dictonaries are equivalent
     for k in range(len(oparam_info)):
         for ckey in oparam_info[k].keys():
             if isinstance(oparam_info[k][ckey][0], tuple):

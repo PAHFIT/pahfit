@@ -19,7 +19,7 @@ def _ingest_limits(min_vals, max_vals):
 
     Limits that are not set are designated as 'nan' in files and
     these are changed to the python None to be compatible with
-    the astropy.modeling conventation.
+    the astropy.modeling convention.
 
     Parameters
     ----------

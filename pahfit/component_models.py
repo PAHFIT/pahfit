@@ -13,7 +13,7 @@ __all__ = ['BlackBody1D', 'Drude1D', 'S07_attenuation']
 class BlackBody1D(Fittable1DModel):
     """
     Current astropy BlackBody1D does not play well with Lorentz1D and Gauss1D
-    maybe...need to check again...possibly a units issue
+    maybe, need to check again, possibly a units issue
     """
     inputs = ('x',)
     outputs = ('y',)
