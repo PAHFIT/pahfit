@@ -367,7 +367,7 @@ class PAHFITBase():
         """
         # get the table format
         if tformat is None:
-            tformat = filename.split('.')[1]
+            tformat = filename.split('.')[-1]
 
         # Reading the input file as table
         t = Table.read(filename, format=tformat)
