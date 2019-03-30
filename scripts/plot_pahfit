@@ -54,7 +54,9 @@ if __name__ == "__main__":
                 'Input spectrumfile {} not found'.format(specfile))
 
     # get the table format (from extension of filename)
-    tformat = specfile.split('.')[1]
+    tformat = specfile.split('.')[-1]
+    if tformat == 'ecsv':
+        tformat = 'ascii.ecsv'
     obs_spectrum = Table.read(specfile, format=tformat)
     obs_x = obs_spectrum['wavelength'].to(u.micron,
                                           equivalencies=u.spectral())
