@@ -1,7 +1,6 @@
 from astropy.modeling.functional_models import Gaussian1D
-
-from pahfit.component_models import (BlackBody1D, Drude1D,
-                                     S07_attenuation)
+from astropy.modeling.physical_models import BlackBody, Drude1D
+from pahfit.component_models import (S07_attenuation)
 
 from astropy.table import Table, vstack
 
@@ -132,7 +131,7 @@ class PAHFITBase():
         self.bb_info = bb_info
         if bb_info is not None:
             # 1st component defines the overall model variable
-            self.model = BlackBody1D(
+            self.model = BlackBody(
                 name=bb_info['names'][0],
                 temperature=bb_info['temps'][0],
                 amplitude=bb_info['amps'][0],
@@ -141,7 +140,7 @@ class PAHFITBase():
                 fixed={'temperature': bb_info['temps_fixed'][0],
                        'amplitude': bb_info['amps_fixed'][0]})
             for k in range(1, len(bb_info['names'])):
-                self.model += BlackBody1D(
+                self.model += BlackBody(
                     name=bb_info['names'][k],
                     temperature=bb_info['temps'][k],
                     amplitude=bb_info['amps'][k],
@@ -163,7 +162,7 @@ class PAHFITBase():
                             'fwhm': dust_features['fwhms_limits'][k]},
                     fixed={'amplitude': dust_features['amps_fixed'][k],
                            'x_0': dust_features['x_0_fixed'][k],
-                           'stddev': dust_features['fwhms_fixed'][k]})
+                           'fwhm': dust_features['fwhms_fixed'][k]})
 
         self.h2_features = h2_features
         if h2_features is not None:
@@ -234,7 +233,7 @@ class PAHFITBase():
         # create the continum compound model (base for plotting lines)
         cont_components = []
         for cmodel in model:
-            if isinstance(cmodel, BlackBody1D):
+            if isinstance(cmodel, BlackBody):
                 cont_components.append(cmodel)
                 # plot as we go
                 ax.plot(x, cmodel(x)*ext_model/x, 'r-')
@@ -295,7 +294,7 @@ class PAHFITBase():
         for component in obs_fit:
             comp_type = (component.__class__.__name__)
 
-            if comp_type == 'BlackBody1D':
+            if comp_type == 'BlackBody':
                 bb_table.add_row([component.name, comp_type,
                                   component.temperature.value,
                                   component.temperature.bounds[0],
@@ -373,7 +372,7 @@ class PAHFITBase():
         t = Table.read(filename, format=tformat)
 
         # Getting indices for the different components
-        bb_ind = np.concatenate(np.argwhere(t['Form'] == 'BlackBody1D'))
+        bb_ind = np.concatenate(np.argwhere(t['Form'] == 'BlackBody'))
         df_ind = np.concatenate(np.argwhere(t['Form'] == 'Drude1D'))
         ga_ind = np.concatenate(np.argwhere(t['Form'] == 'Gaussian1D'))
         at_ind = np.concatenate(np.argwhere(t['Form'] == 'S07_attenuation'))
