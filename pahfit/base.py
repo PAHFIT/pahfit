@@ -1,9 +1,9 @@
 from astropy.modeling.functional_models import Gaussian1D
 
-from pahfit.component_models import (BlackBody1D, Drude1D,
-                                     S07_attenuation)
+from pahfit.component_models import (BlackBody1D, S07_attenuation)
 
 from astropy.table import Table, vstack
+from astropy.modeling.physical_models import Drude1D
 
 import numpy as np
 
@@ -163,7 +163,7 @@ class PAHFITBase():
                             'fwhm': dust_features['fwhms_limits'][k]},
                     fixed={'amplitude': dust_features['amps_fixed'][k],
                            'x_0': dust_features['x_0_fixed'][k],
-                           'stddev': dust_features['fwhms_fixed'][k]})
+                           'fwhm': dust_features['fwhms_fixed'][k]})
 
         self.h2_features = h2_features
         if h2_features is not None:

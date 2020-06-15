@@ -2,12 +2,12 @@ from collections import OrderedDict
 
 import numpy as np
 from scipy import interpolate
-
+from astropy.modeling.physical_models import Drude1D
 from astropy.modeling import Fittable1DModel
 from astropy.modeling import Parameter
 
 
-__all__ = ['BlackBody1D', 'Drude1D', 'S07_attenuation']
+__all__ = ['BlackBody1D', 'S07_attenuation']
 
 
 class BlackBody1D(Fittable1DModel):
@@ -27,103 +27,6 @@ class BlackBody1D(Fittable1DModel):
         """
         return (amplitude*((9.7/x)**2)*3.97289e13/x**3
                 / (np.exp(1.4387752e4/x/temperature)-1.))
-
-
-class Drude1D(Fittable1DModel):
-    """
-    One dimensional Drude model.
-
-    Parameters
-    ----------
-    amplitude : float
-        Peak value
-    x_0 : float
-        Position of the peak
-    fwhm : float
-        Full width at half maximum
-
-    Examples
-    --------
-
-    .. plot::
-        :include-source:
-
-        import numpy as np
-        import matplotlib.pyplot as plt
-
-        from pahfit.component_models import Drude1D
-
-        fig, ax = plt.subplots()
-
-        # generate the curves and plot them
-        x = np.arange(7.5 , 12.5 , 0.1)
-
-        dmodel = Drude1D(amplitude=1.0, fwhm=0.5, x_0=10.0)
-        ax.plot(x, dmodel(x))
-
-        ax.set_xlabel(r'$x$ [$\mu m$]')
-        ax.set_ylabel(r'$Intensity$')
-
-        ax.legend(loc='best')
-        plt.show()
-    """
-
-    amplitude = Parameter(default=1.)
-    x_0 = Parameter(default=10.)
-    fwhm = Parameter(default=1.)
-
-    @staticmethod
-    def evaluate(x, amplitude, x_0, fwhm):
-        """
-        One dimensional Drude model function
-        """
-
-        return (amplitude * ((fwhm / x_0) ** 2) / ((x/x_0 - x_0/x) ** 2 +
-                                                   (fwhm / x_0) ** 2))
-
-    # @staticmethod
-    # def fit_deriv(x, amplitude, x_0, fwhm):
-        # """
-        # One dimensional Lorentzian model derivative with respect
-        # to parameters
-        # """
-
-        # d_amplitude = (fwhm/x_0) ** 2 / ((x/x_0 - x_0/x) ** 2 +
-        #                                  (fwhm / x_0) ** 2)
-        # need updating below (d_amplitude already updated)
-        # d_x_0 = (amplitude * d_amplitude * (2 * x - 2 * x_0) /
-        #         (fwhm ** 2 + (x - x_0) ** 2))
-        # d_fwhm = 2 * amplitude * d_amplitude / fwhm * (1 - d_amplitude)
-        # return [d_amplitude, d_x_0, d_fwhm]
-
-    def bounding_box(self, factor=25):
-        """Tuple defining the default ``bounding_box`` limits,
-        ``(x_low, x_high)``.
-        Parameters
-        ----------
-        factor : float
-            The multiple of FWHM used to define the limits.
-            Default is chosen to include most (99%) of the
-            area under the curve, while still showing the
-            central feature of interest.
-        """
-        x0 = self.x_0
-        dx = factor * self.fwhm
-
-        return (x0 - dx, x0 + dx)
-
-    @property
-    def input_units(self):
-        if self.x_0.unit is None:
-            return None
-        else:
-            return {'x': self.x_0.unit}
-
-    def _parameter_units_for_data_units(self, inputs_unit, outputs_unit):
-        return OrderedDict([('x_0', inputs_unit['x']),
-                            ('fwhm', inputs_unit['x']),
-                            ('amplitude', outputs_unit['y'])])
-
 
 class S07_attenuation(Fittable1DModel):
     """
