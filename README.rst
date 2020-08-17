@@ -114,7 +114,7 @@ the errors and assumptions that seasoned contributors have glossed over.
 pahfit based on its use in the README file for the
 `MetPy project <https://github.com/Unidata/MetPy>`_.*
 
-.. _AstroPy: http://www.astropy.org/
-.. _contributing: http://docs.astropy.org/en/stable/index.html#contributing
-.. _developer: http://docs.astropy.org/en/stable/index.html#developer-documentation
-.. _Astropy Code of Conduct:  http://www.astropy.org/about.html#codeofconduct
+.. _AstroPy: https://www.astropy.org/
+.. _contributing: https://docs.astropy.org/en/stable/index.html#contributing
+.. _developer: https://docs.astropy.org/en/stable/index.html#developer-documentation
+.. _Astropy Code of Conduct:  https://www.astropy.org/about.html#codeofconduct
