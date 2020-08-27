@@ -76,19 +76,17 @@ class S07_attenuation(Fittable1DModel):
         # we scale it to stitch it.
         kvt_int_short = kvt_int_short_tmp * (kvt_int[0] / max(kvt_int_short_tmp))
 
-        # Extend kvt profile to longer wavelengths
-        kvt_wav_long = in_x[in_x > max(kvt_wav)]
-        # Need to input the value instead of using zeros
-        kvt_int_long = np.zeros(len(kvt_wav_long))
-
-        spline_x = np.concatenate([kvt_wav_short, kvt_wav, kvt_wav_long])
-        spline_y = np.concatenate([kvt_int_short, kvt_int, kvt_int_long])
+        spline_x = np.concatenate([kvt_wav_short, kvt_wav])
+        spline_y = np.concatenate([kvt_int_short, kvt_int])
 
         spline_rep = interpolate.splrep(spline_x, spline_y)
-        new_spline_y = interpolate.splev(in_x, spline_rep, der=0)
+        in_x_spline = in_x[in_x < max(kvt_wav)]
+        new_spline_y = interpolate.splev(in_x_spline, spline_rep, der=0)
 
         nf = Drude1D(amplitude=0.4, x_0=18.0, fwhm=0.247 * 18.0)
-        ext = nf(in_x) + new_spline_y
+        in_x_drude = in_x[in_x >= max(kvt_wav)]
+
+        ext = np.concatenate([new_spline_y, nf(in_x_drude)])
 
         # Extend to ~2 um
         # assuing beta is 0.1
