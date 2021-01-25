@@ -105,7 +105,7 @@ class PAHFITBase:
         x_0, x_0_limits, x_0_fixed, fwhms, fwhms_limits, fwhm_fixed}.
     """
 
-    def __init__(self, param_info=None, filename=None, tformat=None):
+    def __init__(self, obs_x, obs_y, param_info=None, filename=None, tformat=None):
         """
         Setup a variant based on inputs.  Generates an astropy.modeling
         compound model.
