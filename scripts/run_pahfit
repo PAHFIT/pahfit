@@ -94,7 +94,7 @@ if __name__ == '__main__':
 
     # fit
     obs_fit = fit(pmodel.model, obs_x, obs_y, weights=weights,
-                  maxiter=400)
+                  maxiter=1000)
     print(fit.fit_info['message'])
 
     # save results to fits file
