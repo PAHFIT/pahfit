@@ -5,6 +5,8 @@ from pahfit.component_models import BlackBody1D, S07_attenuation
 from astropy.table import Table, vstack
 from astropy.modeling.physical_models import Drude1D
 
+from scipy import interpolate
+
 import numpy as np
 
 __all__ = ["PAHFITBase"]
@@ -105,7 +107,7 @@ class PAHFITBase:
         x_0, x_0_limits, x_0_fixed, fwhms, fwhms_limits, fwhm_fixed}.
     """
 
-    def __init__(self, param_info=None, filename=None, tformat=None):
+    def __init__(self, obs_x, obs_y, param_info=None, filename=None, tformat=None):
         """
         Setup a variant based on inputs.  Generates an astropy.modeling
         compound model.
@@ -120,6 +122,9 @@ class PAHFITBase:
         # read in the parameter info from a file
         if filename is not None:
             param_info = self.read(filename, tformat=tformat)
+
+        # guess values and update starting point (if not set fixed) based on the input spectrum
+        param_info = self.starting_point(obs_x, obs_y, param_info)
 
         bb_info = param_info[0]
         dust_features = param_info[1]
@@ -564,3 +569,69 @@ class PAHFITBase:
         readout = (bb_info, df_info, h2_info, ion_info, att_info)
 
         return readout
+
+    def starting_point(self, obs_x, obs_y, param_info):
+        """
+        return updated starting point in param_info based on the input spectrum
+        """
+
+        # guess starting point of bb
+        sp = interpolate.splrep(obs_x, obs_y)
+        for i, (fix, temp) in enumerate(zip(param_info[0]['amps_fixed'], param_info[0]['temps'])):
+
+            if (fix == False) & (i == 0):  # BB0 - stellar comoponent measured at 5.5 um
+                bb = BlackBody1D(1, temp)
+                if min(obs_x) < 5:
+                    lam = min(obs_x) + 0.1  # the wavelength used to compare
+                    y_lam = interpolate.splev(lam, sp)
+                    amp_guess = y_lam / bb(lam)
+                else:  # if min(obs_x) > 5, use 5.5 um
+                    y_lam = interpolate.splev(5.5, sp)
+                    amp_guess = y_lam / bb(5.5)
+
+            elif fix == False:
+                fmax_lam = 2898. / temp
+                bb = BlackBody1D(1, temp)
+                if (fmax_lam >= min(obs_x)) & (fmax_lam <= max(obs_x)):
+                    lam = fmax_lam
+                    y_lam = interpolate.splev(lam, sp)
+                    amp_guess = y_lam / bb(lam) * 0.2
+                elif (fmax_lam > max(obs_x)):
+                    lam = max(obs_x)
+                    amp_guess = obs_y[np.argmax(obs_x)] / bb(lam) * 0.2
+                else:
+                    lam = min(obs_x)
+                    amp_guess = obs_y[np.argmin(obs_x)] / bb(lam) * 0.2
+            else:
+                pass
+
+            param_info[0]['amps'][i] = amp_guess
+
+        # guess starting point of dust features and lines
+        # set to 1/5th of the median (non-negative) intensity of the entire input spectrum
+
+        # dust
+        for i, fix in enumerate(param_info[1]['amps_fixed']):
+
+            if fix == False:
+                amp_guess = 0.2 * np.median(obs_y)
+
+            param_info[1]['amps'][i] = amp_guess
+
+        # h2
+        for i, fix in enumerate(param_info[2]['amps_fixed']):
+
+            if fix == False:
+                amp_guess = 0.2 * np.median(obs_y)
+
+            param_info[2]['amps'][i] = amp_guess
+
+        # ion
+        for i, fix in enumerate(param_info[3]['amps_fixed']):
+
+            if fix == False:
+                amp_guess = 0.2 * np.median(obs_y)
+
+            param_info[3]['amps'][i] = amp_guess
+
+        return param_info
