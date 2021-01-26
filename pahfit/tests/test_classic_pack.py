@@ -19,7 +19,7 @@ def test_classic_pack():
     # now read in the equivalent info from a file
     path = pkg_resources.resource_filename('pahfit', 'packs/')
     packfilename = '{}/scipack_ExGal_SpitzerIRSSLLL.ipac'.format(path)
-    pmodel = PAHFITBase(filename=packfilename, tformat='ipac')
+    pmodel = PAHFITBase(obs_x, obs_y, filename=packfilename, tformat='ipac')
     # read in the file and get the param_info
     nparam_info = pmodel.read(packfilename, tformat='ipac')
 
