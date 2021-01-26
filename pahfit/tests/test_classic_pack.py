@@ -2,6 +2,7 @@ import numpy as np
 
 import pkg_resources
 import astropy.units as u
+from astropy.table import Table
 
 from pahfit.PAHFIT_Spitzer_Exgal import (InstPackSpitzerIRSSLLL, SciPackExGal)
 from pahfit.base import PAHFITBase
