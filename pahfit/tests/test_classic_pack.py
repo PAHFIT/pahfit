@@ -1,6 +1,7 @@
 import numpy as np
 
 import pkg_resources
+import astropy.units as u
 
 from pahfit.PAHFIT_Spitzer_Exgal import (InstPackSpitzerIRSSLLL, SciPackExGal)
 from pahfit.base import PAHFITBase
@@ -17,8 +18,19 @@ def test_classic_pack():
                    sci_pack.att_info)
 
     # now read in the equivalent info from a file
-    path = pkg_resources.resource_filename('pahfit', 'packs/')
-    packfilename = '{}/scipack_ExGal_SpitzerIRSSLLL.ipac'.format(path)
+    path_packs = pkg_resources.resource_filename('pahfit', 'packs/')
+    packfilename = '{}/scipack_ExGal_SpitzerIRSSLLL.ipac'.format(path_packs)
+    path_data = pkg_resources.resource_filename('pahfit', 'data/')
+    datafilename = '{}/M101_Nucleus_irs.ipac'.format(path_data)
+
+    obs_spectrum = Table.read(datafilename, format='ipac')
+    obs_x = obs_spectrum['wavelength'].to(u.micron,
+                                          equivalencies=u.spectral())
+    obs_y = obs_spectrum['flux'].to(u.Jy,
+                                    equivalencies=u.spectral_density(obs_x))
+    obs_x = obs_x.value
+    obs_y = obs_y.value
+
     pmodel = PAHFITBase(obs_x, obs_y, filename=packfilename, tformat='ipac')
     # read in the file and get the param_info
     nparam_info = pmodel.read(packfilename, tformat='ipac')
