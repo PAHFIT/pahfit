@@ -579,7 +579,7 @@ class PAHFITBase:
         sp = interpolate.splrep(obs_x, obs_y)
         for i, (fix, temp) in enumerate(zip(param_info[0]['amps_fixed'], param_info[0]['temps'])):
 
-            if (fix == False) & (i == 0):  # BB0 - stellar comoponent measured at 5.5 um
+            if (fix is False) & (i == 0):  # BB0 - stellar comoponent measured at 5.5 um
                 bb = BlackBody1D(1, temp)
                 if min(obs_x) < 5:
                     lam = min(obs_x) + 0.1  # the wavelength used to compare
@@ -589,7 +589,7 @@ class PAHFITBase:
                     y_lam = interpolate.splev(5.5, sp)
                     amp_guess = y_lam / bb(5.5)
 
-            elif fix == False:
+            elif fix is False:
                 fmax_lam = 2898. / temp
                 bb = BlackBody1D(1, temp)
                 if (fmax_lam >= min(obs_x)) & (fmax_lam <= max(obs_x)):
@@ -613,7 +613,7 @@ class PAHFITBase:
         # dust
         for i, fix in enumerate(param_info[1]['amps_fixed']):
 
-            if fix == False:
+            if fix is False:
                 amp_guess = 0.2 * np.median(obs_y)
 
             param_info[1]['amps'][i] = amp_guess
@@ -621,7 +621,7 @@ class PAHFITBase:
         # h2
         for i, fix in enumerate(param_info[2]['amps_fixed']):
 
-            if fix == False:
+            if fix is False:
                 amp_guess = 0.2 * np.median(obs_y)
 
             param_info[2]['amps'][i] = amp_guess
@@ -629,7 +629,7 @@ class PAHFITBase:
         # ion
         for i, fix in enumerate(param_info[3]['amps_fixed']):
 
-            if fix == False:
+            if fix is False:
                 amp_guess = 0.2 * np.median(obs_y)
 
             param_info[3]['amps'][i] = amp_guess
