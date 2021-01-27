@@ -29,10 +29,8 @@ def test_classic_pack():
                                           equivalencies=u.spectral())
     obs_y = obs_spectrum['flux'].to(u.Jy,
                                     equivalencies=u.spectral_density(obs_x))
-    obs_x = obs_x.value
-    obs_y = obs_y.value
 
-    pmodel = PAHFITBase(obs_x, obs_y, filename=packfilename, tformat='ipac')
+    pmodel = PAHFITBase(obs_x.value, obs_y.value, filename=packfilename, tformat='ipac')
     # read in the file and get the param_info
     nparam_info = pmodel.read(packfilename, tformat='ipac')
 

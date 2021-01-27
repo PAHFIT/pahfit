@@ -89,6 +89,9 @@ class PAHFITBase:
 
     Parameters
     ----------
+    obs_x and obs_y: np.array
+        the input spectrum
+
     filename: string
         filename giving the pack that contains all the
         info described for param_info
@@ -124,7 +127,7 @@ class PAHFITBase:
             param_info = self.read(filename, tformat=tformat)
 
         # guess values and update starting point (if not set fixed) based on the input spectrum
-        param_info = self.starting_point(obs_x, obs_y, param_info)
+        param_info = self.guess(obs_x, obs_y, param_info)
 
         bb_info = param_info[0]
         dust_features = param_info[1]
@@ -570,16 +573,25 @@ class PAHFITBase:
 
         return readout
 
-    def starting_point(self, obs_x, obs_y, param_info):
+    @staticmethod
+    def guess(obs_x, obs_y, param_info):
         """
-        return updated starting point in param_info based on the input spectrum
+        Guess and return updated starting point in param_info based on the input spectrum.
+
+        Parameters
+        ----------
+        obs_x and obs_y: np.array
+            input spectrum
+
+        param_info: tuple of dics
+            The dictonaries contain info for each type of component.
         """
 
         # guess starting point of bb
         sp = interpolate.splrep(obs_x, obs_y)
         for i, (fix, temp) in enumerate(zip(param_info[0]['amps_fixed'], param_info[0]['temps'])):
 
-            if (fix is False) & (i == 0):  # BB0 - stellar comoponent measured at 5.5 um
+            if (fix is False) & (temp >= 2500):  # stellar comoponent is defined by BB that has T>=2500
                 bb = BlackBody1D(1, temp)
                 if min(obs_x) < 5:
                     lam = min(obs_x) + 0.1  # the wavelength used to compare
