@@ -591,7 +591,7 @@ class PAHFITBase:
         sp = interpolate.splrep(obs_x, obs_y)
         for i, (fix, temp) in enumerate(zip(param_info[0]['amps_fixed'], param_info[0]['temps'])):
 
-            if (fix is False) & (temp >= 2500):  # stellar comoponent is defined by BB that has T>=2500
+            if (fix is False) & (temp >= 2500):  # stellar comoponent is defined by BB that has T>=2500 K
                 bb = BlackBody1D(1, temp)
                 if min(obs_x) < 5:
                     lam = min(obs_x) + 0.1  # the wavelength used to compare
