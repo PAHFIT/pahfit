@@ -1,41 +1,46 @@
 PAHFIT
 ======
 
-.. image:: https://readthedocs.org/projects/pahfit/badge/?version=latest
-   :target: http://pahfit.readthedocs.io/en/latest/?badge=latest
-   :alt: Documentation Status
-
-.. image:: https://travis-ci.org/PAHFIT/pahfit.svg?branch=master
-   :target: https://travis-ci.org/PAHFIT/pahfit
-   :alt: CI Testing Status
-
-.. image:: https://ci.appveyor.com/api/projects/status/3wi0ibux1yabc1dj/branch/master?svg=true
-   :target: https://ci.appveyor.com/project/KarlGordon/pahfit/branch/master
-   :alt: Windows CI Testing Status
-
-.. image:: https://coveralls.io/repos/github/PAHFIT/pahfit/badge.svg?branch=master
-	   :target: https://coveralls.io/github/PAHFIT/pahfit?branch=master
-
-.. image:: http://img.shields.io/badge/powered%20by-AstroPy-orange.svg?style=flat
-    :target: http://www.astropy.org
-    :alt: Powered by Astropy Badge
-
-.. image:: https://img.shields.io/lgtm/grade/python/g/PAHFIT/pahfit.svg?logo=lgtm&logoWidth=18
-    :target: https://lgtm.com/projects/g/PAHFIT/pahfit/context:python
-    :alt: Language grade
-
 ``PAHFIT`` is a decomposition model and tool for astronomical infrared spectra, focusing on dust and gas emission features from the interstellar medium (see `Smith, J.D.T., Draine B.T., et al., 2007, ApJ, 656, 770 <http://tir.astro.utoledo.edu/jdsmith/research/pahfit.php>`_).
 
 This package provides an updated python implementation of ``PAHFIT``.  While the original versions of ``PAHFIT`` (``v1.x``) were written in IDL and focused mainly on Spitzer/IRS spectroscopic observations, the newer python-based versions (``>=v2.0``) will expand instrument coverage to other existing (e.g., AKARI) and planned (e.g., JWST) facilities, and will offer a more flexible modeling framework suitable for modeling a wider range of astrophysical sources.
 
 Based on and inspired by the IDL code ``PAHFIT`` by JD Smith and Bruce Draine.
 
-This package is potentially an affiliated package of `AstroPy`_.
+Build checks/status
+-------------------
+
+.. image:: http://readthedocs.org/projects/pahfit/badge/?version=latest
+   :target: http://dust-extinction.readthedocs.io/en/latest/?badge=latest
+   :alt: Documentation Status
+
+.. image:: https://github.com/PAHFIT/pahfit/workflows/Python%20Tests/badge.svg
+   :target: https://github.com/PAHFIT/pahfit/actions/
+   :alt: Test Status
+
+.. image:: https://codecov.io/gh/PAHFIT/pahfit/branch/master/graph/badge.svg
+   :target: https://codecov.io/gh/PAHFIT/pahfit
+   :alt: Test Coverage Status
+
+.. image:: https://img.shields.io/lgtm/grade/python/g/PAHFIT/pahfit.svg?logo=lgtm&logoWidth=18
+   :target: https://lgtm.com/projects/g/PAHFIT/pahfit/context:python
+   :alt: LGTM Status
+
+.. image:: https://app.codacy.com/project/badge/Grade/01a75df3279e45609906c1f28a4ca867
+   :target: https://www.codacy.com/gh/PAHFIT/pahfit?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=PAHFIT/pahfit&amp;utm_campaign=Badge_Grade
+   :alt: Codacy Status
+
+Packaging
+---------
+
+.. image:: http://img.shields.io/badge/powered%20by-AstroPy-orange.svg?style=flat
+    :target: http://www.astropy.org
+    :alt: Powered by Astropy Badge
 
 Documentation
 -------------
 
-Hosted by readthedocs: <http://pypahfit.readthedocs.io/en/latest/>
+Hosted by readthedocs: <http://pahfit.readthedocs.io/en/latest/>
 
 In Development!
 ---------------
@@ -109,7 +114,7 @@ the errors and assumptions that seasoned contributors have glossed over.
 pahfit based on its use in the README file for the
 `MetPy project <https://github.com/Unidata/MetPy>`_.*
 
-.. _AstroPy: http://www.astropy.org/
-.. _contributing: http://docs.astropy.org/en/stable/index.html#contributing
-.. _developer: http://docs.astropy.org/en/stable/index.html#developer-documentation
-.. _Astropy Code of Conduct:  http://www.astropy.org/about.html#codeofconduct
+.. _AstroPy: https://www.astropy.org/
+.. _contributing: https://docs.astropy.org/en/stable/index.html#contributing
+.. _developer: https://docs.astropy.org/en/stable/index.html#developer-documentation
+.. _Astropy Code of Conduct:  https://www.astropy.org/about.html#codeofconduct
