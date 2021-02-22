@@ -1,3 +1,5 @@
+.. _fit_spectrum:
+
 #####################
 How to fit a spectrum
 #####################
@@ -39,6 +41,8 @@ can be seen by:
 .. code-block:: console
 
   $ run_pahfit --help
+
+.. _example_fit_output:
 
 Example Output
 ==============
