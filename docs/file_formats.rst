@@ -23,7 +23,7 @@ amplitude (`amp`).
 The model packs are saved as IPAC tables as these provide readable (ASCII)
 files that include unit information.
 
-See :ref:`How to fit a spectrum <fit_spectrum>` for an example of
+See :ref:`example fit output <example_fit_output>` for an example of
 a model pack/output file.
 
 Fit Outputs

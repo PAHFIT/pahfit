@@ -42,6 +42,8 @@ can be seen by:
 
   $ run_pahfit --help
 
+.. _example_fit_output:
+
 Example Output
 ==============
 
