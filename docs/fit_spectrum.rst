@@ -1,3 +1,5 @@
+.. _fit_spectrum:
+
 #####################
 How to fit a spectrum
 #####################

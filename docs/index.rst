@@ -31,6 +31,7 @@ User Documentation
    Background <background.rst>
    Fitting a spectrum <fit_spectrum.rst>
    Plotting a fit <plot_result.rst>
+   <file_formats.rst>
 
 Installation
 ============
