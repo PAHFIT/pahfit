@@ -126,8 +126,9 @@ class PAHFITBase:
         if filename is not None:
             param_info = self.read(filename, tformat=tformat)
 
-        # guess values and update starting point (if not set fixed) based on the input spectrum
-        param_info = self.guess(obs_x, obs_y, param_info)
+        if not noguess:
+            # guess values and update starting point (if not set fixed) based on the input spectrum
+            param_info = self.guess(obs_x, obs_y, param_info)
 
         bb_info = param_info[0]
         dust_features = param_info[1]
