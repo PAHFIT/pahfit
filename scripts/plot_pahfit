@@ -30,8 +30,6 @@ def initialize_parser():
     parser.add_argument('--savefig', action='store',
                         default=None, choices=plottypes,
                         help='Save figure to a file of specified type')
-    parser.add_argument('--noguess', action='store_true',
-                        help='Bypass guessing of initial values')
 
     return parser
 
@@ -72,13 +70,8 @@ if __name__ == "__main__":
     obs_x = obs_x.value
     obs_y = obs_y.value
 
-    if args.noguess:
-        noguess = args.noguess
-    else:
-        noguess = False
-
     # read in the PAHFIT results
-    pmodel = PAHFITBase(obs_x, obs_y, noguess, filename=args.fitfilename)
+    pmodel = PAHFITBase(obs_x, obs_y, noguess=False, filename=args.fitfilename)
 
     # plot result
     fontsize = 18

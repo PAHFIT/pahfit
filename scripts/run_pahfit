@@ -89,12 +89,7 @@ if __name__ == '__main__':
         else:
             raise ValueError('Input packfile {} not found'.format(packfile))
 
-    if args.noguess:
-        noguess = args.noguess
-    else:
-        noguess = False
-
-    pmodel = PAHFITBase(obs_x, obs_y, noguess, filename=packfile)
+    pmodel = PAHFITBase(obs_x, obs_y, noguess=args.noguess, filename=packfile)
 
     # pick the fitter
     fit = LevMarLSQFitter()
