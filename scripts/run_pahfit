@@ -37,7 +37,9 @@ def initialize_parser():
     parser.add_argument('--saveoutput', action='store',
                         default='ipac', choices=savetypes,
                         help='Save fit results to a file of specified type')
-
+    parser.add_argument('--noguess', action='store_true',
+                        help='Bypass guessing of initial values')
+    
     return parser
 
 
@@ -87,7 +89,12 @@ if __name__ == '__main__':
         else:
             raise ValueError('Input packfile {} not found'.format(packfile))
 
-    pmodel = PAHFITBase(obs_x, obs_y, filename=packfile)
+    if args.noguess:
+        noguess = args.noguess
+    else:
+        noguess = False
+
+    pmodel = PAHFITBase(obs_x, obs_y, filename=packfile, noguess)
 
     # pick the fitter
     fit = LevMarLSQFitter()
