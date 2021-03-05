@@ -94,7 +94,7 @@ if __name__ == '__main__':
     else:
         noguess = False
 
-    pmodel = PAHFITBase(obs_x, obs_y, filename=packfile, noguess)
+    pmodel = PAHFITBase(obs_x, obs_y, noguess, filename=packfile)
 
     # pick the fitter
     fit = LevMarLSQFitter()
