@@ -26,7 +26,7 @@ def initialize_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('spectrumfile',
                         help='name of file with observed spectrum')
-    parser.add_argument('filename', help='name of PAHFIT results file')
+    parser.add_argument('fitfilename', help='name of PAHFIT results file')
     parser.add_argument('--savefig', action='store',
                         default=None, choices=plottypes,
                         help='Save figure to a file of specified type')
@@ -70,7 +70,7 @@ if __name__ == "__main__":
     obs_y = obs_y.value
 
     # read in the PAHFIT results
-    pmodel = PAHFITBase(filename=args.filename)
+    pmodel = PAHFITBase(obs_x, obs_y, filename=args.fitfilename)
 
     # plot result
     fontsize = 18

@@ -587,27 +587,26 @@ class PAHFITBase:
             The dictonaries contain info for each type of component.
         """
 
+        # simple linear interpolation function for spectrum
+        sp = interpolate.interp1d(obs_x, obs_y)
+
         # guess starting point of bb
-        sp = interpolate.splrep(obs_x, obs_y)
         for i, (fix, temp) in enumerate(zip(param_info[0]['amps_fixed'], param_info[0]['temps'])):
 
             if (fix is False) & (temp >= 2500):  # stellar comoponent is defined by BB that has T>=2500 K
                 bb = BlackBody1D(1, temp)
                 if min(obs_x) < 5:
                     lam = min(obs_x) + 0.1  # the wavelength used to compare
-                    y_lam = interpolate.splev(lam, sp)
-                    amp_guess = y_lam / bb(lam)
                 else:  # if min(obs_x) > 5, use 5.5 um
-                    y_lam = interpolate.splev(5.5, sp)
-                    amp_guess = y_lam / bb(5.5)
+                    lam = 5.5
+                amp_guess = sp(lam) / bb(lam)
 
             elif fix is False:
                 fmax_lam = 2898. / temp
                 bb = BlackBody1D(1, temp)
                 if (fmax_lam >= min(obs_x)) & (fmax_lam <= max(obs_x)):
                     lam = fmax_lam
-                    y_lam = interpolate.splev(lam, sp)
-                    amp_guess = y_lam / bb(lam) * 0.2
+                    amp_guess = sp(lam) / bb(lam) * 0.2
                 elif (fmax_lam > max(obs_x)):
                     lam = max(obs_x)
                     amp_guess = obs_y[np.argmax(obs_x)] / bb(lam) * 0.2

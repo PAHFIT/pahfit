@@ -79,9 +79,11 @@ class S07_attenuation(Fittable1DModel):
         spline_x = np.concatenate([kvt_wav_short, kvt_wav])
         spline_y = np.concatenate([kvt_int_short, kvt_int])
 
-        spline_rep = interpolate.splrep(spline_x, spline_y)
+        # spline_rep = interpolate.splrep(spline_x, spline_y)
+        intfunc = interpolate.interp1d(spline_x, spline_y)
         in_x_spline = in_x[in_x < max(kvt_wav)]
-        new_spline_y = interpolate.splev(in_x_spline, spline_rep, der=0)
+        # new_spline_y = interpolate.splev(in_x_spline, spline_rep, der=0)
+        new_spline_y = intfunc(in_x_spline)
 
         nf = Drude1D(amplitude=0.4, x_0=18.0, fwhm=0.247 * 18.0)
         in_x_drude = in_x[in_x >= max(kvt_wav)]
