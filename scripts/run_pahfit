@@ -37,6 +37,8 @@ def initialize_parser():
     parser.add_argument('--saveoutput', action='store',
                         default='ipac', choices=savetypes,
                         help='Save fit results to a file of specified type')
+    parser.add_argument('--estimate_init', action='store', 
+                        default=True, help='Estimate and update starting point based on the input spectrum')
 
     return parser
 
@@ -87,7 +89,7 @@ if __name__ == '__main__':
         else:
             raise ValueError('Input packfile {} not found'.format(packfile))
 
-    pmodel = PAHFITBase(obs_x, obs_y, filename=packfile)
+    pmodel = PAHFITBase(obs_x, obs_y, estimate_init=args.estimate_init, filename=packfile)
 
     # pick the fitter
     fit = LevMarLSQFitter()
