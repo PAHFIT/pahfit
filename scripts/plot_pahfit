@@ -70,7 +70,7 @@ if __name__ == "__main__":
     obs_y = obs_y.value
 
     # read in the PAHFIT results
-    pmodel = PAHFITBase(obs_x, obs_y, estimate_init=False, filename=args.fitfilename)
+    pmodel = PAHFITBase(obs_x, obs_y, noestimate=False, filename=args.fitfilename)
 
     # plot result
     fontsize = 18
