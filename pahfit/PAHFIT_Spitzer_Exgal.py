@@ -166,8 +166,8 @@ class SciPackExGal:
             "x_0_limits": df_cwave_limits,
             "fwhms_limits": df_fwhm_limits,
             "amps_fixed": [False for k in range(n_df)],
-            "x_0_fixed": [False for k in range(n_df)],
-            "fwhms_fixed": [False for k in range(n_df)],
+            "x_0_fixed": [True for k in range(n_df)],
+            "fwhms_fixed": [True for k in range(n_df)],
         }
 
         # define the H2 features
