@@ -128,7 +128,7 @@ class PAHFITBase:
 
         if estimate_init:
             # guess values and update starting point (if not set fixed) based on the input spectrum
-            param_info = self.guess(obs_x, obs_y, param_info)
+            param_info = self.estimate_init(obs_x, obs_y, param_info)
 
         bb_info = param_info[0]
         dust_features = param_info[1]
