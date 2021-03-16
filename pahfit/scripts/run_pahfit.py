@@ -43,7 +43,7 @@ def initialize_parser():
     return parser
 
 
-if __name__ == '__main__':
+def main():
 
     # setup and parse the command line
     parser = initialize_parser()
@@ -126,3 +126,7 @@ if __name__ == '__main__':
         plt.show()
     # save (always)
     fig.savefig('{}.{}'.format(outputname, args.savefig))
+
+
+if __name__ == '__main__':
+    main()
