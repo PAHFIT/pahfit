@@ -62,8 +62,6 @@ def main():
                                           equivalencies=u.spectral())
     obs_y = obs_spectrum['flux'].to(u.Jy,
                                     equivalencies=u.spectral_density(obs_x))
-    obs_unc = obs_spectrum['sigma'].to(u.Jy,
-                                       equivalencies=u.spectral_density(obs_x))
 
     # strip units as the observed spectrum is in the internal units
     obs_x = obs_x.value

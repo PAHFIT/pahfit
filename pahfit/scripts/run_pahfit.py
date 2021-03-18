@@ -37,7 +37,7 @@ def initialize_parser():
     parser.add_argument('--saveoutput', action='store',
                         default='ipac', choices=savetypes,
                         help='Save fit results to a file of specified type')
-    parser.add_argument('--estimate_start', action='store_true', 
+    parser.add_argument('--estimate_start', action='store_true',
                         help='Estimate of starting point based on the input spectrum')
 
     return parser
