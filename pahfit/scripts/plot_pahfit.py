@@ -14,22 +14,37 @@ from pahfit.base import PAHFITBase
 
 
 def initialize_parser():
-    """
-    Command line parser for plot_PAHFIT
+    """Command line parser for plot_pahfit
 
     Returns
     -------
     parser : argparse object
     """
-    plottypes = ['png', 'jpg', 'jpeg', 'pdf', 'ps', 'eps', 'rgba',
-                 'svg', 'tiff', 'tif', 'pgf', 'svgz', 'raw']
+    plottypes = [
+        "png",
+        "jpg",
+        "jpeg",
+        "pdf",
+        "ps",
+        "eps",
+        "rgba",
+        "svg",
+        "tiff",
+        "tif",
+        "pgf",
+        "svgz",
+        "raw",
+    ]
     parser = argparse.ArgumentParser()
-    parser.add_argument('spectrumfile',
-                        help='name of file with observed spectrum')
-    parser.add_argument('fitfilename', help='name of PAHFIT results file')
-    parser.add_argument('--savefig', action='store',
-                        default=None, choices=plottypes,
-                        help='Save figure to a file of specified type')
+    parser.add_argument("spectrumfile", help="name of file with observed spectrum")
+    parser.add_argument("fitfilename", help="name of PAHFIT results file")
+    parser.add_argument(
+        "--savefig",
+        action="store",
+        default=None,
+        choices=plottypes,
+        help="Save figure to a file of specified type",
+    )
     return parser
 
 
@@ -43,25 +58,22 @@ def main():
     # read in the observed spectrum
     # assumed to be astropy table compatibile and include units
     specfile = args.spectrumfile
-    outputname = specfile.split('.')[0]
+    outputname = specfile.split(".")[0]
     if not os.path.isfile(specfile):
-        pack_path = pkg_resources.resource_filename('pahfit', 'data/')
-        test_specfile = '{}/{}'.format(pack_path, specfile)
+        pack_path = pkg_resources.resource_filename("pahfit", "data/")
+        test_specfile = "{}/{}".format(pack_path, specfile)
         if os.path.isfile(test_specfile):
             specfile = test_specfile
         else:
-            raise ValueError(
-                'Input spectrumfile {} not found'.format(specfile))
+            raise ValueError("Input spectrumfile {} not found".format(specfile))
 
     # get the table format (from extension of filename)
-    tformat = specfile.split('.')[-1]
-    if tformat == 'ecsv':
-        tformat = 'ascii.ecsv'
+    tformat = specfile.split(".")[-1]
+    if tformat == "ecsv":
+        tformat = "ascii.ecsv"
     obs_spectrum = Table.read(specfile, format=tformat)
-    obs_x = obs_spectrum['wavelength'].to(u.micron,
-                                          equivalencies=u.spectral())
-    obs_y = obs_spectrum['flux'].to(u.Jy,
-                                    equivalencies=u.spectral_density(obs_x))
+    obs_x = obs_spectrum["wavelength"].to(u.micron, equivalencies=u.spectral())
+    obs_y = obs_spectrum["flux"].to(u.Jy, equivalencies=u.spectral_density(obs_x))
 
     # strip units as the observed spectrum is in the internal units
     obs_x = obs_x.value
@@ -72,26 +84,26 @@ def main():
 
     # plot result
     fontsize = 18
-    font = {'size': fontsize}
-    mpl.rc('font', **font)
-    mpl.rc('lines', linewidth=2)
-    mpl.rc('axes', linewidth=2)
-    mpl.rc('xtick.major', width=2)
-    mpl.rc('ytick.major', width=2)
+    font = {"size": fontsize}
+    mpl.rc("font", **font)
+    mpl.rc("lines", linewidth=2)
+    mpl.rc("axes", linewidth=2)
+    mpl.rc("xtick.major", width=2)
+    mpl.rc("ytick.major", width=2)
 
     fig, ax = plt.subplots(figsize=(15, 10))
 
     pmodel.plot(ax, obs_x, obs_y, pmodel.model)
 
-    ax.set_yscale('linear')
-    ax.set_xscale('log')
+    ax.set_yscale("linear")
+    ax.set_xscale("log")
 
     # use the whitespace better
     fig.tight_layout()
 
     # show or save
     if args.savefig:
-        fig.savefig('{}.{}'.format(outputname, args.savefig))
+        fig.savefig("{}.{}".format(outputname, args.savefig))
     else:
         plt.show()
 
