@@ -15,7 +15,8 @@ from pahfit.base import PAHFITBase
 
 
 def initialize_parser():
-    """Command line parser for run_pahfit
+    """
+    Command line parser for run_pahfit
 
     Returns
     -------
