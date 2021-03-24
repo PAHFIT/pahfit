@@ -601,6 +601,7 @@ class PAHFITBase:
                 else:  # if min(obs_x) > 5, use 5.5 um
                     lam = 5.5
                 amp_guess = sp(lam) / bb(lam)
+                param_info[0]['amps'][i] = amp_guess
 
             elif fix is False:
                 fmax_lam = 2898. / temp
@@ -614,10 +615,9 @@ class PAHFITBase:
                 else:
                     lam = min(obs_x)
                     amp_guess = obs_y[np.argmin(obs_x)] / bb(lam) * 0.2
+                param_info[0]['amps'][i] = amp_guess
             else:
                 pass
-
-            param_info[0]['amps'][i] = amp_guess
 
         # guess starting point of dust features and lines
         # set to half of the median (non-negative) intensity of the entire input spectrum
@@ -627,23 +627,20 @@ class PAHFITBase:
 
             if fix is False:
                 amp_guess = 0.5 * np.median(obs_y)
-
-            param_info[1]['amps'][i] = amp_guess
+                param_info[1]['amps'][i] = amp_guess
 
         # h2
         for i, fix in enumerate(param_info[2]['amps_fixed']):
 
             if fix is False:
                 amp_guess = 0.5 * np.median(obs_y)
-
-            param_info[2]['amps'][i] = amp_guess
+                param_info[2]['amps'][i] = amp_guess
 
         # ion
         for i, fix in enumerate(param_info[3]['amps_fixed']):
 
             if fix is False:
                 amp_guess = 0.5 * np.median(obs_y)
-
-            param_info[3]['amps'][i] = amp_guess
+                param_info[3]['amps'][i] = amp_guess
 
         return param_info
