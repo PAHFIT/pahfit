@@ -627,23 +627,20 @@ class PAHFITBase:
 
             if fix is False:
                 amp_guess = 0.5 * np.median(obs_y)
-
-            param_info[1]['amps'][i] = amp_guess
+                param_info[1]['amps'][i] = amp_guess
 
         # h2
         for i, fix in enumerate(param_info[2]['amps_fixed']):
 
             if fix is False:
                 amp_guess = 0.5 * np.median(obs_y)
-
-            param_info[2]['amps'][i] = amp_guess
+                param_info[2]['amps'][i] = amp_guess
 
         # ion
         for i, fix in enumerate(param_info[3]['amps_fixed']):
 
             if fix is False:
                 amp_guess = 0.5 * np.median(obs_y)
-
-            param_info[3]['amps'][i] = amp_guess
+                param_info[3]['amps'][i] = amp_guess
 
         return param_info
