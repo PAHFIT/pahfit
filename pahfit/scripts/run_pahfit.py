@@ -57,6 +57,12 @@ def initialize_parser():
         action="store_true",
         help="Estimate of starting point based on the input spectrum",
     )
+    parser.add_argument(
+        "--fit_maxiter",
+        default=1000,
+        type=int,
+        help="Maximum number of interations for the fitting",
+    )
 
     return parser
 
@@ -74,7 +80,7 @@ def main():
     pmodel = initialize_model(args.packfile, obsdata, args.estimate_start)
 
     # fit the spectrum
-    obsfit = fit_spectrum(obsdata, pmodel)
+    obsfit = fit_spectrum(obsdata, pmodel, maxiter=args.fit_maxiter)
 
     # save fit results to file
     outputname = args.spectrumfile.split(".")[0]

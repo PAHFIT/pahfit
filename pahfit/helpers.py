@@ -22,7 +22,7 @@ def read_spectrum(specfile):
 
     Returns
     -------
-    obsdata : dict of ndarrays
+    obsdata : dict
         x is wavelength in microns and y/unc are the spectrum/unc in units
         of Jy
     """
@@ -45,18 +45,30 @@ def read_spectrum(specfile):
     obs_spectrum = Table.read(specfile, format=tformat)
     obsdata = {}
     obsdata["x"] = obs_spectrum["wavelength"].to(u.micron, equivalencies=u.spectral())
-    obsdata["y"] = obs_spectrum["flux"].to(u.Jy, equivalencies=u.spectral_density(obsdata["x"]))
-    obsdata["unc"] = obs_spectrum["sigma"].to(u.Jy, equivalencies=u.spectral_density(obsdata["x"]))
+    obsdata["y"] = obs_spectrum["flux"].to(
+        u.Jy, equivalencies=u.spectral_density(obsdata["x"])
+    )
+    obsdata["unc"] = obs_spectrum["sigma"].to(
+        u.Jy, equivalencies=u.spectral_density(obsdata["x"])
+    )
 
     return obsdata
 
 
-def initialize_model(packfile, obsdata, estimate_start):
+def initialize_model(packfile, obsdata, estimate_start=False):
     """
     Initialize a model based on the packfile
 
     Parameters
     ----------
+    packfile : string
+        file with the PAHFIT pack information
+
+    obsdata : dict
+        observed data where x = wavelength, y = SED, and unc = uncertainties
+
+    estimate_start : boolean
+        estimate the starting parameters based on the observed data
 
     Returns
     -------
@@ -74,22 +86,37 @@ def initialize_model(packfile, obsdata, estimate_start):
             raise ValueError("Input packfile {} not found".format(packfile))
 
     pmodel = PAHFITBase(
-        obsdata["x"].value, obsdata["y"].value, estimate_start=estimate_start, filename=packfile
+        obsdata["x"].value,
+        obsdata["y"].value,
+        estimate_start=estimate_start,
+        filename=packfile,
     )
 
     return pmodel
 
 
-def fit_spectrum(obsdata, pmodel):
+def fit_spectrum(obsdata, pmodel, maxiter=1000, verbose=True):
     """
-    Read a spectrum from disk and fit it
+    Fit the observed data using the input PAHFIT model.
 
     Parameters
     ----------
+    obsdata : dict
+        observed data where x = wavelength, y = SED, and unc = uncertainties
+
+    pmodel : PAHFITBase model
+        PAHFIT model
+
+    maxiter : int
+        maximum number of fitting iterations
+
+    verbose : boolean
+        set to provide screen output
 
     Returns
     -------
-    obsfit
+    obsfit : PAHFITBase model
+        PAHFIT model with best fit parameters
     """
 
     # pick the fitter
@@ -101,10 +128,11 @@ def fit_spectrum(obsdata, pmodel):
         obsdata["x"].value,
         obsdata["y"].value,
         weights=1.0 / obsdata["unc"].value,
-        maxiter=200,
+        maxiter=maxiter,
         epsilon=1e-10,
         acc=1e-10,
     )
-    print(fit.fit_info["message"])
+    if verbose:
+        print(fit.fit_info["message"])
 
     return obs_fit
