@@ -1,17 +1,11 @@
 #!/usr/bin/env python
 
-import os
-import pkg_resources
 import argparse
 
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 
-import astropy.units as u
-from astropy.table import Table
-from astropy.modeling.fitting import LevMarLSQFitter
-
-from pahfit.base import PAHFITBase
+from pahfit.helpers import read_spectrum, initialize_model, fit_spectrum
 
 
 def initialize_parser():
@@ -80,63 +74,18 @@ def main():
     parser = initialize_parser()
     args = parser.parse_args()
 
-    # read in the observed spectrum
-    # assumed to be astropy table compatibile and include units
-    specfile = args.spectrumfile
-    outputname = specfile.split(".")[0]
-    if not os.path.isfile(specfile):
-        pack_path = pkg_resources.resource_filename("pahfit", "data/")
-        test_specfile = "{}/{}".format(pack_path, specfile)
-        if os.path.isfile(test_specfile):
-            specfile = test_specfile
-        else:
-            raise ValueError("Input spectrumfile {} not found".format(specfile))
+    # read in the spectrum
+    obsdata = read_spectrum(args.spectrumfile)
 
-    # get the table format (from extension of filename)
-    tformat = specfile.split(".")[-1]
-    if tformat == "ecsv":
-        tformat = "ascii.ecsv"
-    obs_spectrum = Table.read(specfile, format=tformat)
-    obs_x = obs_spectrum["wavelength"].to(u.micron, equivalencies=u.spectral())
-    obs_y = obs_spectrum["flux"].to(u.Jy, equivalencies=u.spectral_density(obs_x))
-    obs_unc = obs_spectrum["sigma"].to(u.Jy, equivalencies=u.spectral_density(obs_x))
+    # setup the model
+    pmodel = initialize_model(args.packfile, obsdata, args.estimate_start)
 
-    # strip units as the observed spectrum is in the internal units
-    obs_x = obs_x.value
-    obs_y = obs_y.value
-    weights = 1.0 / obs_unc.value
+    # fit the spectrum
+    obsfit = fit_spectrum(obsdata, pmodel)
 
-    # read in the pack file
-    packfile = args.packfile
-    if not os.path.isfile(packfile):
-        pack_path = pkg_resources.resource_filename("pahfit", "packs/")
-        test_packfile = "{}/{}".format(pack_path, packfile)
-        if os.path.isfile(test_packfile):
-            packfile = test_packfile
-        else:
-            raise ValueError("Input packfile {} not found".format(packfile))
-
-    pmodel = PAHFITBase(
-        obs_x, obs_y, estimate_start=args.estimate_start, filename=packfile
-    )
-
-    # pick the fitter
-    fit = LevMarLSQFitter()
-
-    # fit
-    obs_fit = fit(
-        pmodel.model,
-        obs_x,
-        obs_y,
-        weights=weights,
-        maxiter=200,
-        epsilon=1e-10,
-        acc=1e-10,
-    )
-    print(fit.fit_info["message"])
-
-    # save results to fits file
-    pmodel.save(obs_fit, outputname, args.saveoutput)
+    # save fit results to file
+    outputname = args.spectrumfile.split(".")[0]
+    pmodel.save(obsfit, outputname, args.saveoutput)
 
     # plot result
     fontsize = 18
@@ -153,7 +102,7 @@ def main():
                             gridspec_kw={'height_ratios': [3, 1]},
                             sharex=True)
 
-    pmodel.plot(axs, obs_x, obs_y, obs_unc.value, obs_fit, scalefac_resid=args.scalefac_resid)
+    pmodel.plot(axs, obsdata["x"], obsdata["y"], obsdata["unc"], obsfit, scalefac_resid=args.scalefac_resid)
 
     # use the whitespace better
     fig.subplots_adjust(hspace=0)
