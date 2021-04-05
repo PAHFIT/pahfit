@@ -98,8 +98,8 @@ def fit_spectrum(obsdata, pmodel):
     # fit
     obs_fit = fit(
         pmodel.model,
-        obsdata["x"],
-        obsdata["y"],
+        obsdata["x"].value,
+        obsdata["y"].value,
         weights=1.0 / obsdata["unc"].value,
         maxiter=200,
         epsilon=1e-10,

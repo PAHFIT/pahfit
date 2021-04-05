@@ -91,7 +91,7 @@ def main():
 
     fig, ax = plt.subplots(figsize=(15, 10))
 
-    pmodel.plot(ax, obsdata["x"], obsdata["y"], obsfit)
+    pmodel.plot(ax, obsdata["x"].value, obsdata["y"].value, obsfit)
 
     ax.set_yscale("linear")
     ax.set_xscale("log")
