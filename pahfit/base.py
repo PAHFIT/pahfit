@@ -262,7 +262,7 @@ class PAHFITBase:
         # spectrum and best fit model
         ax = axs[0]
         ax.minorticks_on()
-        ax.tick_params(which='both', top='on', direction='in')
+        ax.tick_params(which='both', right='on', top='on', direction='in')
         ax.plot(x, model(x) / x, "g-")
         ax.errorbar(x, y / x, yerr=yerr / x, 
                     fmt='o', markeredgecolor='k', markerfacecolor='none', 
