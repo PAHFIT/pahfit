@@ -142,7 +142,7 @@ def main():
 
     fig, axs = plt.subplots(ncols=1, nrows=2, figsize=(15, 10), sharex=True)
 
-    pmodel.plot(axs, obs_x, obs_y, obs_fit)
+    pmodel.plot(axs, obs_x, obs_y, obs_unc, obs_fit)
 
     # use the whitespace better
     fig.tight_layout()
