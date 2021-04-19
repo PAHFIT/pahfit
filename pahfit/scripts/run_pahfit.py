@@ -122,7 +122,7 @@ def main():
         obs_x,
         obs_y,
         weights=weights,
-        maxiter=1000,
+        maxiter=200,
         epsilon=1e-10,
         acc=1e-10,
     )
