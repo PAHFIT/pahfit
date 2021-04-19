@@ -313,8 +313,6 @@ class PAHFITBase:
         ax.set_yscale("linear")
         ax.set_xscale("log")
 
-        fig.subplots_adjust(hspace=0)
-
     def save(self, obs_fit, filename, outform):
         """
         Save the model parameters to a user defined file format.

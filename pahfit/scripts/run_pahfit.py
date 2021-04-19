@@ -146,6 +146,7 @@ def main():
     pmodel.plot(axs, obs_x, obs_y, obs_unc.value, obs_fit)
 
     # use the whitespace better
+    fig.subplots_adjust(hspace=0)
     fig.tight_layout()
 
     # show
