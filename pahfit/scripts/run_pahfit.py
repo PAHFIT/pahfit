@@ -137,10 +137,10 @@ def main():
     mpl.rc("font", **font)
     mpl.rc("lines", linewidth=2)
     mpl.rc("axes", linewidth=2)
-    mpl.rc("xtick.major", width=5)
-    mpl.rc("ytick.major", width=5)
-    mpl.rc("xtick.minor", width=3)
-    mpl.rc("ytick.minor", width=3)
+    mpl.rc("xtick.major", size=5, width=1)
+    mpl.rc("ytick.major", size=5, width=1)
+    mpl.rc("xtick.minor", size=3, width=1)
+    mpl.rc("ytick.minor", size=3, width=1)
 
     fig, axs = plt.subplots(ncols=1, nrows=2, figsize=(15, 10), 
                             gridspec_kw={'height_ratios': [2, 1]}, sharex=True)
