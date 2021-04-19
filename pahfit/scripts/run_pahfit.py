@@ -122,7 +122,7 @@ def main():
         obs_x,
         obs_y,
         weights=weights,
-        maxiter=200,
+        maxiter=1000,
         epsilon=1e-10,
         acc=1e-10,
     )
@@ -140,12 +140,9 @@ def main():
     mpl.rc("xtick.major", width=2)
     mpl.rc("ytick.major", width=2)
 
-    fig, ax = plt.subplots(figsize=(15, 10))
+    fig, axs = plt.subplots(ncols=1, nrows=2, figsize=(15, 10), sharex=True)
 
-    pmodel.plot(ax, obs_x, obs_y, obs_fit)
-
-    ax.set_yscale("linear")
-    ax.set_xscale("log")
+    pmodel.plot(axs, obs_x, obs_y, obs_fit)
 
     # use the whitespace better
     fig.tight_layout()

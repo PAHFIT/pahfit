@@ -242,29 +242,42 @@ class PAHFITBase:
             fixed={"tau_sil": att_info["amps_fixed"][0]},
         )
 
-    def plot(self, ax, x, y, model):
+    def plot(self, axs, x, y, yerr, model):
         """
         Plot model using axis object.
 
         Parameters
         ----------
-        ax : matplotlib.axis object
+        axs : matplotlib.axis objects
             where to put the plot
         x : floats
             wavelength points
         y : floats
             observed spectrum
+        yerr: floats
+            observed spectrum uncertainties
         model : PAHFITBase model
             model giving all the components and parameters
         """
+        # spectrum and best fit model
+        ax = axs[0]
+        ax.minorticks_on()
+        ax.tick_params(which='both', top='on', direction='in')
         ax.plot(x, model(x) / x, "g-")
-        ax.plot(x, y / x, "ks", fillstyle="none")
+        ax.errorbar(x, y / x, yerr=yerr / x, 
+                    fmt='o', markeredgecolor='k', markerfacecolor='none', 
+                    ecolor='k', markersize=6)
+
+        ax_att = ax.twinx() # axis for plotting the extinction curve
 
         # get the extinction model (probably a better way to do this)
         for cmodel in model:
             if isinstance(cmodel, S07_attenuation):
                 ax.plot(x, cmodel(x) * max(y / x), "k--")
+                ax_att.plot(x, cmodel(x), "k--")
                 ext_model = cmodel(x)
+        ax_att.set_ylabel("Attenuation")
+        ax_att.set_ylim(0, 1.1)
 
         # create the continum compound model (base for plotting lines)
         cont_components = []
@@ -287,8 +300,19 @@ class PAHFITBase:
 
         ax.plot(x, cont_y * ext_model / x, "k-")
 
-        ax.set_xlabel(r"$\lambda$ [$\mu m$]")
         ax.set_ylabel(r"$\nu F_{\nu}$")
+        ax.set_yscale("linear")
+        ax.set_xscale("log")
+
+        # residuals
+        ax = axs[1]
+        ax.minorticks_on()
+        ax.tick_params(which='both', top='on', direction='in')
+        ax.plot(x, (y - model(x))/x, color='k')
+
+        ax.set_xlabel(r"$\lambda$ [$\mu m$]")
+        ax.set_yscale("linear")
+        ax.set_xscale("log")
 
     def save(self, obs_fit, filename, outform):
         """
