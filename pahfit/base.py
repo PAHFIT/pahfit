@@ -266,7 +266,7 @@ class PAHFITBase:
         ax.plot(x, model(x) / x, "g-")
         ax.errorbar(x, y / x, yerr=yerr / x, 
                     fmt='o', markeredgecolor='k', markerfacecolor='none', 
-                    ecolor='k', markersize=6)
+                    ecolor='k', elinewidth=0.2, capsize=0.5, markersize=6)
 
         ax_att = ax.twinx() # axis for plotting the extinction curve
 
@@ -310,6 +310,7 @@ class PAHFITBase:
         ax.plot(x, (y - model(x))/x, color='k')
 
         ax.set_xlabel(r"$\lambda$ [$\mu m$]")
+        ax.set_ylabel('residuals')
         ax.set_yscale("linear")
         ax.set_xscale("log")
 

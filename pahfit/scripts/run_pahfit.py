@@ -137,8 +137,10 @@ def main():
     mpl.rc("font", **font)
     mpl.rc("lines", linewidth=2)
     mpl.rc("axes", linewidth=2)
-    mpl.rc("xtick.major", width=2)
-    mpl.rc("ytick.major", width=2)
+    mpl.rc("xtick.major", width=5)
+    mpl.rc("ytick.major", width=5)
+    mpl.rc("xtick.minor", width=3)
+    mpl.rc("ytick.minor", width=3)
 
     fig, axs = plt.subplots(ncols=1, nrows=2, figsize=(15, 10), 
                             gridspec_kw={'height_ratios': [2, 1]}, sharex=True)
@@ -147,7 +149,7 @@ def main():
 
     # use the whitespace better
     fig.subplots_adjust(hspace=0)
-    fig.tight_layout()
+    #fig.tight_layout()
 
     # show
     if args.showplot:
