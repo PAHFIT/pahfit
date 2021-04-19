@@ -307,7 +307,7 @@ class PAHFITBase:
         # residuals
         ax = axs[1]
         ax.minorticks_on()
-        ax.tick_params(which='both', top='on', direction='in')
+        ax.tick_params(which='both', right='on', top='on', direction='in')
         ax.plot(x, (y - model(x))/x, color='k')
 
         ax.set_xlabel(r"$\lambda$ [$\mu m$]")

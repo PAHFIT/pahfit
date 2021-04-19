@@ -149,7 +149,6 @@ def main():
 
     # use the whitespace better
     fig.subplots_adjust(hspace=0)
-    #fig.tight_layout()
 
     # show
     if args.showplot:
