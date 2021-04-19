@@ -269,6 +269,7 @@ class PAHFITBase:
                     ecolor='k', elinewidth=0.2, capsize=0.5, markersize=6)
 
         ax_att = ax.twinx() # axis for plotting the extinction curve
+        ax_att.tick_params(direction='in')
 
         # get the extinction model (probably a better way to do this)
         for cmodel in model:
