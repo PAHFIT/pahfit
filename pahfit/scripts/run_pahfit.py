@@ -142,8 +142,8 @@ def main():
     mpl.rc("xtick.minor", size=3, width=1)
     mpl.rc("ytick.minor", size=3, width=1)
 
-    fig, axs = plt.subplots(ncols=1, nrows=2, figsize=(15, 10), 
-                            gridspec_kw={'height_ratios': [2, 1]}, 
+    fig, axs = plt.subplots(ncols=1, nrows=2, figsize=(15, 10),
+                            gridspec_kw={'height_ratios': [2, 1]},
                             sharex=True)
 
     pmodel.plot(axs, obs_x, obs_y, obs_unc.value, obs_fit)

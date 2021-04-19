@@ -264,8 +264,8 @@ class PAHFITBase:
         ax.minorticks_on()
         ax.tick_params(which='both', right='on', top='on', direction='in')
         ax.plot(x, model(x) / x, "g-")
-        ax.errorbar(x, y / x, yerr=yerr / x, 
-                    fmt='o', markeredgecolor='k', markerfacecolor='none', 
+        ax.errorbar(x, y / x, yerr=yerr / x,
+                    fmt='o', markeredgecolor='k', markerfacecolor='none',
                     ecolor='k', elinewidth=0.2, capsize=0.5, markersize=6)
 
         ax_att = ax.twinx() # axis for plotting the extinction curve
