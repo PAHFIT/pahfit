@@ -273,7 +273,6 @@ class PAHFITBase:
         # get the extinction model (probably a better way to do this)
         for cmodel in model:
             if isinstance(cmodel, S07_attenuation):
-                ax.plot(x, cmodel(x) * max(y / x), "k--")
                 ax_att.plot(x, cmodel(x), "k--")
                 ext_model = cmodel(x)
         ax_att.set_ylabel("Attenuation")
@@ -313,6 +312,8 @@ class PAHFITBase:
         ax.set_xlabel(r"$\lambda$ [$\mu m$]")
         ax.set_yscale("linear")
         ax.set_xscale("log")
+
+        fig.subplots_adjust(hspace=0)
 
     def save(self, obs_fit, filename, outform):
         """
