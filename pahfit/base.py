@@ -260,11 +260,16 @@ class PAHFITBase:
         ax.plot(x, model(x) / x, "g-")
         ax.plot(x, y / x, "ks", fillstyle="none")
 
+        ax_att = ax.twinx()  # axis for plotting the extinction curve
+
         # get the extinction model (probably a better way to do this)
         for cmodel in model:
             if isinstance(cmodel, S07_attenuation):
-                ax.plot(x, cmodel(x) * max(y / x), "k--")
+                ax_att.plot(x, cmodel(x), "k--")
                 ext_model = cmodel(x)
+
+        ax_att.set_ylabel("Attenuation")
+        ax_att.set_ylim(0, 1.1)
 
         # create the continum compound model (base for plotting lines)
         cont_components = []
