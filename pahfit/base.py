@@ -268,7 +268,7 @@ class PAHFITBase:
                     fmt='o', markeredgecolor='k', markerfacecolor='none',
                     ecolor='k', elinewidth=0.2, capsize=0.5, markersize=6)
 
-        ax_att = ax.twinx() # axis for plotting the extinction curve
+        ax_att = ax.twinx()  # axis for plotting the extinction curve
         ax_att.tick_params(direction='in')
 
         # get the extinction model (probably a better way to do this)
@@ -305,14 +305,15 @@ class PAHFITBase:
         ax.set_xscale("log")
 
         # residuals
-        res = (y - model(x))/x
+        res = (y - model(x)) / x
         std = np.std(res)
         ax = axs[1]
         ax.minorticks_on()
         ax.tick_params(which='both', right='on', top='on', direction='in')
         ax.plot(x, res, color='k')
+        ax.hlines(0, linestyle='--', color='darkgray')
 
-        ax.set_ylim(-2*std, 2*std)
+        ax.set_ylim(-2 * std, 2 * std)
         ax.set_xlabel(r"$\lambda$ [$\mu m$]")
         ax.set_ylabel('residuals')
         ax.set_yscale("linear")
