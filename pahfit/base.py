@@ -311,7 +311,7 @@ class PAHFITBase:
         ax.minorticks_on()
         ax.tick_params(which='both', right='on', top='on', direction='in')
         ax.plot(x, res, color='k')
-        ax.hlines(0, linestyle='--', color='darkgray')
+        ax.hlines(0, x[0], x[-1], linestyle='--', color='darkgray')
 
         ax.set_ylim(-2 * std, 2 * std)
         ax.set_xlabel(r"$\lambda$ [$\mu m$]")
