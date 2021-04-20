@@ -373,11 +373,17 @@ class PAHFITBase:
         for cmodel in model:
             if isinstance(cmodel, att_Drude1D):
                 ext_components_funct.append(cmodel)
-        ext_funct_model = ext_components_funct[0]
-        for cmodel in ext_components_funct[1:]:
-            ext_funct_model *= cmodel
 
-        ext_model = ext_components_S07(x) * ext_funct_model(x)
+        if len(ext_components_funct) == 0:
+            ext_model = ext_components_S07(x)
+        elif len(ext_components_funct) == 1:
+            ext_funct_model = ext_components_funct[0]
+            ext_model = ext_components_S07(x) * ext_funct_model(x)
+        elif len(ext_components_funct) >= 2:
+            ext_funct_model = ext_components_funct[0]
+            for cmodel in ext_components_funct[1:]:
+                ext_funct_model *= cmodel
+            ext_model = ext_components_S07(x) * ext_funct_model(x)
 
         ax_att.plot(x, ext_model, "k--")
         ax_att.set_ylabel("Attenuation")
