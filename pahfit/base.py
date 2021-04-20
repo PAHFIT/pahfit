@@ -305,11 +305,14 @@ class PAHFITBase:
         ax.set_xscale("log")
 
         # residuals
+        res = (y - model(x))/x
+        std = np.std(res)
         ax = axs[1]
         ax.minorticks_on()
         ax.tick_params(which='both', right='on', top='on', direction='in')
-        ax.plot(x, (y - model(x))/x, color='k')
+        ax.plot(x, res, color='k')
 
+        ax.set_ylim(-2*std, 2*std)
         ax.set_xlabel(r"$\lambda$ [$\mu m$]")
         ax.set_ylabel('residuals')
         ax.set_yscale("linear")
