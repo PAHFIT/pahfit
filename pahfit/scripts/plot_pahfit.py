@@ -51,7 +51,7 @@ def initialize_parser():
         action="store",
         type=int,
         default=2,
-        help="Factor multiplying the standard deviation of the residuals to adjust plot limts",
+        help="Factor multiplying the standard deviation of the residuals to adjust plot limits",
     )
 
     return parser

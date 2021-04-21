@@ -259,7 +259,7 @@ class PAHFITBase:
         model : PAHFITBase model
             model giving all the components and parameters
         scalefac_resid : integer
-            Factor multiplying the standard deviation of the residuals to adjust plot limts
+            Factor multiplying the standard deviation of the residuals to adjust plot limits
         """
         # spectrum and best fit model
         ax = axs[0]
