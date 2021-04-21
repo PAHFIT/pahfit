@@ -63,6 +63,13 @@ def initialize_parser():
         action="store_true",
         help="Estimate of starting point based on the input spectrum",
     )
+    parser.add_argument(
+        "--scalefac_resid",
+        action="store",
+        type=int,
+        default=2,
+        help="Factor multiplying the standard deviation of the residuals to adjust plot limts",
+    )
 
     return parser
 
@@ -146,7 +153,7 @@ def main():
                             gridspec_kw={'height_ratios': [3, 1]},
                             sharex=True)
 
-    pmodel.plot(axs, obs_x, obs_y, obs_unc.value, obs_fit)
+    pmodel.plot(axs, obs_x, obs_y, obs_unc.value, obs_fit, scalefac_resid=args.scalefac_resid)
 
     # use the whitespace better
     fig.subplots_adjust(hspace=0)

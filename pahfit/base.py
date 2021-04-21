@@ -242,7 +242,7 @@ class PAHFITBase:
             fixed={"tau_sil": att_info["amps_fixed"][0]},
         )
 
-    def plot(self, axs, x, y, yerr, model):
+    def plot(self, axs, x, y, yerr, model, scalefac_resid=2):
         """
         Plot model using axis object.
 
@@ -258,6 +258,8 @@ class PAHFITBase:
             observed spectrum uncertainties
         model : PAHFITBase model
             model giving all the components and parameters
+        scalefac_resid : integer
+            Factor multiplying the standard deviation of the residuals to adjust plot limts
         """
         # spectrum and best fit model
         ax = axs[0]
@@ -313,7 +315,7 @@ class PAHFITBase:
         ax.axhline(0, linestyle='--', color='gray', zorder=0)
         ax.plot(x, res, color='k', zorder=1)
 
-        ax.set_ylim(-2 * std, 2 * std)
+        ax.set_ylim(-scalefac_resid * std, scalefac_resid * std)
         ax.set_xlabel(r"$\lambda$ [$\mu m$]")
         ax.set_ylabel('residuals')
         ax.set_yscale("linear")
