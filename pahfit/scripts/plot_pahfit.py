@@ -49,8 +49,8 @@ def initialize_parser():
     parser.add_argument(
         "--scalefac_resid",
         action="store",
-        type=int,
-        default=2,
+        type=float,
+        default=2.0,
         help="Factor multiplying the standard deviation of the residuals to adjust plot limits",
     )
 
