@@ -242,23 +242,36 @@ class PAHFITBase:
             fixed={"tau_sil": att_info["amps_fixed"][0]},
         )
 
-    def plot(self, ax, x, y, model):
+    def plot(self, axs, x, y, yerr, model, scalefac_resid=2):
         """
         Plot model using axis object.
 
         Parameters
         ----------
-        ax : matplotlib.axis object
+        axs : matplotlib.axis objects
             where to put the plot
         x : floats
             wavelength points
         y : floats
             observed spectrum
+        yerr: floats
+            observed spectrum uncertainties
         model : PAHFITBase model
             model giving all the components and parameters
+        scalefac_resid : integer
+            Factor multiplying the standard deviation of the residuals to adjust plot limits
         """
+        # spectrum and best fit model
+        ax = axs[0]
+        ax.minorticks_on()
+        ax.tick_params(which='both', right='on', top='on', direction='in')
         ax.plot(x, model(x) / x, "g-")
-        ax.plot(x, y / x, "ks", fillstyle="none")
+        ax.errorbar(x, y / x, yerr=yerr / x,
+                    fmt='o', markeredgecolor='k', markerfacecolor='none',
+                    ecolor='k', elinewidth=0.2, capsize=0.5, markersize=6)
+
+        ax_att = ax.twinx()  # axis for plotting the extinction curve
+        ax_att.tick_params(direction='in')
 
         ax_att = ax.twinx()  # axis for plotting the extinction curve
 
@@ -267,6 +280,8 @@ class PAHFITBase:
             if isinstance(cmodel, S07_attenuation):
                 ax_att.plot(x, cmodel(x), "k--")
                 ext_model = cmodel(x)
+        ax_att.set_ylabel("Attenuation")
+        ax_att.set_ylim(0, 1.1)
 
         ax_att.set_ylabel("Attenuation")
         ax_att.set_ylim(0, 1.1)
@@ -292,8 +307,24 @@ class PAHFITBase:
 
         ax.plot(x, cont_y * ext_model / x, "k-")
 
-        ax.set_xlabel(r"$\lambda$ [$\mu m$]")
         ax.set_ylabel(r"$\nu F_{\nu}$")
+        ax.set_yscale("linear")
+        ax.set_xscale("log")
+
+        # residuals
+        res = (y - model(x)) / x
+        std = np.std(res)
+        ax = axs[1]
+        ax.minorticks_on()
+        ax.tick_params(which='both', right='on', top='on', direction='in')
+        ax.axhline(0, linestyle='--', color='gray', zorder=0)
+        ax.plot(x, res, color='k', zorder=1)
+
+        ax.set_ylim(-scalefac_resid * std, scalefac_resid * std)
+        ax.set_xlabel(r"$\lambda$ [$\mu m$]")
+        ax.set_ylabel('residuals')
+        ax.set_yscale("linear")
+        ax.set_xscale("log")
 
     def save(self, obs_fit, filename, outform):
         """

@@ -46,6 +46,14 @@ def initialize_parser():
         choices=plottypes,
         help="Save figure to a file of specified type",
     )
+    parser.add_argument(
+        "--scalefac_resid",
+        action="store",
+        type=float,
+        default=2.0,
+        help="Factor multiplying the standard deviation of the residuals to adjust plot limits",
+    )
+
     return parser
 
 
@@ -75,6 +83,7 @@ def main():
     obs_spectrum = Table.read(specfile, format=tformat)
     obs_x = obs_spectrum["wavelength"].to(u.micron, equivalencies=u.spectral())
     obs_y = obs_spectrum["flux"].to(u.Jy, equivalencies=u.spectral_density(obs_x))
+    obs_unc = obs_spectrum["sigma"].to(u.Jy, equivalencies=u.spectral_density(obs_x))
 
     # strip units as the observed spectrum is in the internal units
     obs_x = obs_x.value
@@ -89,18 +98,19 @@ def main():
     mpl.rc("font", **font)
     mpl.rc("lines", linewidth=2)
     mpl.rc("axes", linewidth=2)
-    mpl.rc("xtick.major", width=2)
-    mpl.rc("ytick.major", width=2)
+    mpl.rc("xtick.major", size=5, width=1)
+    mpl.rc("ytick.major", size=5, width=1)
+    mpl.rc("xtick.minor", size=3, width=1)
+    mpl.rc("ytick.minor", size=3, width=1)
 
-    fig, ax = plt.subplots(figsize=(15, 10))
+    fig, axs = plt.subplots(ncols=1, nrows=2, figsize=(15, 10),
+                            gridspec_kw={'height_ratios': [3, 1]},
+                            sharex=True)
 
-    pmodel.plot(ax, obs_x, obs_y, pmodel.model)
-
-    ax.set_yscale("linear")
-    ax.set_xscale("log")
+    pmodel.plot(axs, obs_x, obs_y, obs_unc.value, pmodel.model, scalefac_resid=args.scalefac_resid)
 
     # use the whitespace better
-    fig.tight_layout()
+    fig.subplots_adjust(hspace=0)
 
     # show or save
     if args.savefig:

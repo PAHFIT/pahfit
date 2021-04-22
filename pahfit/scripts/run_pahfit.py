@@ -63,6 +63,13 @@ def initialize_parser():
         action="store_true",
         help="Estimate of starting point based on the input spectrum",
     )
+    parser.add_argument(
+        "--scalefac_resid",
+        action="store",
+        type=float,
+        default=2.0,
+        help="Factor multiplying the standard deviation of the residuals to adjust plot limits",
+    )
 
     return parser
 
@@ -137,18 +144,19 @@ def main():
     mpl.rc("font", **font)
     mpl.rc("lines", linewidth=2)
     mpl.rc("axes", linewidth=2)
-    mpl.rc("xtick.major", width=2)
-    mpl.rc("ytick.major", width=2)
+    mpl.rc("xtick.major", size=5, width=1)
+    mpl.rc("ytick.major", size=5, width=1)
+    mpl.rc("xtick.minor", size=3, width=1)
+    mpl.rc("ytick.minor", size=3, width=1)
 
-    fig, ax = plt.subplots(figsize=(15, 10))
+    fig, axs = plt.subplots(ncols=1, nrows=2, figsize=(15, 10),
+                            gridspec_kw={'height_ratios': [3, 1]},
+                            sharex=True)
 
-    pmodel.plot(ax, obs_x, obs_y, obs_fit)
-
-    ax.set_yscale("linear")
-    ax.set_xscale("log")
+    pmodel.plot(axs, obs_x, obs_y, obs_unc.value, obs_fit, scalefac_resid=args.scalefac_resid)
 
     # use the whitespace better
-    fig.tight_layout()
+    fig.subplots_adjust(hspace=0)
 
     # show
     if args.showplot:
