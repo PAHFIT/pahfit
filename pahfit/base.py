@@ -258,7 +258,7 @@ class PAHFITBase:
             observed spectrum uncertainties
         model : PAHFITBase model
             model giving all the components and parameters
-        scalefac_resid : integer
+        scalefac_resid : float
             Factor multiplying the standard deviation of the residuals to adjust plot limits
         """
         # spectrum and best fit model
