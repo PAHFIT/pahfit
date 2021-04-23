@@ -273,16 +273,11 @@ class PAHFITBase:
         ax_att = ax.twinx()  # axis for plotting the extinction curve
         ax_att.tick_params(direction='in')
 
-        ax_att = ax.twinx()  # axis for plotting the extinction curve
-
         # get the extinction model (probably a better way to do this)
         for cmodel in model:
             if isinstance(cmodel, S07_attenuation):
                 ax_att.plot(x, cmodel(x), "k--")
                 ext_model = cmodel(x)
-        ax_att.set_ylabel("Attenuation")
-        ax_att.set_ylim(0, 1.1)
-
         ax_att.set_ylabel("Attenuation")
         ax_att.set_ylim(0, 1.1)
 
