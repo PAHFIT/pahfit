@@ -76,9 +76,9 @@ fixes, code, or documentation (no git or GitHub experience necessary):
 
 * `How to make a code contribution <https://docs.astropy.org/en/stable/development/workflow/development_workflow.html>`_
 
-* `Coding Guidelines <https://docs.astropy.org/en/stable/development/codeguide.html>`_
+* `Coding Guidelines <https://docs.astropy.org/en/latest/development/codeguide.html>`_
 
-* `Developer Documentation <https://docs.astropy.org/en/stable/#developer-documentation>`_
+* `Developer Documentation <https://docs.astropy.org/en/latest/#developer-documentation>`_
 
 For the complete list of contributors please see the `pahfit
 contributors page on Github
