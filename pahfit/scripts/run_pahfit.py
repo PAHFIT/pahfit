@@ -58,18 +58,17 @@ def initialize_parser():
         help="Estimate of starting point based on the input spectrum",
     )
     parser.add_argument(
-<<<<<<< HEAD
         "--scalefac_resid",
         action="store",
         type=float,
         default=2.0,
         help="Factor multiplying the standard deviation of the residuals to adjust plot limits",
-=======
+    )
+    parser.add_argument(
         "--fit_maxiter",
         default=1000,
         type=int,
         help="Maximum number of interations for the fitting",
->>>>>>> 2975e2b... run and plot pahfit now using common routines
     )
 
     return parser
