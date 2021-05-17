@@ -261,6 +261,14 @@ class PAHFITBase:
         scalefac_resid : float
             Factor multiplying the standard deviation of the residuals to adjust plot limits
         """
+        # remove units if they are present
+        if hasattr(x, "value"):
+            x = x.value
+        if hasattr(y, "value"):
+            y = y.value
+        if hasattr(yerr, "value"):
+            yerr = yerr.value
+
         # spectrum and best fit model
         ax = axs[0]
         ax.minorticks_on()
