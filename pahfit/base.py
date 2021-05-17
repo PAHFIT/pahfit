@@ -252,52 +252,24 @@ class PAHFITBase:
     def plot(self, axs, x, y, yerr, model, scalefac_resid=2):
 =======
         # add additional att components to the model if necessary
-        # Note: perhaps can be improved to make it more concise by
-        #       encorporating them into a for loop
-        if 'tau_H2O' in att_info["names"]:
-            self.model *= att_Drude1D(
-                name=att_info["names"][1],
-                tau=att_info["amps"][1],
-                x_0=att_info["x_0"][1],
-                fwhm=att_info["fwhms"][1],
-                bounds={
-                    "tau": att_info["amps_limits"][1],
-                    "fwhm": att_info["fwhms_limits"][1],
-                },
-                fixed={
-                    "x_0": att_info["x_0_fixed"][1],
-                },
-            )
-
-        if 'tau_CO2' in att_info["names"]:
-            self.model *= att_Drude1D(
-                name=att_info["names"][2],
-                tau=att_info["amps"][2],
-                x_0=att_info["x_0"][2],
-                fwhm=att_info["fwhms"][2],
-                bounds={
-                    "tau": att_info["amps_limits"][2],
-                    "fwhm": att_info["fwhms_limits"][2],
-                },
-                fixed={
-                    "x_0": att_info["x_0_fixed"][2],
-                },
-            )
-
-        if 'tau_CO' in att_info["names"]:
-            self.model *= att_Drude1D(
-                name=att_info["names"][3],
-                tau=att_info["amps"][3],
-                x_0=att_info["x_0"][3],
-                fwhm=att_info["fwhms"][3],
-                bounds={
-                    "tau": att_info["amps_limits"][3],
-                    "fwhm": att_info["fwhms_limits"][3],
-                },
-                fixed={
-                    "x_0": att_info["x_0_fixed"][3],
-                },
-            )
+        self.att_info = att_info
+        if att_info is not None:
+            for k in range(len(att_info["names"])):
+                if att_info["names"][k] != 'S07_att':  # Only loop through att components
+                                                       # that can be parameterized.
+                    self.model *= att_Drude1D(
+                        name=att_info["names"][k],
+                        tau=att_info["amps"][k],
+                        x_0=att_info["x_0"][k],
+                        fwhm=att_info["fwhms"][k],
+                        bounds={
+                            "tau": att_info["amps_limits"][k],
+                            "fwhm": att_info["fwhms_limits"][k],
+                        },
+                        fixed={
+                            "x_0": att_info["x_0_fixed"][k],
+                        },
+                    )
 
     def plot(self, ax, x, y, model):
 >>>>>>> 86cd523 (PAHFIT_v2.1)
@@ -374,16 +346,10 @@ class PAHFITBase:
             if isinstance(cmodel, att_Drude1D):
                 ext_components_funct.append(cmodel)
 
-        if len(ext_components_funct) == 0:
-            ext_model = ext_components_S07(x)
-        elif len(ext_components_funct) == 1:
-            ext_funct_model = ext_components_funct[0]
-            ext_model = ext_components_S07(x) * ext_funct_model(x)
-        elif len(ext_components_funct) >= 2:
-            ext_funct_model = ext_components_funct[0]
-            for cmodel in ext_components_funct[1:]:
-                ext_funct_model *= cmodel
-            ext_model = ext_components_S07(x) * ext_funct_model(x)
+        ext_model = ext_components_S07(x)
+        if len(ext_components_funct) != 0:
+            for cmodel in ext_components_funct:
+                ext_model *= cmodel(x)
 
         ax_att.plot(x, ext_model, "k--")
         ax_att.set_ylabel("Attenuation")
