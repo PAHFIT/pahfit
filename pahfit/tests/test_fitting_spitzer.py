@@ -57,7 +57,7 @@ def test_fitting_m101():
         3.07805696e+02, 3.48652000e+01, 8.96710558e-02, 5.93764689e-01])
     # fmt: on
 
-    np.testing.assert_allclose(obsfit.parameters, expvals)
+    np.testing.assert_allclose(obsfit.parameters, expvals, rtol=1e-6, atol=1e-6)
 
 
 if __name__ == '__main__':
