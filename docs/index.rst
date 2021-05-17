@@ -74,7 +74,7 @@ contributors who will abide by the `Python Software Foundation Code of Conduct
 `Astropy`_.  The following pages will help you get started with contributing
 fixes, code, or documentation (no git or GitHub experience necessary):
 
-* `How to make a code contribution <https://docs.astropy.org/en/stable/development/workflow/development_workflow.html>`_
+* `How to make a code contribution <https://docs.astropy.org/en/latest/development/workflow/development_workflow.html>`_
 
 * `Coding Guidelines <https://docs.astropy.org/en/latest/development/codeguide.html>`_
 
