@@ -255,8 +255,7 @@ class PAHFITBase:
         self.att_info = att_info
         if att_info is not None:
             for k in range(len(att_info["names"])):
-                if att_info["names"][k] != 'S07_att':  # Only loop through att components
-                                                       # that can be parameterized.
+                if att_info["names"][k] != 'S07_att':  # Only loop through att components that can be parameterized
                     self.model *= att_Drude1D(
                         name=att_info["names"][k],
                         tau=att_info["amps"][k],
