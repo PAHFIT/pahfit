@@ -11,7 +11,7 @@ from pahfit.base import PAHFITBase
 __all__ = ["read_spectrum", "initialize_model", "fit_spectrum"]
 
 
-def read_spectrum(specfile):
+def read_spectrum(specfile, colnames=["wavelength", "flux", "sigma"]):
     """
     Read in a spectrum and convert intput units to the expected internal PAHFIT units.
 
@@ -20,16 +20,18 @@ def read_spectrum(specfile):
     specfile : string
         file with the spectrum to be fit
 
+    colnames : list of strings
+        list giving the column names of the wavelength, flux, and flux uncertainty
+        in the spectrum file with default =  ["wavelength", "flux", "sigma"]
+
     Returns
     -------
     obsdata : dict
         x is wavelength in microns and y/unc are the spectrum/unc in units
         of Jy
     """
-
     # read in the observed spectrum
     # assumed to be astropy table compatibile and include units
-    specfile = specfile
     if not os.path.isfile(specfile):
         pack_path = pkg_resources.resource_filename("pahfit", "data/")
         test_specfile = "{}/{}".format(pack_path, specfile)
@@ -44,11 +46,11 @@ def read_spectrum(specfile):
         tformat = "ascii.ecsv"
     obs_spectrum = Table.read(specfile, format=tformat)
     obsdata = {}
-    obsdata["x"] = obs_spectrum["wavelength"].to(u.micron, equivalencies=u.spectral())
-    obsdata["y"] = obs_spectrum["flux"].to(
+    obsdata["x"] = obs_spectrum[colnames[0]].to(u.micron, equivalencies=u.spectral())
+    obsdata["y"] = obs_spectrum[colnames[1]].to(
         u.Jy, equivalencies=u.spectral_density(obsdata["x"])
     )
-    obsdata["unc"] = obs_spectrum["sigma"].to(
+    obsdata["unc"] = obs_spectrum[colnames[2]].to(
         u.Jy, equivalencies=u.spectral_density(obsdata["x"])
     )
 
