@@ -14,8 +14,8 @@ To run this script, the observed spectrum to be fit and a model pack file
 are specified.
 
 The following command fits the Spitzer IRS SL/LL spectrum of the M101 
-nucleus. This file can be found in the source code's ``pahfit/data`` directory, 
-from
+nucleus. This file can be found in the source code's ``pahfit/data`` directory
+and is taken from
 `Gordon et al. 2008, ApJ, 682, 336 <https://ui.adsabs.harvard.edu/abs/2008ApJ...682..336G/abstract>`_
 
 .. code-block:: console
