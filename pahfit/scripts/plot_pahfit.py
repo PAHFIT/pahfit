@@ -1,16 +1,11 @@
 #!/usr/bin/env python
 
-import os
-import pkg_resources
 import argparse
 
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 
-import astropy.units as u
-from astropy.table import Table
-
-from pahfit.base import PAHFITBase
+from pahfit.helpers import read_spectrum, initialize_model
 
 
 def initialize_parser():
@@ -63,34 +58,11 @@ def main():
     parser = initialize_parser()
     args = parser.parse_args()
 
-    # read an observed spectrum
-    # read in the observed spectrum
-    # assumed to be astropy table compatibile and include units
-    specfile = args.spectrumfile
-    outputname = specfile.split(".")[0]
-    if not os.path.isfile(specfile):
-        pack_path = pkg_resources.resource_filename("pahfit", "data/")
-        test_specfile = "{}/{}".format(pack_path, specfile)
-        if os.path.isfile(test_specfile):
-            specfile = test_specfile
-        else:
-            raise ValueError("Input spectrumfile {} not found".format(specfile))
+    # read in the spectrum
+    obsdata = read_spectrum(args.spectrumfile)
 
-    # get the table format (from extension of filename)
-    tformat = specfile.split(".")[-1]
-    if tformat == "ecsv":
-        tformat = "ascii.ecsv"
-    obs_spectrum = Table.read(specfile, format=tformat)
-    obs_x = obs_spectrum["wavelength"].to(u.micron, equivalencies=u.spectral())
-    obs_y = obs_spectrum["flux"].to(u.Jy, equivalencies=u.spectral_density(obs_x))
-    obs_unc = obs_spectrum["sigma"].to(u.Jy, equivalencies=u.spectral_density(obs_x))
-
-    # strip units as the observed spectrum is in the internal units
-    obs_x = obs_x.value
-    obs_y = obs_y.value
-
-    # read in the PAHFIT results
-    pmodel = PAHFITBase(obs_x, obs_y, filename=args.fitfilename)
+    # setup the model
+    pmodel = initialize_model(args.fitfilename, obsdata, estimate_start=False)
 
     # plot result
     fontsize = 18
@@ -107,12 +79,13 @@ def main():
                             gridspec_kw={'height_ratios': [3, 1]},
                             sharex=True)
 
-    pmodel.plot(axs, obs_x, obs_y, obs_unc.value, pmodel.model, scalefac_resid=args.scalefac_resid)
+    pmodel.plot(axs, obsdata["x"], obsdata["y"], obsdata["unc"], pmodel.model, scalefac_resid=args.scalefac_resid)
 
     # use the whitespace better
     fig.subplots_adjust(hspace=0)
 
     # show or save
+    outputname = args.spectrumfile.split(".")[0]
     if args.savefig:
         fig.savefig("{}.{}".format(outputname, args.savefig))
     else:
