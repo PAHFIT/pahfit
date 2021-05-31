@@ -132,6 +132,8 @@ class PAHFITBase:
             # guess values and update starting point (if not set fixed) based on the input spectrum
             param_info = self.estimate_init(obs_x, obs_y, param_info)
 
+        self.param_info = param_info
+
         bb_info = param_info[0]
         dust_features = param_info[1]
         h2_features = param_info[2]
@@ -263,6 +265,14 @@ class PAHFITBase:
         scalefac_resid : float
             Factor multiplying the standard deviation of the residuals to adjust plot limits
         """
+        # remove units if they are present
+        if hasattr(x, "value"):
+            x = x.value
+        if hasattr(y, "value"):
+            y = y.value
+        if hasattr(yerr, "value"):
+            yerr = yerr.value
+
         # spectrum and best fit model
 
         ax = axs[0]
