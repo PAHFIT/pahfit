@@ -9,6 +9,8 @@ from scipy import interpolate
 
 import numpy as np
 
+import matplotlib as mpl
+
 __all__ = ["PAHFITBase"]
 
 
@@ -272,32 +274,42 @@ class PAHFITBase:
             yerr = yerr.value
 
         # spectrum and best fit model
+
         ax = axs[0]
+        ax.set_yscale("linear")
+        ax.set_xscale("log")
         ax.minorticks_on()
-        ax.tick_params(which='both', right='on', top='on', direction='in')
-        ax.plot(x, model(x) / x, "g-")
-        ax.errorbar(x, y / x, yerr=yerr / x,
-                    fmt='o', markeredgecolor='k', markerfacecolor='none',
-                    ecolor='k', elinewidth=0.2, capsize=0.5, markersize=6)
+        ax.tick_params(axis="both", which='major', top="on", right="on", direction='in', length=10)
+        ax.tick_params(axis="both", which='minor', top="on", right="on", direction='in', length=5)
 
         ax_att = ax.twinx()  # axis for plotting the extinction curve
-        ax_att.tick_params(direction='in')
-
+        ax_att.tick_params(which='minor', direction="in", length=5)
+        ax_att.tick_params(which='major', direction='in', length=10)
+        ax_att.minorticks_on()
         # get the extinction model (probably a better way to do this)
         for cmodel in model:
             if isinstance(cmodel, S07_attenuation):
-                ax_att.plot(x, cmodel(x), "k--")
+                ax_att.plot(x, cmodel(x), "k--", alpha=0.5)
                 ext_model = cmodel(x)
         ax_att.set_ylabel("Attenuation")
         ax_att.set_ylim(0, 1.1)
 
+        # Define legend lines
+        Leg_lines = [mpl.lines.Line2D([0], [0], color="k", linestyle="--", lw=2),
+                     mpl.lines.Line2D([0], [0], color="#FE6100", lw=2),
+                     mpl.lines.Line2D([0], [0], color="#648FFF", lw=2, alpha=0.5),
+                     mpl.lines.Line2D([0], [0], color="#DC267F", lw=2, alpha=0.5),
+                     mpl.lines.Line2D([0], [0], color="#785EF0", lw=2, alpha=1),
+                     mpl.lines.Line2D([0], [0], color="#FFB000", lw=2, alpha=0.5)]
+
         # create the continum compound model (base for plotting lines)
         cont_components = []
+
         for cmodel in model:
             if isinstance(cmodel, BlackBody1D):
                 cont_components.append(cmodel)
                 # plot as we go
-                ax.plot(x, cmodel(x) * ext_model / x, "r-")
+                ax.plot(x, cmodel(x) * ext_model / x, "#FFB000", alpha=0.5)
         cont_model = cont_components[0]
         for cmodel in cont_components[1:]:
             cont_model += cmodel
@@ -306,30 +318,51 @@ class PAHFITBase:
         # now plot the dust and gas lines
         for cmodel in model:
             if isinstance(cmodel, Gaussian1D):
-                ax.plot(x, (cont_y + cmodel(x)) * ext_model / x, color="tab:purple")
+                ax.plot(x, (cont_y + cmodel(x)) * ext_model / x, "#DC267F", alpha=0.5)
             if isinstance(cmodel, Drude1D):
-                ax.plot(x, (cont_y + cmodel(x)) * ext_model / x, color="tab:blue")
+                ax.plot(x, (cont_y + cmodel(x)) * ext_model / x, "#648FFF", alpha=0.5)
 
-        ax.plot(x, cont_y * ext_model / x, "k-")
+        ax.plot(x, cont_y * ext_model / x, "#785EF0", alpha=1)
 
+        ax.plot(x, model(x) / x, "#FE6100", alpha=1)
+        ax.errorbar(x, y / x, yerr=yerr / x,
+                    fmt='o', markeredgecolor='k', markerfacecolor='none',
+                    ecolor='k', elinewidth=0.2, capsize=0.5, markersize=6)
+
+        ax.set_ylim(0)
         ax.set_ylabel(r"$\nu F_{\nu}$")
-        ax.set_yscale("linear")
-        ax.set_xscale("log")
 
+        ax.legend(Leg_lines, ["S07_attenuation",
+                              "Spectrum Fit",
+                              "Dust Features",
+                              r"Atomic and $H_2$ Lines",
+                              "Total Continuum Emissions",
+                              "Continuum Components"], prop={'size': 10}, loc="best", facecolor="white", framealpha=1,
+                  ncol=3)
         # residuals
         res = (y - model(x)) / x
         std = np.std(res)
         ax = axs[1]
-        ax.minorticks_on()
-        ax.tick_params(which='both', right='on', top='on', direction='in')
-        ax.axhline(0, linestyle='--', color='gray', zorder=0)
-        ax.plot(x, res, color='k', zorder=1)
 
-        ax.set_ylim(-scalefac_resid * std, scalefac_resid * std)
-        ax.set_xlabel(r"$\lambda$ [$\mu m$]")
-        ax.set_ylabel('residuals')
         ax.set_yscale("linear")
         ax.set_xscale("log")
+        ax.tick_params(axis="both", which='major', top="on", right="on", direction='in', length=10)
+        ax.tick_params(axis="both", which='minor', top="on", right="on", direction='in', length=5)
+        ax.minorticks_on()
+
+        # Custom X axis ticks
+        ax.xaxis.set_ticks([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 14, 16, 20, 25, 30, 40])
+
+        ax.axhline(0, linestyle='--', color='gray', zorder=0)
+        ax.plot(x, res, 'ko-', fillstyle='none', zorder=1)
+        ax.set_ylim(-scalefac_resid * std, scalefac_resid * std)
+        ax.set_xlim(np.floor(np.amin(x)), np.ceil(np.amax(x)))
+        ax.set_xlabel(r"$\lambda$ [$\mu m$]")
+        ax.set_ylabel('Residuals [%]')
+
+        # non scientific x-axis
+        ax.xaxis.set_minor_formatter(mpl.ticker.ScalarFormatter())
+        ax.xaxis.set_major_formatter(mpl.ticker.ScalarFormatter())
 
     def save(self, obs_fit, filename, outform):
         """
