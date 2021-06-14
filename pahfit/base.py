@@ -340,14 +340,9 @@ class PAHFITBase:
 
         # get additional extinction components that can be
         # characterized by functional forms (Drude profile in this case)
-        ext_components_funct = []
+        ext_model = ext_components_S07(x)
         for cmodel in model:
             if isinstance(cmodel, att_Drude1D):
-                ext_components_funct.append(cmodel)
-
-        ext_model = ext_components_S07(x)
-        if len(ext_components_funct) != 0:
-            for cmodel in ext_components_funct:
                 ext_model *= cmodel(x)
 
         ax_att.plot(x, ext_model, "k--")
