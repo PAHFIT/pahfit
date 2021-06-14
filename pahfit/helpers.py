@@ -57,7 +57,7 @@ def read_spectrum(specfile, colnames=["wavelength", "flux", "sigma"]):
     return obsdata
 
 
-def initialize_model(packfile, obsdata, estimate_start=False):
+def initialize_model(packfile, obsdata, no_starting_estimate=False):
     """
     Initialize a model based on the packfile
 
@@ -69,8 +69,8 @@ def initialize_model(packfile, obsdata, estimate_start=False):
     obsdata : dict
         observed data where x = wavelength, y = SED, and unc = uncertainties
 
-    estimate_start : boolean
-        estimate the starting parameters based on the observed data
+    no_starting_estimate : boolean
+        Bypass the estimation of the fit starting point based on the input spectrum.
 
     Returns
     -------
@@ -90,7 +90,7 @@ def initialize_model(packfile, obsdata, estimate_start=False):
     pmodel = PAHFITBase(
         obsdata["x"].value,
         obsdata["y"].value,
-        estimate_start=estimate_start,
+        no_starting_estimate=no_starting_estimate,
         filename=packfile,
     )
 

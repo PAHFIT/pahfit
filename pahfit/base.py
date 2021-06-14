@@ -112,7 +112,7 @@ class PAHFITBase:
         x_0, x_0_limits, x_0_fixed, fwhms, fwhms_limits, fwhm_fixed}.
     """
 
-    def __init__(self, obs_x, obs_y, estimate_start=False, param_info=None, filename=None, tformat=None):
+    def __init__(self, obs_x, obs_y, no_starting_estimate=False, param_info=None, filename=None, tformat=None):
         """
         Setup a variant based on inputs.  Generates an astropy.modeling
         compound model.
@@ -128,7 +128,7 @@ class PAHFITBase:
         if filename is not None:
             param_info = self.read(filename, tformat=tformat)
 
-        if estimate_start:
+        if not no_starting_estimate:
             # guess values and update starting point (if not set fixed) based on the input spectrum
             param_info = self.estimate_init(obs_x, obs_y, param_info)
 

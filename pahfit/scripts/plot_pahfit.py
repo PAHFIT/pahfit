@@ -62,7 +62,7 @@ def main():
     obsdata = read_spectrum(args.spectrumfile)
 
     # setup the model
-    pmodel = initialize_model(args.fitfilename, obsdata, estimate_start=False)
+    pmodel = initialize_model(args.fitfilename, obsdata, no_starting_estimate=True)
 
     # plot result
     fontsize = 18
