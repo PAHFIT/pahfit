@@ -53,9 +53,9 @@ def initialize_parser():
         help="Save fit results to a file of specified type",
     )
     parser.add_argument(
-        "--estimate_start",
+        "--no_starting_estimate",
         action="store_true",
-        help="Estimate of starting point based on the input spectrum",
+        help="Bypass the estimation of the fit starting point based on the input spectrum.",
     )
     parser.add_argument(
         "--scalefac_resid",
@@ -84,7 +84,7 @@ def main():
     obsdata = read_spectrum(args.spectrumfile)
 
     # setup the model
-    pmodel = initialize_model(args.packfile, obsdata, args.estimate_start)
+    pmodel = initialize_model(args.packfile, obsdata, not args.no_starting_estimate)
 
     # fit the spectrum
     obsfit = fit_spectrum(obsdata, pmodel, maxiter=args.fit_maxiter)
