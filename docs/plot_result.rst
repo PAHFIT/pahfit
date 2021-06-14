@@ -7,7 +7,7 @@ Plotting
 
 The saved results from a PAHFIT run can be plotted using the ``plot_pahfit``
 script.  By default, the plot is displayed.  To save the plot instead,
-use the "--savefig" command line option.
+use the `--savefig` command line option.
 
 .. code-block:: console
 
