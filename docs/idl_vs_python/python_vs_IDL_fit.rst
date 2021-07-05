@@ -5,10 +5,9 @@ IDL vs. Python Spectrum Fitting
 Fit Results
 ===========
 
-The surface brightness data in the following spectrums came from a southern 
-region of NGC 2023. To learn more about the region of NGC 2023 examined, refer to 
-*The PAH Emission Characteristics of the Reflection Nebula NGC 2023* by 
-Els Peeters et al.
+The surface brightness data in the following spectra are from a southern region of 
+NGC 2023. To learn more about the region of NGC 2023 examined, refer to *The PAH 
+Emission Characteristics of the Reflection Nebula NGC 2023* by Els Peeters et al.
 
 Changes to Default scipack File Used for Fitting
 ================================================
