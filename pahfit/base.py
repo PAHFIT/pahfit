@@ -4,6 +4,7 @@ from pahfit.component_models import BlackBody1D, S07_attenuation
 
 from astropy.table import Table, vstack
 from astropy.modeling.physical_models import Drude1D
+from astropy import constants as const
 
 from scipy import interpolate
 
@@ -364,7 +365,7 @@ class PAHFITBase:
         ax.xaxis.set_minor_formatter(mpl.ticker.ScalarFormatter())
         ax.xaxis.set_major_formatter(mpl.ticker.ScalarFormatter())
 
-    def save(self, obs_fit, filename, outform):
+    def save(self, obs_fit, x, yerr, filename, outform):
         """
         Save the model parameters to a user defined file format.
 
@@ -421,6 +422,8 @@ class PAHFITBase:
                 "fwhm_min",
                 "fwhm_max",
                 "fwhm_fixed",
+                "strength",
+                "strength_unc"
             ),
             dtype=(
                 "U25",
@@ -437,6 +440,8 @@ class PAHFITBase:
                 "float64",
                 "float64",
                 "bool",
+                "float64",
+                "float64"
             ),
         )
         att_table = Table(
@@ -463,6 +468,19 @@ class PAHFITBase:
                     ]
                 )
             elif comp_type == "Drude1D":
+
+                # Calculate feature strength.
+                # TODO: Use input units to determine conversion and feature strength units.
+                strength = (np.pi * const.c.to('micron/s').value / 2) * (component.amplitude.value * component.fwhm.value / component.x_0.value**2) * 1e-26
+                # Estimate profile-weighted uncertainty.
+                if strength != 0.:
+                    nu = const.c.to('micron/s').value / x.value
+                    dnu = np.diff(nu, prepend=nu[1])
+                    uwv = np.where(component(x.value) / np.nanmax(component(x.value)) > 0.1)[0]
+                    strength_unc = np.sqrt(np.sum(np.take(yerr, uwv)**2 * np.take(dnu, uwv)**2)) * 1e-26
+                else:
+                    strength_unc = 0.
+
                 line_table.add_row(
                     [
                         component.name,
@@ -479,9 +497,25 @@ class PAHFITBase:
                         component.fwhm.bounds[0],
                         component.fwhm.bounds[1],
                         component.fwhm.fixed,
+                        strength,
+                        strength_unc,
                     ]
                 )
             elif comp_type == "Gaussian1D":
+
+                # Calculate line strength.
+                # TODO: Use input units to determine conversion and line strength units.
+                fwhm = 2 * component.stddev.value * np.sqrt(2 * np.log(2))
+                strength = ((np.sqrt(np.pi / np.log(2)) / np.pi) * const.c.to('micron/s').value / 2) * (component.amplitude.value * fwhm / component.mean.value**2) * 1e-26
+                # Estimate profile-weighted uncertainty.
+                if strength != 0.:
+                    nu = const.c.to('micron/s').value / x.value
+                    dnu = np.diff(nu, prepend=nu[1])
+                    uwv = np.where(component(x.value) / np.nanmax(component(x.value)) > 0.1)[0]
+                    strength_unc = np.sqrt(np.sum(np.take(yerr, uwv)**2 * np.take(dnu, uwv)**2)) * 1e-26
+                else:
+                    strength_unc = 0.
+
                 line_table.add_row(
                     [
                         component.name,
@@ -498,6 +532,8 @@ class PAHFITBase:
                         2.355 * component.stddev.bounds[0],
                         2.355 * component.stddev.bounds[1],
                         component.stddev.fixed,
+                        strength,
+                        strength_unc,
                     ]
                 )
             elif comp_type == "S07_attenuation":
