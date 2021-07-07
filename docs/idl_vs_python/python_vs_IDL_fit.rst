@@ -8,6 +8,8 @@ Fit Results
 The surface brightness data in the following spectra are from a southern region of 
 NGC 2023. To learn more about the region of NGC 2023 examined, refer to *The PAH 
 Emission Characteristics of the Reflection Nebula NGC 2023* by Els Peeters et al.
+(found in The Astrophysical Journal, Volume 836, Issue 2, article id. 198, 40 pp. 
+(2017) or found in the ADS at https://ui.adsabs.harvard.edu/abs/2017ApJ...836..198P/abstract)
 
 Changes to Default scipack File Used for Fitting
 ================================================
@@ -31,16 +33,16 @@ default maxiter of 200 while the Python version uses a default maxiter of 1000).
 
 The above graphs of pixel [18, 14] represent a 'good' comparison between the IDL
 and Python fit.  That is, the fits resulted in similar residuals and calculated 
-fluxes.  Of note, the Python fit does not contain a dust feature at 5.27 µm
-while the IDL fit does. Additionally, both the Python and IDL fit do not contain a 
-dust feature at 14.04 µm.
+fluxes.  Of note, the output of the Python version of PAHFIT fit did not contain
+a dust feature at 5.27 µm (DF0 **amp** = 0) while the IDL fit did. Additionally, 
+both the Python and IDL PAHFIT outputs did not contain a dust feature at 14.04 µm.
 
 .. image:: NGC2023_pixel_37_21.png
 
 Contrastingly, the graphs of pixel [37, 21] represent more dissimilar IDL and
-Python fits.  Interestingly, in this case, the Python fit did not contain dust
-features for 5.27 and 5.70 µm.  Conversely, while it did contain the 5.70 µm feature,
-the IDL fit did not contain the 10.68 µm dust feature.
+Python fits.  Interestingly, in this case, the Python PAHFIT output did not contain 
+dust features for 5.27 and 5.70 µm.  Conversely, while it did contain the 5.70 µm 
+feature, the IDL PAHFIT output did not contain the 10.68 µm dust feature.
 
 In general, for NGC 2023, spectrum fitting seemed to be the least accurate below 
 6 µm and above 14 µm. Further, the spectrum fit around 11 µm does not always 
