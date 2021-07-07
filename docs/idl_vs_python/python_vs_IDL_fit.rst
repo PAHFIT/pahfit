@@ -11,13 +11,11 @@ Emission Characteristics of the Reflection Nebula NGC 2023* by Els Peeters et al
 (found in The Astrophysical Journal, Volume 836, Issue 2, article id. 198, 40 pp. 
 (2017) or found in the ADS at https://ui.adsabs.harvard.edu/abs/2017ApJ...836..198P/abstract)
 
-Changes to Default scipack File Used for Fitting
-================================================
-
-Several changes were made to the default package *scipack_ExGal_SpitzerIRSSLLL.ipac*
-when fitting the infrared spectrum of NGC 2023.  Of note, the **amp** values of 
-H2 S(4), H2 S(6) and H2 S(7) were changed to **0**.  Additionally, the **amp_fixed** 
-values of the same features were changed to **True**.
+.. note::
+   Several changes were made to the default package *scipack_ExGal_SpitzerIRSSLLL.ipac*
+   when fitting the infrared spectrum of NGC 2023.  Of note, the **amp** values of 
+   H2 S(4), H2 S(6) and H2 S(7) were changed to **0**.  Additionally, the **amp_fixed** 
+   values of the same features were changed to **True**.
 
 Python vs. IDL PAHFIT Results
 =============================
@@ -44,7 +42,7 @@ Python fits.  Interestingly, in this case, the Python PAHFIT output did not cont
 dust features for 5.27 and 5.70 µm.  Conversely, while it did contain the 5.70 µm 
 feature, the IDL PAHFIT output did not contain the 10.68 µm dust feature.
 
-In general, for NGC 2023, spectrum fitting seemed to be the least accurate below 
-6 µm and above 14 µm. Further, the spectrum fit around 11 µm does not always 
-appear accurate. In fact, the accuracy of the fit tends to decease as the 
-11.0 µm PAH feature increases.
+In general, for NGC 2023, Python spectrum fitting seemed to be the least accurate 
+below 6 µm and above 14 µm. Further, in both Python and IDL, the spectrum fit 
+around 11 µm does not always appear accurate. In fact, the accuracy of the fit tends 
+to decrease as the 11.0 µm PAH feature increases.
