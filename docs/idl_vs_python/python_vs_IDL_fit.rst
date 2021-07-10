@@ -2,8 +2,8 @@
 IDL vs. Python Spectrum Fitting
 ###############################
 
-Fit Results
-===========
+Background Information
+======================
 
 The surface brightness data in the following spectra are from a southern region of 
 NGC 2023. To learn more about the region of NGC 2023 examined, refer to *The PAH 
