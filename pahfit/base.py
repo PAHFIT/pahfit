@@ -365,7 +365,8 @@ class PAHFITBase:
         ax.xaxis.set_minor_formatter(mpl.ticker.ScalarFormatter())
         ax.xaxis.set_major_formatter(mpl.ticker.ScalarFormatter())
 
-    def save(self, obs_fit, x, yerr, filename, outform):
+    @staticmethod
+    def save(obs_fit, x, yerr, filename, outform):
         """
         Save the model parameters to a user defined file format.
 
