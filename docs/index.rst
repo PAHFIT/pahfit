@@ -32,6 +32,7 @@ User Documentation
    Fitting a spectrum <fit_spectrum.rst>
    Plotting a fit <plot_result.rst>
    File formats <file_formats.rst>
+   IDL versus Python PAHFIT implementations <idl_vs_python/python_vs_IDL_fit.rst>
 
 Installation
 ============
