@@ -365,7 +365,6 @@ class PAHFITBase:
         ax.xaxis.set_minor_formatter(mpl.ticker.ScalarFormatter())
         ax.xaxis.set_major_formatter(mpl.ticker.ScalarFormatter())
 
-    # @staticmethod
     def save(self, obs_fit, x, yerr, filename, outform):
         """
         Save the model parameters to a user defined file format.
@@ -558,7 +557,8 @@ class PAHFITBase:
             "{}_output.{}".format(filename, outform), format=outform, overwrite=True
         )
 
-    def featcombine(self, ftable):
+    @staticmethod
+    def featcombine(ftable):
         """
         Combine dust features strengths.
 
