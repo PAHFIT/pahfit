@@ -592,7 +592,7 @@ class PAHFITBase:
             names=("Name", "range_min", "range_max", "strength", "strength_unc", "eqw"),
             dtype=("U25", "float64", "float64", "float64", "float64", "float64"))
 
-        # Get indices of dust features. 
+        # Get indices of dust features.
         df_ind = np.concatenate(np.argwhere(ftable["Form"] == "Drude1D"))
 
         # Get table subset containing only the dust features.
