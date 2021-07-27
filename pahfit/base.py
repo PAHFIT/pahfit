@@ -365,8 +365,8 @@ class PAHFITBase:
         ax.xaxis.set_minor_formatter(mpl.ticker.ScalarFormatter())
         ax.xaxis.set_major_formatter(mpl.ticker.ScalarFormatter())
 
-    @staticmethod
-    def save(obs_fit, x, yerr, filename, outform):
+    # @staticmethod
+    def save(self, obs_fit, x, yerr, filename, outform):
         """
         Save the model parameters to a user defined file format.
 
@@ -471,7 +471,6 @@ class PAHFITBase:
             elif comp_type == "Drude1D":
 
                 # Calculate feature strength.
-                # TODO: Use input units to determine conversion and feature strength units.
                 strength = (np.pi * const.c.to('micron/s').value / 2) * (component.amplitude.value * component.fwhm.value / component.x_0.value**2) * 1e-26
                 # Estimate profile-weighted uncertainty.
                 if strength != 0.:
@@ -505,7 +504,6 @@ class PAHFITBase:
             elif comp_type == "Gaussian1D":
 
                 # Calculate line strength.
-                # TODO: Use input units to determine conversion and line strength units.
                 fwhm = 2 * component.stddev.value * np.sqrt(2 * np.log(2))
                 strength = ((np.sqrt(np.pi / np.log(2)) / np.pi) * const.c.to('micron/s').value / 2) * (component.amplitude.value * fwhm / component.mean.value**2) * 1e-26
                 # Estimate profile-weighted uncertainty.
@@ -549,13 +547,69 @@ class PAHFITBase:
                     ]
                 )
 
+        # Call featcombine to calculate combined dust feature strengths.
+        cftable = self.featcombine(line_table)
+
         # stack the tables (handles missing columns between tables)
-        out_table = vstack([bb_table, line_table, att_table])
+        out_table = vstack([bb_table, line_table, att_table, cftable])
 
         # Writing output table
         out_table.write(
             "{}_output.{}".format(filename, outform), format=outform, overwrite=True
         )
+
+    def featcombine(self, ftable):
+        """
+        Combine dust features strengths.
+
+        Parameters
+        ----------
+        ftable : data table
+            Astropy table containing lines.
+
+        Returns
+        -------
+        cftable : data table
+            Astropy table containing combined dust feature strengths.
+        """
+        # Define combined strength dictionary.
+        cfdic = {'PAH_62': {'range': [6.2, 6.3]},
+                 'PAH_77_C': {'range': [7.3, 7.9]},
+                 'PAH_83': {'range': [8.3, 8.4]},
+                 'PAH_86': {'range': [8.6, 8.7]},
+                 'PAH_112': {'range': [11.2, 11.4]},
+                 'PAH_120': {'range': [11.9, 12.1]},
+                 'PAH_126_C': {'range': [12.6, 12.7]},
+                 'PAH_136': {'range': [13.4, 13.6]},
+                 'PAH_142': {'range': [14.1, 14.2]},
+                 'PAH_164': {'range': [16.4, 16.5]},
+                 'PAH_17c': {'range': [16.4, 17.9]},
+                 'PAH_174': {'range': [17.35, 17.45]}
+                 }
+
+        # Create combined strength, unc, and eqw table.
+        cftable = Table(
+            names=("Name", "range_min", "range_max", "strength", "strength_unc", "eqw"),
+            dtype=("U25", "float64", "float64", "float64", "float64", "float64"))
+
+        # Get indices of dust features. 
+        df_ind = np.concatenate(np.argwhere(ftable["Form"] == "Drude1D"))
+
+        # Get table subset containing only the dust features.
+        dfs = ftable[df_ind[0]:df_ind[-1] + 1]
+
+        # Iterate keys and calculate combined strengths.
+        for feat in cfdic.keys():
+            mask = np.logical_and(dfs['x_0'] >= cfdic[feat]['range'][0], cfdic[feat]['range'][-1])
+            cftable.add_row(
+                [feat,
+                 cfdic[feat]['range'][0],
+                 cfdic[feat]['range'][-1],
+                 np.sum(dfs[mask]['strength']),
+                 None,
+                 None
+                 ])
+        return cftable
 
     def read(self, filename, tformat=None):
         """
