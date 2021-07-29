@@ -635,7 +635,8 @@ class PAHFITBase:
                  ])
         return cftable
 
-    def eqws(self, comp_type, x_0, amp, fwhm_stddev, obs_fit):
+    @staticmethod
+    def eqws(comp_type, x_0, amp, fwhm_stddev, obs_fit):
         """
         Calculate the emission features equivalent width in microns.
 
