@@ -600,7 +600,7 @@ class PAHFITBase:
 
         # Iterate keys and calculate combined strengths.
         for feat in cfdic.keys():
-            mask = np.logical_and(dfs['x_0'] >= cfdic[feat]['range'][0], cfdic[feat]['range'][-1])
+            mask = np.logical_and(dfs['x_0'] >= cfdic[feat]['range'][0], dfs['x_0'] <= cfdic[feat]['range'][-1])
             cftable.add_row(
                 [feat,
                  cfdic[feat]['range'][0],
