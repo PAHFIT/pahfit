@@ -6,7 +6,7 @@ from astropy.table import Table, vstack
 from astropy.modeling.physical_models import Drude1D
 from astropy import constants as const
 
-from scipy import interpolate
+from scipy import interpolate, integrate
 
 import numpy as np
 
@@ -423,7 +423,8 @@ class PAHFITBase:
                 "fwhm_max",
                 "fwhm_fixed",
                 "strength",
-                "strength_unc"
+                "strength_unc",
+                "eqw"
             ),
             dtype=(
                 "U25",
@@ -440,6 +441,7 @@ class PAHFITBase:
                 "float64",
                 "float64",
                 "bool",
+                "float64",
                 "float64",
                 "float64"
             ),
@@ -471,14 +473,24 @@ class PAHFITBase:
 
                 # Calculate feature strength.
                 strength = (np.pi * const.c.to('micron/s').value / 2) * (component.amplitude.value * component.fwhm.value / component.x_0.value**2) * 1e-26
-                # Estimate profile-weighted uncertainty.
+
+                # Estimate profile-weighted uncertainty and EQW.
                 if strength != 0.:
                     nu = const.c.to('micron/s').value / x.value
                     dnu = np.diff(nu, prepend=nu[1])
                     uwv = np.where(component(x.value) / np.nanmax(component(x.value)) > 0.1)[0]
                     strength_unc = np.sqrt(np.sum(np.take(yerr, uwv)**2 * np.take(dnu, uwv)**2)) * 1e-26
+
+                    # Get feature EQW.
+                    eqw = self.eqws(comp_type,
+                                    component.x_0.value,
+                                    component.amplitude.value,
+                                    component.fwhm,
+                                    obs_fit)
+
                 else:
                     strength_unc = 0.
+                    eqw = 0.
 
                 line_table.add_row(
                     [
@@ -498,6 +510,7 @@ class PAHFITBase:
                         component.fwhm.fixed,
                         strength,
                         strength_unc,
+                        eqw
                     ]
                 )
             elif comp_type == "Gaussian1D":
@@ -505,14 +518,24 @@ class PAHFITBase:
                 # Calculate line strength.
                 fwhm = 2 * component.stddev.value * np.sqrt(2 * np.log(2))
                 strength = ((np.sqrt(np.pi / np.log(2)) / np.pi) * const.c.to('micron/s').value / 2) * (component.amplitude.value * fwhm / component.mean.value**2) * 1e-26
-                # Estimate profile-weighted uncertainty.
+
+                # Estimate profile-weighted uncertainty and EQW.
                 if strength != 0.:
                     nu = const.c.to('micron/s').value / x.value
                     dnu = np.diff(nu, prepend=nu[1])
                     uwv = np.where(component(x.value) / np.nanmax(component(x.value)) > 0.1)[0]
                     strength_unc = np.sqrt(np.sum(np.take(yerr, uwv)**2 * np.take(dnu, uwv)**2)) * 1e-26
+
+                    # Get feature EQW.
+                    eqw = self.eqws(comp_type,
+                                    component.mean.value,
+                                    component.amplitude.value,
+                                    fwhm,
+                                    obs_fit)
+
                 else:
                     strength_unc = 0.
+                    eqw = 0.
 
                 line_table.add_row(
                     [
@@ -532,6 +555,7 @@ class PAHFITBase:
                         component.stddev.fixed,
                         strength,
                         strength_unc,
+                        eqw
                     ]
                 )
             elif comp_type == "S07_attenuation":
@@ -589,7 +613,7 @@ class PAHFITBase:
 
         # Create combined strength, unc, and eqw table.
         cftable = Table(
-            names=("Name", "range_min", "range_max", "strength", "strength_unc", "eqw"),
+            names=("Name", "x_0_min", "x_0_max", "strength", "strength_unc", "eqw"),
             dtype=("U25", "float64", "float64", "float64", "float64", "float64"))
 
         # Get indices of dust features.
@@ -600,16 +624,83 @@ class PAHFITBase:
 
         # Iterate keys and calculate combined strengths.
         for feat in cfdic.keys():
-            mask = np.logical_and(dfs['x_0'] >= cfdic[feat]['range'][0], cfdic[feat]['range'][-1])
+            mask = np.logical_and(dfs['x_0'] >= cfdic[feat]['range'][0], dfs['x_0'] <= cfdic[feat]['range'][-1])
             cftable.add_row(
                 [feat,
                  cfdic[feat]['range'][0],
                  cfdic[feat]['range'][-1],
                  np.sum(dfs[mask]['strength']),
                  None,
-                 None
+                 np.sum(dfs[mask]['eqw'])
                  ])
         return cftable
+
+    def eqws(self, comp_type, x_0, amp, fwhm_stddev, obs_fit):
+        """
+        Calculate the emission features equivalent width in microns.
+
+        Parameters
+        ----------
+        comp_type : string
+            type of emission component (Drude1D/Gaussian)
+        x_0 : float
+            central wavelength of the feature.
+        amp : float
+            central intensity of the feature.
+        fwhm_stddev : float
+            fwhm or stddev of the feature depending on comp_type.
+
+        Returns
+        -------
+        eqw : float
+            the equivalent width of the feature
+        """
+        # Check if the emission component is Gaussian and calculate fwhm.
+        if comp_type == 'Gaussian1D':
+            fwhm = 2 * fwhm_stddev * np.sqrt(2 * np.log(2))
+        else:
+            fwhm = fwhm_stddev
+
+        # Get range and wavelength region for integration.
+        low = x_0 - (fwhm * x_0 * 6)
+        lmin = low if low > 0 else 0.
+        lmax = x_0 + (fwhm * x_0 * 6)
+        lam = np.arange(100) / 99 * (lmax - lmin) + lmin
+
+        # Calculate the continuum and feature components in the integration range.
+        cont_components = []
+        for cmodel in obs_fit:
+            if isinstance(cmodel, BlackBody1D):
+                cont_components.append(cmodel)
+        cont_model = cont_components[0]
+        for cmodel in cont_components[1:]:
+            cont_model += cmodel
+        continuum = np.nan_to_num(cont_model(lam))
+
+        if comp_type == 'Drude1D':
+            drude = Drude1D(amplitude=amp,
+                            x_0=x_0,
+                            fwhm=fwhm)
+            lnu = drude(lam)
+
+        elif comp_type == 'Gaussian1D':
+            gauss = Gaussian1D(amplitude=amp,
+                               mean=x_0,
+                               stddev=fwhm_stddev)
+            lnu = gauss(lam)
+
+        # Set default broad limit value.
+        bl = 0.05
+
+        # Calculate EQW.
+        if fwhm > bl:
+            ilam = integrate.simpson(lnu, lam)
+            weighted_cont = integrate.simpson(lnu * continuum, lam) / ilam
+            eqw = ilam / weighted_cont
+        else:
+            eqw = integrate.simpson(lnu / continuum, lam)
+
+        return eqw
 
     def read(self, filename, tformat=None):
         """
