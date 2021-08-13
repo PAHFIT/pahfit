@@ -99,7 +99,7 @@ class S07_attenuation(Fittable1DModel):
 
     def evaluate(self, in_x, tau_si):
         if tau_si == 0.0:
-            return np.full((len(in_x)), 0.0)
+            return np.full((len(in_x)), 1.0)
         else:
             tau_x = tau_si * self.kvt(in_x)
             return (1.0 - np.exp(-1.0 * tau_x)) / tau_x
