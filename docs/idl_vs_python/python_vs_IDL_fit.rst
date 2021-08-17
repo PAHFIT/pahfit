@@ -23,21 +23,21 @@ Python vs. IDL PAHFIT Results
 The graphs below compare the fit results of given pixels of NGC 2023.  The top graph
 shows the Python and IDL spectrum fit along with the data points used.  The second
 graph shows the residuals resulting from the fits.  Lastly, the third graph compares
-the calculated fluxes of PAH features obtained from the fits.  In both graphs, the 
-resulting fit came from default maxiter values (the IDL version of PAHFIT uses a 
-default maxiter of 200 while the Python version uses a default maxiter of 1000).
+the calculated integrated intensities of PAH features obtained from the fits.  In both 
+graphs, the resulting fit came from default maxiter values (the IDL version of PAHFIT 
+uses a default maxiter of 200 while the Python version uses a default maxiter of 1000).
 
-.. image:: NGC2023_pixel_18_14.png
+.. image:: NGC2023_pixel_14_18.png
 
-The above graphs of pixel [18, 14] represent a 'good' comparison between the IDL
-and Python fit.  That is, the fits resulted in similar residuals and calculated 
-fluxes.  Of note, the output of the Python version of PAHFIT fit did not contain
+The above graphs of pixel [14, 18] represent a 'good' comparison between the IDL
+and Python fit.  That is, the fits resulted in similar residuals and integrated 
+intensities.  Of note, the output of the Python version of PAHFIT fit did not contain
 a dust feature at 5.27 µm (DF0 **amp** = 0) while the IDL fit did. Additionally, 
 both the Python and IDL PAHFIT outputs did not contain a dust feature at 14.04 µm.
 
-.. image:: NGC2023_pixel_37_21.png
+.. image:: NGC2023_pixel_21_37.png
 
-Contrastingly, the graphs of pixel [37, 21] represent more dissimilar IDL and
+Contrastingly, the graphs of pixel [21, 37] represent more dissimilar IDL and
 Python fits.  Interestingly, in this case, the Python PAHFIT output did not contain 
 dust features for 5.27 and 5.70 µm.  Conversely, while it did contain the 5.70 µm 
 feature, the IDL PAHFIT output did not contain the 10.68 µm dust feature.
