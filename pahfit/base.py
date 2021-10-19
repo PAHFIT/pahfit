@@ -4,13 +4,15 @@ from pahfit.component_models import BlackBody1D, S07_attenuation
 
 from astropy.table import Table, vstack
 from astropy.modeling.physical_models import Drude1D
-from astropy import constants as const
+from astropy import constants as const, modeling
 
 from scipy import interpolate
 
 import numpy as np
 
 import matplotlib as mpl
+
+from pahfit.feature_strengths import feature_strength, line_strength
 
 __all__ = ["PAHFITBase"]
 
@@ -366,7 +368,7 @@ class PAHFITBase:
         ax.xaxis.set_major_formatter(mpl.ticker.ScalarFormatter())
 
     @staticmethod
-    def save(obs_fit, x, yerr, filename, outform):
+    def save(obs_fit, filename, outform, strength_calc=True):
         """
         Save the model parameters to a user defined file format.
 
@@ -379,6 +381,9 @@ class PAHFITBase:
             Currently using the input data file name.
         outform : string
             Sets the output file format (ascii, fits, csv, etc.).
+        strength_calc : bool
+            Imports the feature_strength module
+            to calculate PAH feature and emission line strenghts.
         """
         # setup the tables for the different components
         bb_table = Table(
@@ -470,17 +475,14 @@ class PAHFITBase:
                 )
             elif comp_type == "Drude1D":
 
-                # Calculate feature strength.
-                # TODO: Use input units to determine conversion and feature strength units.
-                strength = (np.pi * const.c.to('micron/s').value / 2) * (component.amplitude.value * component.fwhm.value / component.x_0.value**2) * 1e-26
-                # Estimate profile-weighted uncertainty.
-                if strength != 0.:
-                    nu = const.c.to('micron/s').value / x.value
-                    dnu = np.diff(nu, prepend=nu[1])
-                    uwv = np.where(component(x.value) / np.nanmax(component(x.value)) > 0.1)[0]
-                    strength_unc = np.sqrt(np.sum(np.take(yerr, uwv)**2 * np.take(dnu, uwv)**2)) * 1e-26
+                if strength_calc:
+                    strength = feature_strength(component.amplitude.value,
+                                                component.fwhm.value,
+                                                component.x_0.value)
                 else:
-                    strength_unc = 0.
+                    strength = None
+
+                strength_unc = None
 
                 line_table.add_row(
                     [
@@ -504,18 +506,14 @@ class PAHFITBase:
                 )
             elif comp_type == "Gaussian1D":
 
-                # Calculate line strength.
-                # TODO: Use input units to determine conversion and line strength units.
-                fwhm = 2 * component.stddev.value * np.sqrt(2 * np.log(2))
-                strength = ((np.sqrt(np.pi / np.log(2)) / np.pi) * const.c.to('micron/s').value / 2) * (component.amplitude.value * fwhm / component.mean.value**2) * 1e-26
-                # Estimate profile-weighted uncertainty.
-                if strength != 0.:
-                    nu = const.c.to('micron/s').value / x.value
-                    dnu = np.diff(nu, prepend=nu[1])
-                    uwv = np.where(component(x.value) / np.nanmax(component(x.value)) > 0.1)[0]
-                    strength_unc = np.sqrt(np.sum(np.take(yerr, uwv)**2 * np.take(dnu, uwv)**2)) * 1e-26
+                if strength_calc:
+                    strength = line_strength(component.amplitude.value,
+                                             component.mean.value,
+                                             component.stddev.value)
                 else:
-                    strength_unc = 0.
+                    strength = None
+
+                strength_unc = None
 
                 line_table.add_row(
                     [
