@@ -4,7 +4,6 @@ from pahfit.component_models import BlackBody1D, S07_attenuation
 
 from astropy.table import Table, vstack
 from astropy.modeling.physical_models import Drude1D
-from astropy import constants as const, modeling
 
 from scipy import interpolate
 
