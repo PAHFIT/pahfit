@@ -2,7 +2,7 @@ import numpy as np
 from astropy import constants as const
 
 
-def feature_strength(ampl, fwhm, x_0):
+def pah_feature_strength(ampl, fwhm, x_0):
     """
     Calculate PAH feature strengths.
 
@@ -37,7 +37,7 @@ def line_strength(ampl, mean, stddev):
         Gaussian1D amplitude
     mean : float
         Mean of the Gaussian
-    fwhm : float
+    stddev : float
         Gaussian1D stddev
 
     Returns

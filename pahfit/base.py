@@ -11,7 +11,7 @@ import numpy as np
 
 import matplotlib as mpl
 
-from pahfit.feature_strengths import feature_strength, line_strength
+from pahfit.feature_strengths import pah_feature_strength, line_strength
 
 __all__ = ["PAHFITBase"]
 
@@ -475,9 +475,9 @@ class PAHFITBase:
             elif comp_type == "Drude1D":
 
                 if strength_calc:
-                    strength = feature_strength(component.amplitude.value,
-                                                component.fwhm.value,
-                                                component.x_0.value)
+                    strength = pah_feature_strength(component.amplitude.value,
+                                                    component.fwhm.value,
+                                                    component.x_0.value)
                 else:
                     strength = None
 
