@@ -8,6 +8,11 @@ from astropy.modeling.fitting import LevMarLSQFitter
 
 from pahfit.base import PAHFITBase
 
+from pahfit.component_models import BlackBody1D
+from astropy.modeling.physical_models import Drude1D
+from astropy.modeling.functional_models import Gaussian1D
+
+
 __all__ = ["read_spectrum", "initialize_model", "fit_spectrum"]
 
 
@@ -138,3 +143,72 @@ def fit_spectrum(obsdata, pmodel, maxiter=1000, verbose=True):
         print(fit.fit_info["message"])
 
     return obs_fit
+
+
+def get_compounds(obsdata, pmodel):
+    """
+    Determine model compounds for total continuum, dust continuum, dust feature, H2 lines
+
+    Parameters
+    ----------
+    obsdata : dict
+        observed data where x = wavelength, y = SED, and unc = uncertainties
+
+    obs_fit : CompoundModel
+        PAHFIT model (output from fit_spectrum)
+
+    Returns
+    -------
+    compounds : dict
+        x = wavelength in microns; 
+        tot_cont = total continuum; 
+        dust_cont = total dust continuum; 
+        dust_feat = combined dust features; 
+        h2_feat = combined H2 lines
+    """
+
+    # get wavelength array
+    x = obsdata["x"].value
+
+    # calculate total dust continuum and total continuum (oncluding stellar continuum)
+    cont_components = []
+
+    for cmodel in pmodel.model:
+        if isinstance(cmodel, BlackBody1D):
+            cont_components.append(cmodel)
+    stellar_cont_model = cont_components[0]
+    dust_cont_model = cont_components[1] 
+    for cmodel in cont_components[2:]:
+        dust_cont_model += cmodel
+    totcont = dust_cont_model(x) + stellar_cont_model(x)
+
+    # calculate total dust features 
+    dust_features = []
+
+    for cmodel in pmodel.model:
+        if isinstance(cmodel, Drude1D):
+            dust_features.append(cmodel)
+    dust_features_model = dust_features[0]
+    for cmodel in dust_features[1:]:
+        dust_features_model += cmodel
+
+    # calculate H2 spectrum
+    H2_features = []
+
+    for cmodel in pmodel.model:
+        if isinstance(cmodel, Gaussian1D):
+            if cmodel.name[0:2] == 'H2':
+                H2_features.append(cmodel)
+    H2_features_model = H2_features[0]
+    for cmodel in H2_features[1:]:
+        H2_features_model += cmodel
+
+    # save compounds in dictionary
+    compounds = {}
+    compounds["x"] = x
+    compounds["tot_cont"] = totcont
+    compounds["dust_cont"] = dust_cont_model(x)
+    compounds["dust_feat"] = dust_features_model(x)
+    compounds["h2_feat"] = H2_features_model(x)
+
+    return compounds
