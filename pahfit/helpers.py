@@ -243,3 +243,4 @@ def calculate_compounds(obsdata, pmodel):
     compounds["extinction_model"] = ext_model
 
     return compounds
+    
