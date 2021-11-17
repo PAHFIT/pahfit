@@ -145,10 +145,12 @@ def fit_spectrum(obsdata, pmodel, maxiter=1000, verbose=True):
     return obs_fit
 
 
-def get_compounds(obsdata, pmodel):
+def calculate_compounds(obsdata, pmodel):
     """
-    Determine model compounds for total continuum, stellar continuum, total dust continuum, combined dust features, 
-    combined atomic and H2 lines, combined H2 lines, combined atomic lines, and extinction model
+    Determine model compounds for total continuum, stellar continuum,
+    total dust continuum, combined dust features,
+    combined atomic and H2 lines, combined H2 lines,
+    combined atomic lines, and extinction model
 
     Parameters
     ----------
@@ -239,6 +241,5 @@ def get_compounds(obsdata, pmodel):
     compounds["h2_lines"] = h2_features_model(x)
     compounds["atomic_lines"] = atomic_features_model(x)
     compounds["extinction_model"] = ext_model
-
 
     return compounds
