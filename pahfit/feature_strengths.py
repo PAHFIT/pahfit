@@ -4,7 +4,7 @@ from astropy import constants as const
 
 def pah_feature_strength(ampl, fwhm, x_0):
     """
-    Calculate PAH feature strengths.
+    Calculate the integrated area of PAH feature profiles.
 
     Parameters
     ----------
