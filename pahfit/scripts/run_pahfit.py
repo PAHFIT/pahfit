@@ -70,6 +70,11 @@ def initialize_parser():
         type=int,
         help="Maximum number of interations for the fitting",
     )
+    parser.add_argument(
+        "--strength_calc",
+        action="store_true",
+        help="Calculate PAH feature and emission line strenghts",
+    )
 
     return parser
 
@@ -91,7 +96,7 @@ def main():
 
     # save fit results to file
     outputname = args.spectrumfile.split(".")[0]
-    pmodel.save(obsfit, outputname, args.saveoutput)
+    pmodel.save(obsfit, outputname, args.saveoutput, strength_calc=args.strength_calc)
 
     # plot result
     fontsize = 18

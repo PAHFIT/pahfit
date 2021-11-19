@@ -11,6 +11,8 @@ import numpy as np
 
 import matplotlib as mpl
 
+from pahfit.feature_strengths import pah_feature_strength, line_strength
+
 __all__ = ["PAHFITBase"]
 
 
@@ -364,7 +366,8 @@ class PAHFITBase:
         ax.xaxis.set_minor_formatter(mpl.ticker.ScalarFormatter())
         ax.xaxis.set_major_formatter(mpl.ticker.ScalarFormatter())
 
-    def save(self, obs_fit, filename, outform):
+    @staticmethod
+    def save(obs_fit, filename, outform, strength_calc=True):
         """
         Save the model parameters to a user defined file format.
 
@@ -377,6 +380,9 @@ class PAHFITBase:
             Currently using the input data file name.
         outform : string
             Sets the output file format (ascii, fits, csv, etc.).
+        strength_calc : bool
+            Imports the feature_strength module
+            to calculate PAH feature and emission line strenghts.
         """
         # setup the tables for the different components
         bb_table = Table(
@@ -421,6 +427,8 @@ class PAHFITBase:
                 "fwhm_min",
                 "fwhm_max",
                 "fwhm_fixed",
+                "strength",
+                "strength_unc"
             ),
             dtype=(
                 "U25",
@@ -437,6 +445,8 @@ class PAHFITBase:
                 "float64",
                 "float64",
                 "bool",
+                "float64",
+                "float64"
             ),
         )
         att_table = Table(
@@ -463,6 +473,16 @@ class PAHFITBase:
                     ]
                 )
             elif comp_type == "Drude1D":
+
+                if strength_calc:
+                    strength = pah_feature_strength(component.amplitude.value,
+                                                    component.fwhm.value,
+                                                    component.x_0.value)
+                else:
+                    strength = None
+
+                strength_unc = None
+
                 line_table.add_row(
                     [
                         component.name,
@@ -479,9 +499,21 @@ class PAHFITBase:
                         component.fwhm.bounds[0],
                         component.fwhm.bounds[1],
                         component.fwhm.fixed,
+                        strength,
+                        strength_unc,
                     ]
                 )
             elif comp_type == "Gaussian1D":
+
+                if strength_calc:
+                    strength = line_strength(component.amplitude.value,
+                                             component.mean.value,
+                                             component.stddev.value)
+                else:
+                    strength = None
+
+                strength_unc = None
+
                 line_table.add_row(
                     [
                         component.name,
@@ -498,6 +530,8 @@ class PAHFITBase:
                         2.355 * component.stddev.bounds[0],
                         2.355 * component.stddev.bounds[1],
                         component.stddev.fixed,
+                        strength,
+                        strength_unc,
                     ]
                 )
             elif comp_type == "S07_attenuation":
