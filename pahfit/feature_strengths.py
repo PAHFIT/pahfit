@@ -27,6 +27,7 @@ def pah_feature_strength(ampl, fwhm, x_0):
 
     return strength
 
+
 def line_strength(ampl, mean, stddev):
     """
     Calculate emission line strengths.
