@@ -13,7 +13,7 @@ from astropy.modeling.physical_models import Drude1D
 from astropy.modeling.functional_models import Gaussian1D
 
 
-__all__ = ["read_spectrum", "initialize_model", "fit_spectrum"]
+__all__ = ["read_spectrum", "initialize_model", "fit_spectrum", "calculate_compounds"]
 
 
 def read_spectrum(specfile, colnames=["wavelength", "flux", "sigma"]):
