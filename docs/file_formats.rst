@@ -24,9 +24,7 @@ The astropy version of `Drude1D
 <https://docs.astropy.org/en/stable/modeling/physical_models.html#drude1d>`_
 and `Gaussian1D
 <https://docs.astropy.org/en/stable/api/astropy.modeling.functional_models.Gaussian1D.html#astropy.modeling.functional_models.Gaussian1D>`_
-are used. See
-:ref:`BlackBody1D <BlackBody1D>` and  
-:ref:`dust attenuation model <S07_attenuation>` for a
+are used. See :ref:`reference API <reference_API>` for a
 description of BlackBody1D and the dust attenuation model.
 
 The model packs are saved as IPAC tables as these provide readable (ASCII)
