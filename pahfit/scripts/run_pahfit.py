@@ -1,17 +1,11 @@
 #!/usr/bin/env python
 
-import os
-import pkg_resources
 import argparse
 
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 
-import astropy.units as u
-from astropy.table import Table
-from astropy.modeling.fitting import LevMarLSQFitter
-
-from pahfit.base import PAHFITBase
+from pahfit.helpers import read_spectrum, initialize_model, fit_spectrum
 
 
 def initialize_parser():
@@ -59,9 +53,22 @@ def initialize_parser():
         help="Save fit results to a file of specified type",
     )
     parser.add_argument(
-        "--estimate_start",
+        "--no_starting_estimate",
         action="store_true",
-        help="Estimate of starting point based on the input spectrum",
+        help="Bypass the estimation of the fit starting point based on the input spectrum.",
+    )
+    parser.add_argument(
+        "--scalefac_resid",
+        action="store",
+        type=float,
+        default=2.0,
+        help="Factor multiplying the standard deviation of the residuals to adjust plot limits",
+    )
+    parser.add_argument(
+        "--fit_maxiter",
+        default=1000,
+        type=int,
+        help="Maximum number of interations for the fitting",
     )
 
     return parser
@@ -73,63 +80,18 @@ def main():
     parser = initialize_parser()
     args = parser.parse_args()
 
-    # read in the observed spectrum
-    # assumed to be astropy table compatibile and include units
-    specfile = args.spectrumfile
-    outputname = specfile.split(".")[0]
-    if not os.path.isfile(specfile):
-        pack_path = pkg_resources.resource_filename("pahfit", "data/")
-        test_specfile = "{}/{}".format(pack_path, specfile)
-        if os.path.isfile(test_specfile):
-            specfile = test_specfile
-        else:
-            raise ValueError("Input spectrumfile {} not found".format(specfile))
+    # read in the spectrum
+    obsdata = read_spectrum(args.spectrumfile)
 
-    # get the table format (from extension of filename)
-    tformat = specfile.split(".")[-1]
-    if tformat == "ecsv":
-        tformat = "ascii.ecsv"
-    obs_spectrum = Table.read(specfile, format=tformat)
-    obs_x = obs_spectrum["wavelength"].to(u.micron, equivalencies=u.spectral())
-    obs_y = obs_spectrum["flux"].to(u.Jy, equivalencies=u.spectral_density(obs_x))
-    obs_unc = obs_spectrum["sigma"].to(u.Jy, equivalencies=u.spectral_density(obs_x))
+    # setup the model
+    pmodel = initialize_model(args.packfile, obsdata, not args.no_starting_estimate)
 
-    # strip units as the observed spectrum is in the internal units
-    obs_x = obs_x.value
-    obs_y = obs_y.value
-    weights = 1.0 / obs_unc.value
+    # fit the spectrum
+    obsfit = fit_spectrum(obsdata, pmodel, maxiter=args.fit_maxiter)
 
-    # read in the pack file
-    packfile = args.packfile
-    if not os.path.isfile(packfile):
-        pack_path = pkg_resources.resource_filename("pahfit", "packs/")
-        test_packfile = "{}/{}".format(pack_path, packfile)
-        if os.path.isfile(test_packfile):
-            packfile = test_packfile
-        else:
-            raise ValueError("Input packfile {} not found".format(packfile))
-
-    pmodel = PAHFITBase(
-        obs_x, obs_y, estimate_start=args.estimate_start, filename=packfile
-    )
-
-    # pick the fitter
-    fit = LevMarLSQFitter()
-
-    # fit
-    obs_fit = fit(
-        pmodel.model,
-        obs_x,
-        obs_y,
-        weights=weights,
-        maxiter=200,
-        epsilon=1e-10,
-        acc=1e-10,
-    )
-    print(fit.fit_info["message"])
-
-    # save results to fits file
-    pmodel.save(obs_fit, outputname, args.saveoutput)
+    # save fit results to file
+    outputname = args.spectrumfile.split(".")[0]
+    pmodel.save(obsfit, outputname, args.saveoutput)
 
     # plot result
     fontsize = 18
@@ -137,18 +99,19 @@ def main():
     mpl.rc("font", **font)
     mpl.rc("lines", linewidth=2)
     mpl.rc("axes", linewidth=2)
-    mpl.rc("xtick.major", width=2)
-    mpl.rc("ytick.major", width=2)
+    mpl.rc("xtick.major", size=5, width=1)
+    mpl.rc("ytick.major", size=5, width=1)
+    mpl.rc("xtick.minor", size=3, width=1)
+    mpl.rc("ytick.minor", size=3, width=1)
 
-    fig, ax = plt.subplots(figsize=(15, 10))
+    fig, axs = plt.subplots(ncols=1, nrows=2, figsize=(15, 10),
+                            gridspec_kw={'height_ratios': [3, 1]},
+                            sharex=True)
 
-    pmodel.plot(ax, obs_x, obs_y, obs_fit)
-
-    ax.set_yscale("linear")
-    ax.set_xscale("log")
+    pmodel.plot(axs, obsdata["x"], obsdata["y"], obsdata["unc"], obsfit, scalefac_resid=args.scalefac_resid)
 
     # use the whitespace better
-    fig.tight_layout()
+    fig.subplots_adjust(hspace=0)
 
     # show
     if args.showplot:
