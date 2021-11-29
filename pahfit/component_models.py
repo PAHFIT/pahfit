@@ -35,7 +35,7 @@ class S07_attenuation(Fittable1DModel):
     Smith, Draine, et al. (2007) kvt attenuation model calculation.
     Calculation is for a fully mixed geometrically model.
     Uses an extinction curve based on the silicate profiles from
-    Kemper, Vreind, & Tielens (2004, apJ, 609, 826).
+    Kemper, Vriend, & Tielens (2004, apJ, 609, 826).
     Constructed as a weighted sum of two components: silicate profiles,
     and an exponent 1.7 power-law.
 
@@ -99,7 +99,7 @@ class S07_attenuation(Fittable1DModel):
 
     def evaluate(self, in_x, tau_si):
         if tau_si == 0.0:
-            return np.full((len(in_x)), 0.0)
+            return np.full((len(in_x)), 1.0)
         else:
             tau_x = tau_si * self.kvt(in_x)
             return (1.0 - np.exp(-1.0 * tau_x)) / tau_x

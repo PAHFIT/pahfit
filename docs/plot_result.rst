@@ -7,7 +7,7 @@ Plotting
 
 The saved results from a PAHFIT run can be plotted using the ``plot_pahfit``
 script.  By default, the plot is displayed.  To save the plot instead,
-use the "--savefig" command line option.
+use the `--savefig` command line option.
 
 .. code-block:: console
 
@@ -27,10 +27,12 @@ can be seen by:
 Example Plot
 ============
 
-The fit to the M101 Nucleus spectrum gives the observed spectrum as
-open squares, the full PAHFIT model as a green line, the dust continua
-as red lines, the sum of the continua as a black line,
-the dust features as blue lines, the atomic features
-as purple lines, and the attenuation as a dashed, black line.
+The default output figure is shown below. The top panel displays the
+observed spectrum as open circles; the full PAHFIT model, the dust and stellar continua, and
+the sum of the continua as solid lines (see the legend for the
+color coding); the dust features as blue
+lines; and the atomic features as purple lines.  The attenuation is
+shown as a dashed line at the top.  The bottom panel displays the
+residuals.
 
 .. image:: M101_Nucleus_irs.png

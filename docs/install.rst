@@ -17,3 +17,8 @@ Using pip
 
     # from the master trunk on the repository, considered developmental code
     pip install git+https://github.com/PAHFIT/pahfit.git
+
+If you get an error that is includes `SSLError(SSLCertVerificationError`, the
+following command may work to remove this error::
+
+    pip install --trusted-host=pypi.org --trusted-host=files.pythonhosted.org git+https://github.com/PAHFIT/pahfit.git
