@@ -1,11 +1,7 @@
 import numpy as np
 
-import pkg_resources
-import astropy.units as u
-from astropy.table import Table
-
-from pahfit.PAHFIT_Spitzer_Exgal import (InstPackSpitzerIRSSLLL, SciPackExGal)
-from pahfit.base import PAHFITBase
+from pahfit.PAHFIT_Spitzer_Exgal import InstPackSpitzerIRSSLLL, SciPackExGal
+from pahfit.helpers import read_spectrum, initialize_model
 
 
 def test_classic_pack():
@@ -19,20 +15,15 @@ def test_classic_pack():
                    sci_pack.att_info)
 
     # now read in the equivalent info from a file
-    path_packs = pkg_resources.resource_filename('pahfit', 'packs/')
-    packfilename = '{}/scipack_ExGal_SpitzerIRSSLLL.ipac'.format(path_packs)
-    path_data = pkg_resources.resource_filename('pahfit', 'data/')
-    datafilename = '{}/M101_Nucleus_irs.ipac'.format(path_data)
 
-    obs_spectrum = Table.read(datafilename, format='ipac')
-    obs_x = obs_spectrum['wavelength'].to(u.micron,
-                                          equivalencies=u.spectral())
-    obs_y = obs_spectrum['flux'].to(u.Jy,
-                                    equivalencies=u.spectral_density(obs_x))
+    # read in the spectrum
+    spectrumfile = "M101_Nucleus_irs.ipac"
+    obsdata = read_spectrum(spectrumfile)
 
-    pmodel = PAHFITBase(obs_x.value, obs_y.value, filename=packfilename, tformat='ipac')
-    # read in the file and get the param_info
-    nparam_info = pmodel.read(packfilename, tformat='ipac')
+    # setup the model
+    packfile = "scipack_ExGal_SpitzerIRSSLLL.ipac"
+    pmodel = initialize_model(packfile, obsdata)
+    nparam_info = pmodel.param_info
 
     # check the different dictonaries are equivalent
     for k in range(len(oparam_info)):
