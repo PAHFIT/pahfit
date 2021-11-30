@@ -428,7 +428,7 @@ class PAHFITBase:
                 "fwhm_max",
                 "fwhm_fixed",
                 "strength",
-                "strength_unc"
+                "strength_unc",
                 "asymm",
                 "asymm_min",
                 "asymm_max",
@@ -452,6 +452,8 @@ class PAHFITBase:
                 "float64",
                 "float64",
                 "float64",
+                "float64",
+                "float64",
                 "bool",
             ),
         )
@@ -471,6 +473,8 @@ class PAHFITBase:
                 "fwhm_min",
                 "fwhm_max",
                 "fwhm_fixed",
+                "strength",
+                "strength_unc",
             ),
             dtype=(
                 "U25",
@@ -487,6 +491,8 @@ class PAHFITBase:
                 "float64",
                 "float64",
                 "bool",
+                "float64",
+                "float64",
             ),
         )
         att_table = Table(
@@ -536,12 +542,13 @@ class PAHFITBase:
                         component.fwhm_0.bounds[0],
                         component.fwhm_0.bounds[1],
                         component.fwhm_0.fixed,
+                        strength,
+                        strength_unc,
                         component.a.value,
                         component.a.bounds[0],
                         component.a.bounds[1],
                         component.a.fixed,
-                        strength,
-                        strength_unc,
+                        
                         
                     ]
                 )
@@ -568,6 +575,8 @@ class PAHFITBase:
                         2.355 * component.stddev.bounds[0],
                         2.355 * component.stddev.bounds[1],
                         component.stddev.fixed,
+                        strength,
+                        strength_unc,
                     ]
                 )
             elif comp_type == "S07_attenuation":
