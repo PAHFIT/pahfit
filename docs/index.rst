@@ -85,6 +85,8 @@ For the complete list of contributors please see the `pahfit
 contributors page on Github
 <https://github.com/karllark/pahfit/graphs/contributors>`_.
 
+.. _reference_API:
+
 Reference API
 =============
 
