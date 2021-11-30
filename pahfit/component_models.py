@@ -5,7 +5,7 @@ from astropy.modeling import Fittable1DModel
 from astropy.modeling import Parameter
 
 
-__all__ = ["BlackBody1D", "S07_attenuation"]
+__all__ = ["BlackBody1D", "S07_attenuation", "Drude_asymm"]
 
 
 class BlackBody1D(Fittable1DModel):
@@ -103,3 +103,21 @@ class S07_attenuation(Fittable1DModel):
         else:
             tau_x = tau_si * self.kvt(in_x)
             return (1.0 - np.exp(-1.0 * tau_x)) / tau_x
+        
+class Drude_asymm(Fittable1DModel):
+    """Asymmetric Drude profile following Stancik and Brauns"""
+    amplitude = Parameter()
+    fwhm_0 = Parameter()
+    x_0 = Parameter()
+    a = Parameter()
+    
+    
+    @staticmethod
+    def evaluate(x, amplitude, fwhm_0, x_0, a):
+        """
+        """
+        fwhm = 2*fwhm_0/(1+np.exp(a*(x-x_0)))
+        num = amplitude*(fwhm/x_0)**2
+        denom = ((x/x_0)-(x_0/x))**2 + (fwhm/x_0)**2
+        return num/denom
+        
