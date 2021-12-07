@@ -11,7 +11,7 @@ import numpy as np
 
 import matplotlib as mpl
 
-from pahfit.feature_strengths import pah_feature_strength, line_strength
+from pahfit.feature_strengths import pah_feature_strength, line_strength, featcombine
 
 __all__ = ["PAHFITBase"]
 
@@ -537,8 +537,11 @@ class PAHFITBase:
                     ]
                 )
 
+        # Call featcombine to calculate combined dust feature strengths.
+        cftable = featcombine(line_table)
+
         # stack the tables (handles missing columns between tables)
-        out_table = vstack([bb_table, line_table, att_table])
+        out_table = vstack([bb_table, line_table, att_table, cftable])
 
         # Writing output table
         out_table.write(
