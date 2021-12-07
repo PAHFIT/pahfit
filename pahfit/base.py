@@ -367,7 +367,7 @@ class PAHFITBase:
         ax.xaxis.set_major_formatter(mpl.ticker.ScalarFormatter())
 
     @staticmethod
-    def save(obs_fit, filename, outform, strength_calc=True):
+    def save(obs_fit, filename, outform):
         """
         Save the model parameters to a user defined file format.
 
@@ -380,9 +380,6 @@ class PAHFITBase:
             Currently using the input data file name.
         outform : string
             Sets the output file format (ascii, fits, csv, etc.).
-        strength_calc : bool
-            Imports the feature_strength module
-            to calculate PAH feature and emission line strenghts.
         """
         # setup the tables for the different components
         bb_table = Table(
@@ -474,12 +471,9 @@ class PAHFITBase:
                 )
             elif comp_type == "Drude1D":
 
-                if strength_calc:
-                    strength = pah_feature_strength(component.amplitude.value,
-                                                    component.fwhm.value,
-                                                    component.x_0.value)
-                else:
-                    strength = None
+                strength = pah_feature_strength(component.amplitude.value,
+                                                component.fwhm.value,
+                                                component.x_0.value)
 
                 strength_unc = None
 
@@ -505,12 +499,9 @@ class PAHFITBase:
                 )
             elif comp_type == "Gaussian1D":
 
-                if strength_calc:
-                    strength = line_strength(component.amplitude.value,
-                                             component.mean.value,
-                                             component.stddev.value)
-                else:
-                    strength = None
+                strength = line_strength(component.amplitude.value,
+                                         component.mean.value,
+                                         component.stddev.value)
 
                 strength_unc = None
 
