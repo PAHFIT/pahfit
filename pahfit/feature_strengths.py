@@ -56,6 +56,7 @@ def line_strength(ampl, mean, stddev):
 
     return strength
 
+
 def featcombine(ftable):
     """
     Combine dust features strengths.
@@ -70,18 +71,18 @@ def featcombine(ftable):
     """
     # Define combined strength dictionary.
     cfdic = {'PAH_62': {'range': [6.2, 6.3]},
-                'PAH_77_C': {'range': [7.3, 7.9]},
-                'PAH_83': {'range': [8.3, 8.4]},
-                'PAH_86': {'range': [8.6, 8.7]},
-                'PAH_112_C': {'range': [11.2, 11.4]},
-                'PAH_120': {'range': [11.9, 12.1]},
-                'PAH_126_C': {'range': [12.6, 12.7]},
-                'PAH_136': {'range': [13.4, 13.6]},
-                'PAH_142': {'range': [14.1, 14.2]},
-                'PAH_164': {'range': [16.4, 16.5]},
-                'PAH_17_C': {'range': [16.4, 17.9]},
-                'PAH_174': {'range': [17.35, 17.45]}
-                }
+             'PAH_77_C': {'range': [7.3, 7.9]},
+             'PAH_83': {'range': [8.3, 8.4]},
+             'PAH_86': {'range': [8.6, 8.7]},
+             'PAH_112_C': {'range': [11.2, 11.4]},
+             'PAH_120': {'range': [11.9, 12.1]},
+             'PAH_126_C': {'range': [12.6, 12.7]},
+             'PAH_136': {'range': [13.4, 13.6]},
+             'PAH_142': {'range': [14.1, 14.2]},
+             'PAH_164': {'range': [16.4, 16.5]},
+             'PAH_17_C': {'range': [16.4, 17.9]},
+             'PAH_174': {'range': [17.35, 17.45]}
+             }
 
     # Create combined strength, unc, and eqw table.
     cftable = Table(
@@ -98,10 +99,10 @@ def featcombine(ftable):
     for feat in cfdic.keys():
         mask = np.logical_and(dfs['x_0'] >= cfdic[feat]['range'][0], dfs['x_0'] <= cfdic[feat]['range'][-1])
         cftable.add_row([feat,
-                            cfdic[feat]['range'][0],
-                            cfdic[feat]['range'][-1],
-                            np.sum(dfs[mask]['strength']),
-                            None,
-                            None])
+                         cfdic[feat]['range'][0],
+                         cfdic[feat]['range'][-1],
+                         np.sum(dfs[mask]['strength']),
+                         None,
+                         None])
 
     return cftable
