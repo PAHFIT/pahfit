@@ -262,7 +262,7 @@ class PAHFITBase:
             observed spectrum
         yerr: floats
             observed spectrum uncertainties
-        model : PAHFITBase model
+        model : PAHFITBase model (astropy modeling CompoundModel)
             model giving all the components and parameters
         scalefac_resid : float
             Factor multiplying the standard deviation of the residuals to adjust plot limits
@@ -377,7 +377,7 @@ class PAHFITBase:
             Model giving all the components and parameters.
         filename : string
             String used to name the output file.
-            Currently using the input data file name.
+            Currently using the input data file name (without the file's extension).
         outform : string
             Sets the output file format (ascii, fits, csv, etc.).
         """
