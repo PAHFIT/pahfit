@@ -1,6 +1,6 @@
 from astropy.modeling.functional_models import Gaussian1D
 
-from pahfit.component_models import BlackBody1D, S07_attenuation, Drude_asymm
+from pahfit.component_models import BlackBody1D, S07_attenuation, Drude_modified
 
 from astropy.table import Table, vstack
 
@@ -11,7 +11,6 @@ import numpy as np
 import matplotlib as mpl
 
 from pahfit.feature_strengths import pah_feature_strength, line_strength
-
 
 __all__ = ["PAHFITBase"]
 
@@ -177,7 +176,7 @@ class PAHFITBase:
         self.dust_features = dust_features
         if dust_features is not None:
             for k in range(len(dust_features["names"])):
-                self.model += Drude_asymm(
+                self.model += Drude_modified(
                     name=dust_features["names"][k],
                     amplitude=dust_features["amps"][k],
                     x_0=dust_features["x_0"][k],
@@ -324,7 +323,7 @@ class PAHFITBase:
         for cmodel in model:
             if isinstance(cmodel, Gaussian1D):
                 ax.plot(x, (cont_y + cmodel(x)) * ext_model / x, "#DC267F", alpha=0.5)
-            if isinstance(cmodel, Drude_asymm):
+            if isinstance(cmodel, Drude_modified):
                 ax.plot(x, (cont_y + cmodel(x)) * ext_model / x, "#648FFF", alpha=0.5)
 
         ax.plot(x, cont_y * ext_model / x, "#785EF0", alpha=1)
@@ -458,43 +457,43 @@ class PAHFITBase:
             ),
         )
         line_table_gaussian = Table(
-            names=(
-                "Name",
-                "Form",
-                "x_0",
-                "x_0_min",
-                "x_0_max",
-                "x_0_fixed",
-                "amp",
-                "amp_min",
-                "amp_max",
-                "amp_fixed",
-                "fwhm",
-                "fwhm_min",
-                "fwhm_max",
-                "fwhm_fixed",
-                "strength",
-                "strength_unc",
-            ),
-            dtype=(
-                "U25",
-                "U25",
-                "float64",
-                "float64",
-                "float64",
-                "bool",
-                "float64",
-                "float64",
-                "float64",
-                "bool",
-                "float64",
-                "float64",
-                "float64",
-                "bool",
-                "float64",
-                "float64",
-            ),
-        )
+             names=(
+                 "Name",
+                 "Form",
+                 "x_0",
+                 "x_0_min",
+                 "x_0_max",
+                 "x_0_fixed",
+                 "amp",
+                 "amp_min",
+                 "amp_max",
+                 "amp_fixed",
+                 "fwhm",
+                 "fwhm_min",
+                 "fwhm_max",
+                 "fwhm_fixed",
+                 "strength",
+                 "strength_unc",
+             ),
+             dtype=(
+                 "U25",
+                 "U25",
+                 "float64",
+                 "float64",
+                 "float64",
+                 "bool",
+                 "float64",
+                 "float64",
+                 "float64",
+                 "bool",
+                 "float64",
+                 "float64",
+                 "float64",
+                 "bool",
+                 "float64",
+                 "float64",
+             ),
+         )
         att_table = Table(
             names=("Name", "Form", "amp", "amp_min", "amp_max", "amp_fixed"),
             dtype=("U25", "U25", "float64", "float64", "float64", "bool"),
@@ -518,14 +517,14 @@ class PAHFITBase:
                         component.amplitude.fixed,
                     ]
                 )
-            elif comp_type == "Drude_asymm":
-                
+            elif comp_type == "Drude_modified":
+
                 strength = pah_feature_strength(component.amplitude.value,
                                                 component.fwhm_0.value,
                                                 component.x_0.value)
-                
+
                 strength_unc = None
-                
+
                 line_table.add_row(
                     [
                         component.name,
@@ -548,17 +547,16 @@ class PAHFITBase:
                         component.a.bounds[0],
                         component.a.bounds[1],
                         component.a.fixed,
-                        
-                        
                     ]
                 )
             elif comp_type == "Gaussian1D":
-                
+
                 strength = line_strength(component.amplitude.value,
                                          component.mean.value,
                                          component.stddev.value)
-                
+
                 strength_unc = None
+
                 line_table_gaussian.add_row(
                     [
                         component.name,
@@ -651,7 +649,7 @@ class PAHFITBase:
             ),
             "amps_fixed": _ingest_fixed(t["amp_fixed"][bb_ind].data),
         }
-        
+
         # Creating the dust_features dict
         df_info = {
             "names": np.array(t["Name"][df_ind].data),
@@ -667,8 +665,8 @@ class PAHFITBase:
             ),
             "amps_fixed": _ingest_fixed(t["amp_fixed"][df_ind].data),
             "asymm_limits": _ingest_limits(
-                t["asymm_min"][df_ind].data, t["asymm_max"][df_ind].data
-            ),
+                 t["asymm_min"][df_ind].data, t["asymm_max"][df_ind].data
+             ),
             "asymm_fixed": _ingest_fixed(t["asymm_fixed"][df_ind].data),
             "fwhms": np.array(t["fwhm"][df_ind].data),
             "fwhms_limits": _ingest_limits(
