@@ -11,7 +11,7 @@ import numpy as np
 
 import matplotlib as mpl
 
-from pahfit.feature_strengths import pah_feature_strength, line_strength
+from pahfit.feature_strengths import pah_feature_strength, line_strength, featcombine
 
 __all__ = ["PAHFITBase"]
 
@@ -262,7 +262,7 @@ class PAHFITBase:
             observed spectrum
         yerr: floats
             observed spectrum uncertainties
-        model : PAHFITBase model
+        model : PAHFITBase model (astropy modeling CompoundModel)
             model giving all the components and parameters
         scalefac_resid : float
             Factor multiplying the standard deviation of the residuals to adjust plot limits
@@ -377,7 +377,7 @@ class PAHFITBase:
             Model giving all the components and parameters.
         filename : string
             String used to name the output file.
-            Currently using the input data file name.
+            Currently using the input data file name (without the file's extension).
         outform : string
             Sets the output file format (ascii, fits, csv, etc.).
         """
@@ -537,8 +537,11 @@ class PAHFITBase:
                     ]
                 )
 
+        # Call featcombine to calculate combined dust feature strengths.
+        cftable = featcombine(line_table)
+
         # stack the tables (handles missing columns between tables)
-        out_table = vstack([bb_table, line_table, att_table])
+        out_table = vstack([bb_table, line_table, att_table, cftable])
 
         # Writing output table
         out_table.write(

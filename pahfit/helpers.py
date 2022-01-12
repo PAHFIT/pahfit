@@ -122,7 +122,7 @@ def fit_spectrum(obsdata, pmodel, maxiter=1000, verbose=True):
 
     Returns
     -------
-    obsfit : PAHFITBase model
+    obsfit : PAHFITBase model (astropy modeling CompoundModel)
         PAHFIT model with best fit parameters
     """
 
