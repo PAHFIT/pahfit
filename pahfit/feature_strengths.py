@@ -117,7 +117,9 @@ def featcombine(ftable):
 
 def eqws(comp_type, x_0, amp, fwhm_stddev, obs_fit):
     """
-    Calculate the emission features equivalent width in microns.
+    Calculate the emission features equivalent width
+    (integral[(I_nu-I_cont)/I_cont d_lam]) in microns.
+
     Parameters
     ----------
     comp_type : string
@@ -140,9 +142,9 @@ def eqws(comp_type, x_0, amp, fwhm_stddev, obs_fit):
         fwhm = fwhm_stddev
 
     # Get range and wavelength region for integration.
-    low = x_0 - (fwhm * x_0 * 6)
+    low = x_0 - (fwhm * 6)
     lmin = low if low > 0 else 0.
-    lmax = x_0 + (fwhm * x_0 * 6)
+    lmax = x_0 + (fwhm * 6)
     lam = np.arange(100) / 99 * (lmax - lmin) + lmin
 
     # Calculate the continuum and feature components in the integration range.
@@ -167,11 +169,15 @@ def eqws(comp_type, x_0, amp, fwhm_stddev, obs_fit):
                            stddev=fwhm_stddev)
         lnu = gauss(lam)
 
-    # Set default broad limit value.
+    # Set broad limit (bl) to replace the continuum in the EQW calculation
+    # by its profile-averaged value for fractional FWHM greater than that limit.
+    # Useful when the EQW requires extrapolation to regions where the continuum
+    # can vanish, such that f_line/f_continuum diverges.
+    # Default value bl = 0.05.
     bl = 0.05
 
     # Calculate EQW.
-    if fwhm > bl:
+    if fwhm / x_0 > bl:
         ilam = integrate.simpson(lnu, lam)
         weighted_cont = integrate.simpson(lnu * continuum, lam) / ilam
         eqw = ilam / weighted_cont
