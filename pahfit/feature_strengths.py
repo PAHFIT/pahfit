@@ -1,7 +1,13 @@
+from astropy.modeling.functional_models import Gaussian1D
+from pahfit.component_models import BlackBody1D
+
 import numpy as np
 
 from astropy import constants as const
 from astropy.table import Table
+from astropy.modeling.physical_models import Drude1D
+
+from scipy import integrate
 
 
 def pah_feature_strength(ampl, fwhm, x_0):
@@ -103,6 +109,73 @@ def featcombine(ftable):
                          cfdic[feat]['range'][-1],
                          np.sum(dfs[mask]['strength']),
                          None,
-                         None])
+                         np.sum(dfs[mask]['eqw'])
+                         ])
 
     return cftable
+
+
+def eqws(comp_type, x_0, amp, fwhm_stddev, obs_fit):
+    """
+    Calculate the emission features equivalent width in microns.
+    Parameters
+    ----------
+    comp_type : string
+        type of emission component (Drude1D/Gaussian)
+    x_0 : float
+        central wavelength of the feature.
+    amp : float
+        central intensity of the feature.
+    fwhm_stddev : float
+        fwhm or stddev of the feature depending on comp_type.
+    Returns
+    -------
+    eqw : float
+        the equivalent width of the feature
+    """
+    # Check if the emission component is Gaussian and calculate fwhm.
+    if comp_type == 'Gaussian1D':
+        fwhm = 2 * fwhm_stddev * np.sqrt(2 * np.log(2))
+    else:
+        fwhm = fwhm_stddev
+
+    # Get range and wavelength region for integration.
+    low = x_0 - (fwhm * x_0 * 6)
+    lmin = low if low > 0 else 0.
+    lmax = x_0 + (fwhm * x_0 * 6)
+    lam = np.arange(100) / 99 * (lmax - lmin) + lmin
+
+    # Calculate the continuum and feature components in the integration range.
+    cont_components = []
+    for cmodel in obs_fit:
+        if isinstance(cmodel, BlackBody1D):
+            cont_components.append(cmodel)
+    cont_model = cont_components[0]
+    for cmodel in cont_components[1:]:
+        cont_model += cmodel
+    continuum = np.nan_to_num(cont_model(lam))
+
+    if comp_type == 'Drude1D':
+        drude = Drude1D(amplitude=amp,
+                        x_0=x_0,
+                        fwhm=fwhm)
+        lnu = drude(lam)
+
+    elif comp_type == 'Gaussian1D':
+        gauss = Gaussian1D(amplitude=amp,
+                           mean=x_0,
+                           stddev=fwhm_stddev)
+        lnu = gauss(lam)
+
+    # Set default broad limit value.
+    bl = 0.05
+
+    # Calculate EQW.
+    if fwhm > bl:
+        ilam = integrate.simpson(lnu, lam)
+        weighted_cont = integrate.simpson(lnu * continuum, lam) / ilam
+        eqw = ilam / weighted_cont
+    else:
+        eqw = integrate.simpson(lnu / continuum, lam)
+
+    return eqw
