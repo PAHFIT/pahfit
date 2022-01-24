@@ -311,7 +311,8 @@ class PAHFITBase:
             if isinstance(cmodel, BlackBody1D):
                 cont_components.append(cmodel)
                 # plot as we go
-                ax.plot(x, cmodel(x) * ext_model / x, "#FFB000", alpha=0.5)
+                # ax.plot(x, cmodel(x) * ext_model / x, "#FFB000", alpha=0.5)
+                ax.plot(x, cmodel(x) * ext_model / x, "limegreen", alpha=0.5)
         cont_model = cont_components[0]
         for cmodel in cont_components[1:]:
             cont_model += cmodel
@@ -320,11 +321,13 @@ class PAHFITBase:
         # now plot the dust and gas lines
         for cmodel in model:
             if isinstance(cmodel, Gaussian1D):
+                # ax.plot(x, (cont_y + cmodel(x)) * ext_model / x, "#DC267F", alpha=0.5)
                 ax.plot(x, (cont_y + cmodel(x)) * ext_model / x, "#DC267F", alpha=0.5)
             if isinstance(cmodel, Drude1D):
                 ax.plot(x, (cont_y + cmodel(x)) * ext_model / x, "#648FFF", alpha=0.5)
 
-        ax.plot(x, cont_y * ext_model / x, "#785EF0", alpha=1)
+        ax.plot(x, cont_y * ext_model / x, "red", alpha=1, zorder=99)
+        # ax.plot(x, cont_y * ext_model / x, "#785EF0", alpha=1)
 
         ax.plot(x, model(x) / x, "#FE6100", alpha=1)
         ax.errorbar(x, y / x, yerr=yerr / x,
@@ -367,7 +370,7 @@ class PAHFITBase:
         ax.xaxis.set_major_formatter(mpl.ticker.ScalarFormatter())
 
     @staticmethod
-    def save(obs_fit, x, yerr, filename, outform):
+    def save(obs_fit, filename, outform):
         """
         Save the model parameters to a user defined file format.
 

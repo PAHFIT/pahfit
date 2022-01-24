@@ -91,7 +91,7 @@ def main():
 
     # save fit results to file
     outputname = args.spectrumfile.split(".")[0]
-    pmodel.save(obsfit, obsdata["x"], obsdata["unc"], outputname, args.saveoutput)
+    pmodel.save(obsfit, outputname, args.saveoutput)
 
     # plot result
     fontsize = 18
