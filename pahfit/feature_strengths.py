@@ -145,7 +145,8 @@ def eqws(comp_type, x_0, amp, fwhm_stddev, obs_fit):
     low = x_0 - (fwhm * 6)
     lmin = low if low > 0 else 0.
     lmax = x_0 + (fwhm * 6)
-    lam = np.arange(100) / 99 * (lmax - lmin) + lmin
+    # lam = np.arange(100) / 99 * (lmax - lmin) + lmin
+    lam = np.linspace(lmin, lmax, num=100)
 
     # Calculate the continuum and feature components in the integration range.
     cont_components = []
@@ -169,7 +170,8 @@ def eqws(comp_type, x_0, amp, fwhm_stddev, obs_fit):
                            stddev=fwhm_stddev)
         lnu = gauss(lam)
 
-    # Set broad limit (bl) to replace the continuum in the EQW calculation
+    # Following the EQW calculation in IDL PAHFIT, we define a default broad limit (bl).
+    # Set bl to replace the continuum in the EQW calculation
     # by its profile-averaged value for fractional FWHM greater than that limit.
     # Useful when the EQW requires extrapolation to regions where the continuum
     # can vanish, such that f_line/f_continuum diverges.
