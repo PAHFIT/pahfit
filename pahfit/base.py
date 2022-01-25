@@ -656,17 +656,10 @@ class PAHFITBase:
             "{}_output.{}".format(filename, outform), format=outform, overwrite=True
         )
 
-    def read(self, filename, tformat=None):
+    @staticmethod
+    def parse_table(t):
         """
-        Read the model parameters from a file.
-
-        Parameters
-        ----------
-        filename : string
-            The name of the input file containing fit results.
-
-        tformat: string
-            table format of filename (compatible with astropy Table.read)
+        Load the model parameters from a Table
 
         Returns
         -------
@@ -674,18 +667,11 @@ class PAHFITBase:
             Tuple containing dictionaries of all components from
             the input file.
         """
-        # get the table format
-        if tformat is None:
-            tformat = filename.split(".")[-1]
-
-        # Reading the input file as table
-        t = Table.read(filename, format=tformat)
-
         # Getting indices for the different components
-        bb_ind = np.concatenate(np.argwhere(t["Form"] == "BlackBody1D"))
-        df_ind = np.concatenate(np.argwhere(t["Form"] == "Drude1D"))
-        ga_ind = np.concatenate(np.argwhere(t["Form"] == "Gaussian1D"))
-        at_ind = np.concatenate(np.argwhere((t["Form"] == "S07_attenuation") | (t["Form"] == "att_Drude1D")))
+        bb_ind = t["Form"] == "BlackBody1D"
+        df_ind = t["Form"] == "Drude1D"
+        ga_ind = t["Form"] == "Gaussian1D"
+        at_ind = (t["Form"] == "S07_attenuation") | (t["Form"] == "att_Drude1D")
 
         # now split the gas emission lines between H2 and ions
         names = [str(i) for i in np.take(t["Name"], ga_ind)]
@@ -793,6 +779,34 @@ class PAHFITBase:
         readout = (bb_info, df_info, h2_info, ion_info, att_info)
 
         return readout
+
+    @staticmethod
+    def read(filename, tformat=None):
+        """
+        Read the model parameters from a file.
+
+        Parameters
+        ----------
+        filename : string
+            The name of the input file containing fit results.
+
+        tformat: string
+            table format of filename (compatible with astropy Table.read)
+
+        Returns
+        -------
+        readout : tuple
+            Tuple containing dictionaries of all components from
+            the input file.
+        """
+        # get the table format
+        if tformat is None:
+            tformat = filename.split(".")[-1]
+
+        # Reading the input file as table
+        t = Table.read(filename, format=tformat)
+        return PAHFITBase.parse_table(t)
+
 
     @staticmethod
     def estimate_init(obs_x, obs_y, param_info):
