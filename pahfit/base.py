@@ -267,7 +267,8 @@ class PAHFITBase:
                         },
                     )
 
-    def plot(self, axs, x, y, yerr, model, scalefac_resid=2):
+    @staticmethod
+    def plot(axs, x, y, yerr, model, scalefac_resid=2):
         """
         Plot model using axis object.
 
