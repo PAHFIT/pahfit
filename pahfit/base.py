@@ -658,7 +658,7 @@ class PAHFITBase:
         )
 
     @staticmethod
-    def parse_table(table):
+    def parse_table(t):
         """
         Load the model parameters from a Table
 
@@ -813,7 +813,6 @@ class PAHFITBase:
         # Reading the input file as table
         t = Table.read(filename, format=tformat)
         return PAHFITBase.parse_table(t)
-
 
     @staticmethod
     def estimate_init(obs_x, obs_y, param_info):
