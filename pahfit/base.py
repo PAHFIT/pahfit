@@ -658,15 +658,21 @@ class PAHFITBase:
         )
 
     @staticmethod
-    def parse_table(t):
+    def parse_table(table):
         """
         Load the model parameters from a Table
+
+        Parameters
+        ----------
+        table : astropy Table
+            Table created by reading in a science pack.
 
         Returns
         -------
         readout : tuple
-            Tuple containing dictionaries of all components from
-            the input file.
+            Tuple containing dictionaries of all components from the
+            input Table. Can be used to create PAHFITBase instance using
+            param_info argument.
         """
         # Getting indices for the different components
         bb_ind = t["Form"] == "BlackBody1D"
@@ -784,7 +790,7 @@ class PAHFITBase:
     @staticmethod
     def read(filename, tformat=None):
         """
-        Read the model parameters from a file.
+        Create model by reading the parameters from a file.
 
         Parameters
         ----------
