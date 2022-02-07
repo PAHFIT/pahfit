@@ -676,17 +676,23 @@ class PAHFITBase:
         """
         # Getting indices for the different components
         pack_table = None
-        bb_ind = pack_table["Form"] == "BlackBody1D"
-        df_ind = pack_table["Form"] == "Drude1D"
-        ga_ind = pack_table["Form"] == "Gaussian1D"
-        at_ind = (pack_table["Form"] == "S07_attenuation") | (pack_table["Form"] == "att_Drude1D")
+        bb_ind = np.where(pack_table["Form"] == "BlackBody1D")
+        df_ind = np.where(pack_table["Form"] == "Drude1D")
+        ga_ind = np.where(pack_table["Form"] == "Gaussian1D")
+        at_ind = np.where((pack_table["Form"] == "S07_attenuation") | (pack_table["Form"] == "att_Drude1D"))
 
         # now split the gas emission lines between H2 and ions
-        names = [str(i) for i in np.take(pack_table["Name"], ga_ind)]
-        h2_temp = np.concatenate(np.where(np.char.find(names, "H2") >= 0))
-        ion_temp = np.concatenate(np.where(np.char.find(names, "H2") == -1))
-        h2_ind = np.take(ga_ind, h2_temp)
-        ion_ind = np.take(ga_ind, ion_temp)
+        names = [str(i) for i in pack_table["Name"][ga_ind]]
+        if len(names) > 0:
+            # this has trouble with empty list
+            h2_temp = np.char.find(names, "H2") >= 0
+            ion_temp = np.char.find(names, "H2") == -1
+            h2_ind = ga_ind[h2_temp]
+            ion_ind = ga_ind[ion_temp]
+        else:
+            h2_ind = []
+            ion_ind = []
+        # the rest works fine with empty list
 
         # Creating the blackbody dict
         bb_info = {
