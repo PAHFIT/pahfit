@@ -658,13 +658,13 @@ class PAHFITBase:
         )
 
     @staticmethod
-    def parse_table(t):
+    def parse_table(pack_table):
         """
         Load the model parameters from a Table
 
         Parameters
         ----------
-        table : astropy Table
+        pack_table : astropy Table
             Table created by reading in a science pack.
 
         Returns
@@ -675,13 +675,14 @@ class PAHFITBase:
             param_info argument.
         """
         # Getting indices for the different components
-        bb_ind = t["Form"] == "BlackBody1D"
-        df_ind = t["Form"] == "Drude1D"
-        ga_ind = t["Form"] == "Gaussian1D"
-        at_ind = (t["Form"] == "S07_attenuation") | (t["Form"] == "att_Drude1D")
+        pack_table = None
+        bb_ind = pack_table["Form"] == "BlackBody1D"
+        df_ind = pack_table["Form"] == "Drude1D"
+        ga_ind = pack_table["Form"] == "Gaussian1D"
+        at_ind = (pack_table["Form"] == "S07_attenuation") | (pack_table["Form"] == "att_Drude1D")
 
         # now split the gas emission lines between H2 and ions
-        names = [str(i) for i in np.take(t["Name"], ga_ind)]
+        names = [str(i) for i in np.take(pack_table["Name"], ga_ind)]
         h2_temp = np.concatenate(np.where(np.char.find(names, "H2") >= 0))
         ion_temp = np.concatenate(np.where(np.char.find(names, "H2") == -1))
         h2_ind = np.take(ga_ind, h2_temp)
@@ -689,97 +690,97 @@ class PAHFITBase:
 
         # Creating the blackbody dict
         bb_info = {
-            "names": np.array(t["Name"][bb_ind].data),
-            "temps": np.array(t["temp"][bb_ind].data),
+            "names": np.array(pack_table["Name"][bb_ind].data),
+            "temps": np.array(pack_table["temp"][bb_ind].data),
             "temps_limits": _ingest_limits(
-                t["temp_min"][bb_ind].data, t["temp_max"][bb_ind].data
+                pack_table["temp_min"][bb_ind].data, pack_table["temp_max"][bb_ind].data
             ),
-            "temps_fixed": _ingest_fixed(t["temp_fixed"][bb_ind].data),
-            "amps": np.array(t["amp"][bb_ind].data),
+            "temps_fixed": _ingest_fixed(pack_table["temp_fixed"][bb_ind].data),
+            "amps": np.array(pack_table["amp"][bb_ind].data),
             "amps_limits": _ingest_limits(
-                t["amp_min"][bb_ind].data, t["amp_max"][bb_ind].data
+                pack_table["amp_min"][bb_ind].data, pack_table["amp_max"][bb_ind].data
             ),
-            "amps_fixed": _ingest_fixed(t["amp_fixed"][bb_ind].data),
+            "amps_fixed": _ingest_fixed(pack_table["amp_fixed"][bb_ind].data),
         }
 
         # Creating the dust_features dict
         df_info = {
-            "names": np.array(t["Name"][df_ind].data),
-            "x_0": np.array(t["x_0"][df_ind].data),
+            "names": np.array(pack_table["Name"][df_ind].data),
+            "x_0": np.array(pack_table["x_0"][df_ind].data),
             "x_0_limits": _ingest_limits(
-                t["x_0_min"][df_ind].data, t["x_0_max"][df_ind].data
+                pack_table["x_0_min"][df_ind].data, pack_table["x_0_max"][df_ind].data
             ),
-            "x_0_fixed": _ingest_fixed(t["x_0_fixed"][df_ind].data),
-            "amps": np.array(t["amp"][df_ind].data),
+            "x_0_fixed": _ingest_fixed(pack_table["x_0_fixed"][df_ind].data),
+            "amps": np.array(pack_table["amp"][df_ind].data),
             "amps_limits": _ingest_limits(
-                t["amp_min"][df_ind].data, t["amp_max"][df_ind].data
+                pack_table["amp_min"][df_ind].data, pack_table["amp_max"][df_ind].data
             ),
-            "amps_fixed": _ingest_fixed(t["amp_fixed"][df_ind].data),
-            "fwhms": np.array(t["fwhm"][df_ind].data),
+            "amps_fixed": _ingest_fixed(pack_table["amp_fixed"][df_ind].data),
+            "fwhms": np.array(pack_table["fwhm"][df_ind].data),
             "fwhms_limits": _ingest_limits(
-                t["fwhm_min"][df_ind].data, t["fwhm_max"][df_ind].data
+                pack_table["fwhm_min"][df_ind].data, pack_table["fwhm_max"][df_ind].data
             ),
-            "fwhms_fixed": _ingest_fixed(t["fwhm_fixed"][df_ind].data),
+            "fwhms_fixed": _ingest_fixed(pack_table["fwhm_fixed"][df_ind].data),
         }
 
         # Creating the H2 dict
         h2_info = {
-            "names": np.array(t["Name"][h2_ind].data),
-            "x_0": np.array(t["x_0"][h2_ind].data),
+            "names": np.array(pack_table["Name"][h2_ind].data),
+            "x_0": np.array(pack_table["x_0"][h2_ind].data),
             "x_0_limits": _ingest_limits(
-                t["x_0_min"][h2_ind].data, t["x_0_max"][h2_ind].data
+                pack_table["x_0_min"][h2_ind].data, pack_table["x_0_max"][h2_ind].data
             ),
-            "x_0_fixed": _ingest_fixed(t["x_0_fixed"][h2_ind].data),
-            "amps": np.array(t["amp"][h2_ind].data),
+            "x_0_fixed": _ingest_fixed(pack_table["x_0_fixed"][h2_ind].data),
+            "amps": np.array(pack_table["amp"][h2_ind].data),
             "amps_limits": _ingest_limits(
-                t["amp_min"][h2_ind].data, t["amp_max"][h2_ind].data
+                pack_table["amp_min"][h2_ind].data, pack_table["amp_max"][h2_ind].data
             ),
-            "amps_fixed": _ingest_fixed(t["amp_fixed"][h2_ind].data),
-            "fwhms": np.array(t["fwhm"][h2_ind].data),
+            "amps_fixed": _ingest_fixed(pack_table["amp_fixed"][h2_ind].data),
+            "fwhms": np.array(pack_table["fwhm"][h2_ind].data),
             "fwhms_limits": _ingest_limits(
-                t["fwhm_min"][h2_ind].data, t["fwhm_max"][h2_ind].data
+                pack_table["fwhm_min"][h2_ind].data, pack_table["fwhm_max"][h2_ind].data
             ),
-            "fwhms_fixed": _ingest_fixed(t["fwhm_fixed"][h2_ind].data),
+            "fwhms_fixed": _ingest_fixed(pack_table["fwhm_fixed"][h2_ind].data),
         }
 
         # Creating the ion dict
         ion_info = {
-            "names": np.array(t["Name"][ion_ind].data),
-            "x_0": np.array(t["x_0"][ion_ind].data),
+            "names": np.array(pack_table["Name"][ion_ind].data),
+            "x_0": np.array(pack_table["x_0"][ion_ind].data),
             "x_0_limits": _ingest_limits(
-                t["x_0_min"][ion_ind].data, t["x_0_max"][ion_ind].data
+                pack_table["x_0_min"][ion_ind].data, pack_table["x_0_max"][ion_ind].data
             ),
-            "x_0_fixed": _ingest_fixed(t["x_0_fixed"][ion_ind].data),
-            "amps": np.array(t["amp"][ion_ind].data),
+            "x_0_fixed": _ingest_fixed(pack_table["x_0_fixed"][ion_ind].data),
+            "amps": np.array(pack_table["amp"][ion_ind].data),
             "amps_limits": _ingest_limits(
-                t["amp_min"][ion_ind].data, t["amp_max"][ion_ind].data
+                pack_table["amp_min"][ion_ind].data, pack_table["amp_max"][ion_ind].data
             ),
-            "amps_fixed": _ingest_fixed(t["amp_fixed"][ion_ind].data),
-            "fwhms": np.array(t["fwhm"][ion_ind].data),
+            "amps_fixed": _ingest_fixed(pack_table["amp_fixed"][ion_ind].data),
+            "fwhms": np.array(pack_table["fwhm"][ion_ind].data),
             "fwhms_limits": _ingest_limits(
-                t["fwhm_min"][ion_ind].data, t["fwhm_max"][ion_ind].data
+                pack_table["fwhm_min"][ion_ind].data, pack_table["fwhm_max"][ion_ind].data
             ),
-            "fwhms_fixed": _ingest_fixed(t["fwhm_fixed"][ion_ind].data),
+            "fwhms_fixed": _ingest_fixed(pack_table["fwhm_fixed"][ion_ind].data),
         }
 
         # Create the attenuation dict
         att_info = {
-            "names": np.array(t["Name"][at_ind].data),
-            "x_0": np.array(t["x_0"][at_ind].data),
+            "names": np.array(pack_table["Name"][at_ind].data),
+            "x_0": np.array(pack_table["x_0"][at_ind].data),
             "x_0_limits": _ingest_limits(
-                t["x_0_min"][at_ind].data, t["x_0_max"][at_ind].data
+                pack_table["x_0_min"][at_ind].data, pack_table["x_0_max"][at_ind].data
             ),
-            "x_0_fixed": _ingest_fixed(t["x_0_fixed"][at_ind].data),
-            "amps": np.array(t["amp"][at_ind].data),
+            "x_0_fixed": _ingest_fixed(pack_table["x_0_fixed"][at_ind].data),
+            "amps": np.array(pack_table["amp"][at_ind].data),
             "amps_limits": _ingest_limits(
-                t["amp_min"][at_ind].data, t["amp_max"][at_ind].data
+                pack_table["amp_min"][at_ind].data, pack_table["amp_max"][at_ind].data
             ),
-            "amps_fixed": _ingest_fixed(t["amp_fixed"][at_ind].data),
-            "fwhms": np.array(t["fwhm"][at_ind].data),
+            "amps_fixed": _ingest_fixed(pack_table["amp_fixed"][at_ind].data),
+            "fwhms": np.array(pack_table["fwhm"][at_ind].data),
             "fwhms_limits": _ingest_limits(
-                t["fwhm_min"][at_ind].data, t["fwhm_max"][at_ind].data
+                pack_table["fwhm_min"][at_ind].data, pack_table["fwhm_max"][at_ind].data
             ),
-            "fwhms_fixed": _ingest_fixed(t["fwhm_fixed"][at_ind].data),
+            "fwhms_fixed": _ingest_fixed(pack_table["fwhm_fixed"][at_ind].data),
         }
 
         # Create output tuple
