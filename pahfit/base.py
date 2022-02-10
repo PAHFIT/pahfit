@@ -11,7 +11,7 @@ import numpy as np
 
 import matplotlib as mpl
 
-from pahfit.feature_strengths import pah_feature_strength, line_strength, featcombine
+from pahfit.feature_strengths import pah_feature_strength, line_strength, featcombine, eqws
 
 __all__ = ["PAHFITBase"]
 
@@ -425,7 +425,8 @@ class PAHFITBase:
                 "fwhm_max",
                 "fwhm_fixed",
                 "strength",
-                "strength_unc"
+                "strength_unc",
+                "eqw"
             ),
             dtype=(
                 "U25",
@@ -442,6 +443,7 @@ class PAHFITBase:
                 "float64",
                 "float64",
                 "bool",
+                "float64",
                 "float64",
                 "float64"
             ),
@@ -471,11 +473,22 @@ class PAHFITBase:
                 )
             elif comp_type == "Drude1D":
 
+                # Calculate feature strength.
                 strength = pah_feature_strength(component.amplitude.value,
                                                 component.fwhm.value,
                                                 component.x_0.value)
 
                 strength_unc = None
+
+                # Calculate feature EQW.
+                if strength != 0.:
+                    eqw = eqws(comp_type,
+                               component.x_0.value,
+                               component.amplitude.value,
+                               component.fwhm,
+                               obs_fit)
+                else:
+                    eqw = 0.
 
                 line_table.add_row(
                     [
@@ -495,15 +508,27 @@ class PAHFITBase:
                         component.fwhm.fixed,
                         strength,
                         strength_unc,
+                        eqw
                     ]
                 )
             elif comp_type == "Gaussian1D":
 
+                # Calculate feature strength.
                 strength = line_strength(component.amplitude.value,
                                          component.mean.value,
                                          component.stddev.value)
 
                 strength_unc = None
+
+                # Calculate feature EQW.
+                if strength != 0.:
+                    eqw = eqws(comp_type,
+                               component.mean.value,
+                               component.amplitude.value,
+                               component.stddev.value,
+                               obs_fit)
+                else:
+                    eqw = 0.
 
                 line_table.add_row(
                     [
@@ -523,6 +548,7 @@ class PAHFITBase:
                         component.stddev.fixed,
                         strength,
                         strength_unc,
+                        eqw
                     ]
                 )
             elif comp_type == "S07_attenuation":
