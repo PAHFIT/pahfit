@@ -149,7 +149,7 @@ def initialize_trimmed_model(packfile, obsdata):
     keep_row[is_drude_or_gauss] = np.logical_and(wmin < x0 + fwhm, x0 - fwhm < wmax)
 
     # now parse the trimmed table
-    print("Keeping these rows")77
+    print("Keeping these rows")
     print(t[keep_row])
     param_info = PAHFITBase.parse_table(t[keep_row])
 
