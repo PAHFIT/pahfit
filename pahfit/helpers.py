@@ -103,6 +103,7 @@ def initialize_model(packfile, obsdata, estimate_start=False):
 
     return pmodel
 
+
 def initialize_trimmed_model(packfile, obsdata):
     """
     Initialize a model based on the packfile, ignoring components outside of the wavelength range.
@@ -162,6 +163,7 @@ def initialize_trimmed_model(packfile, obsdata):
         param_info=param_info,
     )
     return trimmed_model
+
 
 def fit_spectrum(obsdata, pmodel, maxiter=1000, verbose=True):
     """
