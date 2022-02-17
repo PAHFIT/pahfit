@@ -727,7 +727,7 @@ class PAHFITBase:
                     lam = min(obs_x) + 0.1  # the wavelength used to compare
                 elif min(obs_x) < 5.5:
                     lam = 5.5
-                else: # if min(obs_x) > 5.5, use min(obs_x)+0.1
+                else:  # if min(obs_x) > 5.5, use min(obs_x)+0.1
                     lam = min(obs_x) + 0.1
                 amp_guess = sp(lam) / bb(lam)
                 param_info[0]['amps'][i] = amp_guess
