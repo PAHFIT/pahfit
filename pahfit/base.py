@@ -721,15 +721,16 @@ class PAHFITBase:
 
         # guess starting point of bb
         for i, (fix, temp) in enumerate(zip(param_info[0]['amps_fixed'], param_info[0]['temps'])):
-
             if (fix is False) & (temp >= 2500):  # stellar comoponent is defined by BB that has T>=2500 K
                 bb = BlackBody1D(1, temp)
                 if min(obs_x) < 5:
                     lam = min(obs_x) + 0.1  # the wavelength used to compare
-                else:  # if min(obs_x) > 5, use 5.5 um
+                elif min(obs_x) < 5.5:  
                     lam = 5.5
+                else: # if min(obs_x) > 5.5, use min(obs_x)+0.1
+                    lam = min(obs_x) + 0.1
                 amp_guess = sp(lam) / bb(lam)
-                param_info[0]['amps'][i] = amp_guess
+                param_info[0]['amps'][i] = amp_guess  
 
             elif fix is False:
                 fmax_lam = 2898. / temp
