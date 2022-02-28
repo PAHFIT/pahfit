@@ -286,7 +286,6 @@ class PAHFITBase:
         scalefac_resid : float
             Factor multiplying the standard deviation of the residuals to adjust plot limits
         """
-#<<<<<<< HEAD
         # remove units if they are present
         if hasattr(x, "value"):
             x = x.value
@@ -311,12 +310,10 @@ class PAHFITBase:
         # get the extinction model (probably a better way to do this)
         for cmodel in model:
             if isinstance(cmodel, S07_attenuation):
-                #ax_att.plot(x, cmodel(x), "k--", alpha=0.5)
                 ext_model = cmodel(x)
 
         # get additional extinction components that can be
         # characterized by functional forms (Drude profile in this case)
-        #ext_model = ext_components_S07(x)
         for cmodel in model:
             if isinstance(cmodel, att_Drude1D):
                 ext_model *= cmodel(x)
@@ -332,28 +329,6 @@ class PAHFITBase:
                      mpl.lines.Line2D([0], [0], color="#DC267F", lw=2, alpha=0.5),
                      mpl.lines.Line2D([0], [0], color="#785EF0", lw=2, alpha=1),
                      mpl.lines.Line2D([0], [0], color="#FFB000", lw=2, alpha=0.5)]
-# =======
-#         ax.plot(x, model(x) / x, "g-")
-#         ax.plot(x, y / x, "ks", fillstyle="none")
-
-#         ax_att = ax.twinx()  # axis for plotting the extinction curve
-
-#         # get the extinction model (probably a better way to do this)
-#         for cmodel in model:
-#             if isinstance(cmodel, S07_attenuation):
-#                 ext_components_S07 = cmodel
-
-#         # get additional extinction components that can be
-#         # characterized by functional forms (Drude profile in this case)
-#         ext_model = ext_components_S07(x)
-#         for cmodel in model:
-#             if isinstance(cmodel, att_Drude1D):
-#                 ext_model *= cmodel(x)
-
-#         ax_att.plot(x, ext_model, "k--")
-#         ax_att.set_ylabel("Attenuation")
-#         ax_att.set_ylim(0, 1.1)
-# >>>>>>> 86cd523 (PAHFIT_v2.1)
 
         # create the continum compound model (base for plotting lines)
         cont_components = []
