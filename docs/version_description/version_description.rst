@@ -16,7 +16,7 @@ v2.1
 ------------
 PAHFIT v2.1 is an enhanced version of v2.0 that extends the fitting range down to the near IR at 2.5 µm (total wavelength coverage: 2.5--38 µm). The detail of this version is discussed in `Lai et al. 2020, ApJ, 905, 55 <https://iopscience.iop.org/article/10.3847/1538-4357/abc002/pdf>`_, in which the model was trained by a sample of 113 bright PAH galaxies drawn from the AKARI-Spitzer Extragalactic Spectral Survey (ASESS). 
 
-The summary of the newly added components and the instruction of running the AKARI-Spitzer combined spectrum can be found in: `PAHFIT v2.1 notes <https://github.com/PAHFIT/pahfit/blob/master/docs/version_description/PAHFIT_v2.1.rst>`_.
+The summary of the newly added components and the instruction of running the AKARI-Spitzer combined spectrum can be found in: :doc:`PAHFIT 2.1 summary <PAHFIT_v2.1>`
 
 v2.2
 ------------
