@@ -278,8 +278,10 @@ class PAHFITBase:
         if hasattr(yerr, "value"):
             yerr = yerr.value
 
+        # Fine x samples for model fit
+        x_mod=np.linspace(min(x),max(x),1000)
+            
         # spectrum and best fit model
-
         ax = axs[0]
         ax.set_yscale("linear")
         ax.set_xscale("log")
@@ -294,8 +296,9 @@ class PAHFITBase:
         # get the extinction model (probably a better way to do this)
         for cmodel in model:
             if isinstance(cmodel, S07_attenuation):
-                ax_att.plot(x, cmodel(x), "k--", alpha=0.5)
-                ext_model = cmodel(x)
+                ext_model = cmodel(x_mod)
+                ax_att.plot(x_mod, ext_model, "k--", alpha=0.5)
+
         ax_att.set_ylabel("Attenuation")
         ax_att.set_ylim(0, 1.1)
 
@@ -314,22 +317,22 @@ class PAHFITBase:
             if isinstance(cmodel, BlackBody1D):
                 cont_components.append(cmodel)
                 # plot as we go
-                ax.plot(x, cmodel(x) * ext_model / x, "#FFB000", alpha=0.5)
+                ax.plot(x_mod, cmodel(x_mod) * ext_model / x_mod, "#FFB000", alpha=0.5)
         cont_model = cont_components[0]
         for cmodel in cont_components[1:]:
             cont_model += cmodel
-        cont_y = cont_model(x)
+        cont_y = cont_model(x_mod)
 
-        # now plot the dust and gas lines
+        # now plot the dust bands and lines
         for cmodel in model:
             if isinstance(cmodel, Gaussian1D):
-                ax.plot(x, (cont_y + cmodel(x)) * ext_model / x, "#DC267F", alpha=0.5)
+                ax.plot(x_mod, (cont_y + cmodel(x_mod)) * ext_model / x_mod, "#DC267F", alpha=0.5)
             if isinstance(cmodel, Drude1D):
-                ax.plot(x, (cont_y + cmodel(x)) * ext_model / x, "#648FFF", alpha=0.5)
+                ax.plot(x_mod, (cont_y + cmodel(x_mod)) * ext_model / x_mod, "#648FFF", alpha=0.5)
 
-        ax.plot(x, cont_y * ext_model / x, "#785EF0", alpha=1)
+        ax.plot(x_mod, cont_y * ext_model / x_mod, "#785EF0", alpha=1)
 
-        ax.plot(x, model(x) / x, "#FE6100", alpha=1)
+        ax.plot(x_mod, model(x_mod) / x_mod, "#FE6100", alpha=1)
         ax.errorbar(x, y / x, yerr=yerr / x,
                     fmt='o', markeredgecolor='k', markerfacecolor='none',
                     ecolor='k', elinewidth=0.2, capsize=0.5, markersize=6)
@@ -344,7 +347,8 @@ class PAHFITBase:
                               "Total Continuum Emissions",
                               "Continuum Components"], prop={'size': 10}, loc="best", facecolor="white", framealpha=1,
                   ncol=3)
-        # residuals
+
+        # residuals, lower sub-figure
         res = (y - model(x)) / x
         std = np.std(res)
         ax = axs[1]
@@ -365,7 +369,7 @@ class PAHFITBase:
         ax.set_xlabel(r"$\lambda$ [$\mu m$]")
         ax.set_ylabel('Residuals [%]')
 
-        # non scientific x-axis
+        # scalar x-axis marks
         ax.xaxis.set_minor_formatter(mpl.ticker.ScalarFormatter())
         ax.xaxis.set_major_formatter(mpl.ticker.ScalarFormatter())
 
