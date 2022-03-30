@@ -675,11 +675,10 @@ class PAHFITBase:
             param_info argument.
         """
         # Getting indices for the different components
-        pack_table = None
-        bb_ind = np.where(pack_table["Form"] == "BlackBody1D")
-        df_ind = np.where(pack_table["Form"] == "Drude1D")
-        ga_ind = np.where(pack_table["Form"] == "Gaussian1D")
-        at_ind = np.where((pack_table["Form"] == "S07_attenuation") | (pack_table["Form"] == "att_Drude1D"))
+        bb_ind = np.where(pack_table["Form"] == "BlackBody1D")[0]
+        df_ind = np.where(pack_table["Form"] == "Drude1D")[0]
+        ga_ind = np.where(pack_table["Form"] == "Gaussian1D")[0]
+        at_ind = np.where((pack_table["Form"] == "S07_attenuation") | (pack_table["Form"] == "att_Drude1D"))[0]
 
         # now split the gas emission lines between H2 and ions
         names = [str(i) for i in pack_table["Name"][ga_ind]]
