@@ -134,6 +134,9 @@ class PAHFITBase:
             # guess values and update starting point (if not set fixed) based on the input spectrum
             param_info = self.estimate_init(obs_x, obs_y, param_info)
 
+        if not param_info:
+            raise ValueError("No parameter information set.")
+        
         self.param_info = param_info
 
         bb_info = param_info[0]
