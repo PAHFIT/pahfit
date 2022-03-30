@@ -4,9 +4,7 @@ from astropy.modeling.physical_models import Drude1D
 from astropy.modeling import Fittable1DModel
 from astropy.modeling import Parameter
 
-
-__all__ = ["BlackBody1D", "ModifiedBlackBody1D", "S07_attenuation"]
-
+__all__ = ["BlackBody1D", "ModifiedBlackBody1D", "S07_attenuation",  "att_Drude1D"]
 
 class BlackBody1D(Fittable1DModel):
     """
@@ -111,4 +109,22 @@ class S07_attenuation(Fittable1DModel):
             return np.full((len(in_x)), 1.0)
         else:
             tau_x = tau_si * self.kvt(in_x)
+            return (1.0 - np.exp(-1.0 * tau_x)) / tau_x
+
+
+class att_Drude1D(Fittable1DModel):
+    """
+    Attenuation components that can be parameterized by Drude profiles.
+    """
+    tau = Parameter()
+    x_0 = Parameter()
+    fwhm = Parameter()
+
+    @staticmethod
+    def evaluate(x, tau, x_0, fwhm):
+        if tau == 0.0:
+            return np.full((len(x)), 0.0)
+        else:
+            profile = Drude1D(amplitude=1.0, fwhm=fwhm, x_0=x_0)
+            tau_x = tau * profile(x)
             return (1.0 - np.exp(-1.0 * tau_x)) / tau_x
