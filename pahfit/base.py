@@ -136,7 +136,7 @@ class PAHFITBase:
 
         if not param_info:
             raise ValueError("No parameter information set.")
-        
+
         self.param_info = param_info
 
         bb_info = param_info[0]
@@ -270,7 +270,7 @@ class PAHFITBase:
                         },
                     )
 
-    def plot(self, axs, x, y, yerr, model, model_samples = 1000, scalefac_resid=2):
+    def plot(self, axs, x, y, yerr, model, model_samples=1000, scalefac_resid=2):
         """
         Plot model using axis object.
 
@@ -300,8 +300,8 @@ class PAHFITBase:
             yerr = yerr.value
 
         # Fine x samples for model fit
-        x_mod=np.linspace(min(x),max(x),model_samples)
-            
+        x_mod = np.linspace(min(x), max(x), model_samples)
+
         # spectrum and best fit model
         ax = axs[0]
         ax.set_yscale("linear")
