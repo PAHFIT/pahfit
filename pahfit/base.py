@@ -1,6 +1,6 @@
 from astropy.modeling.functional_models import Gaussian1D
 
-from pahfit.component_models import BlackBody1D, S07_attenuation
+from pahfit.component_models import BlackBody1D, S07_attenuation, att_Drude1D
 
 from astropy.table import Table, vstack
 from astropy.modeling.physical_models import Drude1D
@@ -248,6 +248,25 @@ class PAHFITBase:
             fixed={"tau_sil": att_info["amps_fixed"][0]},
         )
 
+        # add additional att components to the model if necessary
+        self.att_info = att_info
+        if att_info is not None:
+            for k in range(len(att_info["names"])):
+                if att_info["names"][k] != 'S07_att':  # Only loop through att components that can be parameterized
+                    self.model *= att_Drude1D(
+                        name=att_info["names"][k],
+                        tau=att_info["amps"][k],
+                        x_0=att_info["x_0"][k],
+                        fwhm=att_info["fwhms"][k],
+                        bounds={
+                            "tau": att_info["amps_limits"][k],
+                            "fwhm": att_info["fwhms_limits"][k],
+                        },
+                        fixed={
+                            "x_0": att_info["x_0_fixed"][k],
+                        },
+                    )
+
     def plot(self, axs, x, y, yerr, model, scalefac_resid=2):
         """
         Plot model using axis object.
@@ -291,8 +310,15 @@ class PAHFITBase:
         # get the extinction model (probably a better way to do this)
         for cmodel in model:
             if isinstance(cmodel, S07_attenuation):
-                ax_att.plot(x, cmodel(x), "k--", alpha=0.5)
                 ext_model = cmodel(x)
+
+        # get additional extinction components that can be
+        # characterized by functional forms (Drude profile in this case)
+        for cmodel in model:
+            if isinstance(cmodel, att_Drude1D):
+                ext_model *= cmodel(x)
+
+        ax_att.plot(x, ext_model, "k--", alpha=0.5)
         ax_att.set_ylabel("Attenuation")
         ax_att.set_ylim(0, 1.1)
 
@@ -453,6 +479,42 @@ class PAHFITBase:
             dtype=("U25", "U25", "float64", "float64", "float64", "bool"),
         )
 
+        # attenuation components that can be characterized by a functional form
+        att_funct_table = Table(
+            names=(
+                "Name",
+                "Form",
+                "x_0",
+                "x_0_min",
+                "x_0_max",
+                "x_0_fixed",
+                "amp",
+                "amp_min",
+                "amp_max",
+                "amp_fixed",
+                "fwhm",
+                "fwhm_min",
+                "fwhm_max",
+                "fwhm_fixed",
+            ),
+            dtype=(
+                "U25",
+                "U25",
+                "float64",
+                "float64",
+                "float64",
+                "bool",
+                "float64",
+                "float64",
+                "float64",
+                "bool",
+                "float64",
+                "float64",
+                "float64",
+                "bool",
+            ),
+        )
+
         for component in obs_fit:
             comp_type = component.__class__.__name__
 
@@ -563,11 +625,31 @@ class PAHFITBase:
                     ]
                 )
 
+            elif comp_type == "att_Drude1D":
+                att_funct_table.add_row(
+                    [
+                        component.name,
+                        comp_type,
+                        component.x_0.value,
+                        component.x_0.bounds[0],
+                        component.x_0.bounds[1],
+                        component.x_0.fixed,
+                        component.tau.value,
+                        component.tau.bounds[0],
+                        component.tau.bounds[1],
+                        component.tau.fixed,
+                        component.fwhm.value,
+                        component.fwhm.bounds[0],
+                        component.fwhm.bounds[1],
+                        component.fwhm.fixed,
+                    ]
+                )
+
         # Call featcombine to calculate combined dust feature strengths.
         cftable = featcombine(line_table)
 
         # stack the tables (handles missing columns between tables)
-        out_table = vstack([bb_table, line_table, att_table, cftable])
+        out_table = vstack([bb_table, line_table, att_table, att_funct_table, cftable])
 
         # Writing output table
         out_table.write(
@@ -603,7 +685,7 @@ class PAHFITBase:
         bb_ind = np.concatenate(np.argwhere(t["Form"] == "BlackBody1D"))
         df_ind = np.concatenate(np.argwhere(t["Form"] == "Drude1D"))
         ga_ind = np.concatenate(np.argwhere(t["Form"] == "Gaussian1D"))
-        at_ind = np.concatenate(np.argwhere(t["Form"] == "S07_attenuation"))
+        at_ind = np.concatenate(np.argwhere((t["Form"] == "S07_attenuation") | (t["Form"] == "att_Drude1D")))
 
         # now split the gas emission lines between H2 and ions
         names = [str(i) for i in np.take(t["Name"], ga_ind)]
@@ -690,11 +772,21 @@ class PAHFITBase:
         # Create the attenuation dict
         att_info = {
             "names": np.array(t["Name"][at_ind].data),
+            "x_0": np.array(t["x_0"][at_ind].data),
+            "x_0_limits": _ingest_limits(
+                t["x_0_min"][at_ind].data, t["x_0_max"][at_ind].data
+            ),
+            "x_0_fixed": _ingest_fixed(t["x_0_fixed"][at_ind].data),
             "amps": np.array(t["amp"][at_ind].data),
             "amps_limits": _ingest_limits(
                 t["amp_min"][at_ind].data, t["amp_max"][at_ind].data
             ),
             "amps_fixed": _ingest_fixed(t["amp_fixed"][at_ind].data),
+            "fwhms": np.array(t["fwhm"][at_ind].data),
+            "fwhms_limits": _ingest_limits(
+                t["fwhm_min"][at_ind].data, t["fwhm_max"][at_ind].data
+            ),
+            "fwhms_fixed": _ingest_fixed(t["fwhm_fixed"][at_ind].data),
         }
 
         # Create output tuple
