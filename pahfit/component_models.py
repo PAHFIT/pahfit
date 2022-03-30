@@ -5,11 +5,13 @@ from astropy.modeling import Fittable1DModel
 from astropy.modeling import Parameter
 
 
-__all__ = ["BlackBody1D", "S07_attenuation"]
+__all__ = ["BlackBody1D", "ModifiedBlackBody1D", "S07_attenuation"]
 
 
 class BlackBody1D(Fittable1DModel):
     """
+    A blackbody component.
+
     Current astropy BlackBody1D does not play well with Lorentz1D and Gauss1D
     maybe, need to check again, possibly a units issue
     """
@@ -23,12 +25,19 @@ class BlackBody1D(Fittable1DModel):
         """
         return (
             amplitude
-            * ((9.7 / x) ** 2)
             * 3.97289e13
             / x ** 3
             / (np.exp(1.4387752e4 / x / temperature) - 1.0)
         )
 
+class ModifiedBlackBody1D(BlackBody1D):
+    """
+    Modified blackbody with an emissivity propoportional to nu^2
+    """
+    
+    @staticmethod
+    def evaluate(x, amplitude, temperature):
+        return BlackBody1D.evaluate(x, amplitude, temperature) * ((9.7 / x) ** 2)
 
 class S07_attenuation(Fittable1DModel):
     """
@@ -91,7 +100,7 @@ class S07_attenuation(Fittable1DModel):
         ext = np.concatenate([new_spline_y, nf(in_x_drude)])
 
         # Extend to ~2 um
-        # assuing beta is 0.1
+        # assuming beta is 0.1
         beta = 0.1
         y = (1.0 - beta) * ext + beta * (9.7 / in_x) ** 1.7
 

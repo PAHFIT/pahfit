@@ -1,6 +1,6 @@
 from astropy.modeling.functional_models import Gaussian1D
 
-from pahfit.component_models import BlackBody1D, S07_attenuation
+from pahfit.component_models import BlackBody1D, ModifiedBlackBody1D, S07_attenuation
 
 from astropy.table import Table, vstack
 from astropy.modeling.physical_models import Drude1D
@@ -146,24 +146,15 @@ class PAHFITBase:
         att_info = param_info[4]
 
         # setup the model
+        self.model = None
         self.bb_info = bb_info
         if bb_info is not None:
-            # 1st component defines the overall model variable
-            self.model = BlackBody1D(
-                name=bb_info["names"][0],
-                temperature=bb_info["temps"][0],
-                amplitude=bb_info["amps"][0],
-                bounds={
-                    "temperature": bb_info["temps_limits"][0],
-                    "amplitude": bb_info["amps_limits"][0],
-                },
-                fixed={
-                    "temperature": bb_info["temps_fixed"][0],
-                    "amplitude": bb_info["amps_fixed"][0],
-                },
-            )
-            for k in range(1, len(bb_info["names"])):
-                self.model += BlackBody1D(
+            bbs=[]
+            for k in range(len(bb_info["names"])):
+                BBClass = (ModifiedBlackBody1D
+                           if bb_info["modified"][k]
+                           else BlackBody1D)
+                bbs.append(BBClass(
                     name=bb_info["names"][k],
                     temperature=bb_info["temps"][k],
                     amplitude=bb_info["amps"][k],
@@ -175,12 +166,14 @@ class PAHFITBase:
                         "temperature": bb_info["temps_fixed"][k],
                         "amplitude": bb_info["amps_fixed"][k],
                     },
-                )
+                ))
+            self.model = sum(bbs[1:], bbs[0])
 
         self.dust_features = dust_features
         if dust_features is not None:
+            df = []
             for k in range(len(dust_features["names"])):
-                self.model += Drude1D(
+                df.append(Drude1D(
                     name=dust_features["names"][k],
                     amplitude=dust_features["amps"][k],
                     x_0=dust_features["x_0"][k],
@@ -195,12 +188,17 @@ class PAHFITBase:
                         "x_0": dust_features["x_0_fixed"][k],
                         "fwhm": dust_features["fwhms_fixed"][k],
                     },
-                )
+                ))
+
+            df = sum(df[1:], df[0])
+            if self.model: self.model += df
+            else: self.model = df
 
         self.h2_features = h2_features
         if h2_features is not None:
+            h2 = []
             for k in range(len(h2_features["names"])):
-                self.model += Gaussian1D(
+                h2.append(Gaussian1D(
                     name=h2_features["names"][k],
                     amplitude=h2_features["amps"][k],
                     mean=h2_features["x_0"][k],
@@ -218,12 +216,16 @@ class PAHFITBase:
                         "mean": h2_features["x_0_fixed"][k],
                         "stddev": h2_features["fwhms_fixed"][k],
                     },
-                )
+                ))
+            h2 = sum(h2[1:], h2[0])
+            if self.model: self.model += h2
+            else: self.model = h2
 
         self.ion_features = ion_features
         if ion_features is not None:
+            ions=[]
             for k in range(len(ion_features["names"])):
-                self.model += Gaussian1D(
+                ions.append(Gaussian1D(
                     name=ion_features["names"][k],
                     amplitude=ion_features["amps"][k],
                     mean=ion_features["x_0"][k],
@@ -241,15 +243,21 @@ class PAHFITBase:
                         "mean": ion_features["x_0_fixed"][k],
                         "stddev": ion_features["fwhms_fixed"][k],
                     },
-                )
+                ))
+            ions = sum(ions[1:], ions[0])
+            if self.model: self.model += ions
+            else: self.model = ions
 
-        # apply the attenuation to *all* the components
-        self.model *= S07_attenuation(
-            name=att_info["names"][0],
-            tau_sil=att_info["amps"][0],
-            bounds={"tau_sil": att_info["amps_limits"][0]},
-            fixed={"tau_sil": att_info["amps_fixed"][0]},
-        )
+        if self.model:
+            # apply the attenuation to *all* the components
+            self.model *= S07_attenuation(
+                name=att_info["names"][0],
+                tau_sil=att_info["amps"][0],
+                bounds={"tau_sil": att_info["amps_limits"][0]},
+                fixed={"tau_sil": att_info["amps_fixed"][0]},
+            )
+        else:
+            raise ValueError("No model components found")
 
     def plot(self, axs, x, y, yerr, model, scalefac_resid=2):
         """
@@ -320,7 +328,7 @@ class PAHFITBase:
             cont_model += cmodel
         cont_y = cont_model(x)
 
-        # now plot the dust and gas lines
+        # now plot the dust bands and lines
         for cmodel in model:
             if isinstance(cmodel, Gaussian1D):
                 ax.plot(x, (cont_y + cmodel(x)) * ext_model / x, "#DC267F", alpha=0.5)
@@ -603,7 +611,8 @@ class PAHFITBase:
         t = Table.read(filename, format=tformat)
 
         # Getting indices for the different components
-        bb_ind = np.concatenate(np.argwhere(t["Form"] == "BlackBody1D"))
+        bb_ind = np.concatenate(np.argwhere((t["Form"] == "BlackBody1D") |
+                                            (t["Form"] == "ModifiedBlackBody1D")))
         df_ind = np.concatenate(np.argwhere(t["Form"] == "Drude1D"))
         ga_ind = np.concatenate(np.argwhere(t["Form"] == "Gaussian1D"))
         at_ind = np.concatenate(np.argwhere(t["Form"] == "S07_attenuation"))
@@ -628,6 +637,7 @@ class PAHFITBase:
                 t["amp_min"][bb_ind].data, t["amp_max"][bb_ind].data
             ),
             "amps_fixed": _ingest_fixed(t["amp_fixed"][bb_ind].data),
+            "modified": np.array(t["Form"][bb_ind] == "ModifiedBlackBody1D")
         }
 
         # Creating the dust_features dict
@@ -700,10 +710,7 @@ class PAHFITBase:
             "amps_fixed": _ingest_fixed(t["amp_fixed"][at_ind].data),
         }
 
-        # Create output tuple
-        readout = (bb_info, df_info, h2_info, ion_info, att_info)
-
-        return readout
+        return (bb_info, df_info, h2_info, ion_info, att_info)
 
     @staticmethod
     def estimate_init(obs_x, obs_y, param_info):
