@@ -312,7 +312,9 @@ class PAHFITBase:
         ax_att.tick_params(which='minor', direction="in", length=5)
         ax_att.tick_params(which='major', direction='in', length=10)
         ax_att.minorticks_on()
+
         # get the extinction model (probably a better way to do this)
+        ext_model = None
         for cmodel in model:
             if isinstance(cmodel, S07_attenuation):
                 ext_model = cmodel(x_mod)
@@ -321,8 +323,10 @@ class PAHFITBase:
         # characterized by functional forms (Drude profile in this case)
         for cmodel in model:
             if isinstance(cmodel, att_Drude1D):
-                ext_model *= cmodel(x_mod)
-
+                if ext_model:
+                    ext_model *= cmodel(x_mod)
+                else:
+                    ext_model = cmodel(x_mod)
         ax_att.plot(x_mod, ext_model, "k--", alpha=0.5)
         ax_att.set_ylabel("Attenuation")
         ax_att.set_ylim(0, 1.1)
