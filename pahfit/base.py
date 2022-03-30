@@ -270,7 +270,7 @@ class PAHFITBase:
                         },
                     )
 
-    def plot(self, axs, x, y, yerr, model, scalefac_resid=2):
+    def plot(self, axs, x, y, yerr, model, model_samples = 1000, scalefac_resid=2):
         """
         Plot model using axis object.
 
@@ -286,6 +286,8 @@ class PAHFITBase:
             observed spectrum uncertainties
         model : PAHFITBase model (astropy modeling CompoundModel)
             model giving all the components and parameters
+        model_samples : int
+            Total number of wavelength points to allocate to the model display
         scalefac_resid : float
             Factor multiplying the standard deviation of the residuals to adjust plot limits
         """
@@ -298,7 +300,7 @@ class PAHFITBase:
             yerr = yerr.value
 
         # Fine x samples for model fit
-        x_mod=np.linspace(min(x),max(x),1000)
+        x_mod=np.linspace(min(x),max(x),model_samples)
             
         # spectrum and best fit model
         ax = axs[0]
