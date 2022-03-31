@@ -325,7 +325,7 @@ class PAHFITBase:
         # characterized by functional forms (Drude profile in this case)
         for cmodel in model:
             if isinstance(cmodel, att_Drude1D):
-                if ext_model:
+                if ext_model is not None:
                     ext_model *= cmodel(x_mod)
                 else:
                     ext_model = cmodel(x_mod)
