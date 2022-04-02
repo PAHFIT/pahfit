@@ -527,7 +527,7 @@ class PAHFITBase:
         for component in obs_fit:
             comp_type = component.__class__.__name__
 
-            if comp_type == "BlackBody1D":
+            if isinstance(component, BlackBody1D):
                 bb_table.add_row(
                     [
                         component.name,
@@ -542,7 +542,7 @@ class PAHFITBase:
                         component.amplitude.fixed,
                     ]
                 )
-            elif comp_type == "Drude1D":
+            elif isinstance(component,Drude1D):
 
                 # Calculate feature strength.
                 strength = pah_feature_strength(component.amplitude.value,
@@ -582,7 +582,7 @@ class PAHFITBase:
                         eqw
                     ]
                 )
-            elif comp_type == "Gaussian1D":
+            elif isinstance(component,Gaussian1D):
 
                 # Calculate feature strength.
                 strength = line_strength(component.amplitude.value,
@@ -622,7 +622,7 @@ class PAHFITBase:
                         eqw
                     ]
                 )
-            elif comp_type == "S07_attenuation":
+            elif isinstance(component,S07_attenuation):
                 att_table.add_row(
                     [
                         component.name,
@@ -634,7 +634,7 @@ class PAHFITBase:
                     ]
                 )
 
-            elif comp_type == "att_Drude1D":
+            elif isinstance(component,att_Drude1D):
                 att_funct_table.add_row(
                     [
                         component.name,
