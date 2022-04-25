@@ -33,7 +33,9 @@ User Documentation
    Plotting a fit <plot_result.rst>
    File formats <file_formats.rst>
    IDL versus Python PAHFIT implementations <idl_vs_python/python_vs_IDL_fit.rst>
-
+   PAHFIT version description <version_description/version_description.rst>
+   PAHFIT v2.1 notes <version_description/PAHFIT_v2.1.rst>
+   
 Installation
 ============
 

@@ -1,7 +1,12 @@
-2.0.dev (unreleased)
+2.1 (unreleased)
 ================
 
-- merged two prototype codes into one
+- no changes yet
+
+2.0 (2022-02-15)
+================
+
+- provides equivalent capabilities as the IDL version 1.4
 
 1.4 (and previous)
 ==================
