@@ -303,7 +303,7 @@ class PAHFITBase:
                             "tau": att_info["amps_limits"][k],
                             "fwhm": att_info["fwhms_limits"][k],
                         },
-                        fixed={"x_0": att_info["x_0_fixed"][k],},
+                        fixed={"x_0": att_info["x_0_fixed"][k]},
                     )
 
     def plot(self, axs, x, y, yerr, model, model_samples=1000, scalefac_resid=2):
