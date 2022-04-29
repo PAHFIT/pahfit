@@ -89,9 +89,6 @@ def main():
     # fit the spectrum
     obsfit = fit_spectrum(obsdata, pmodel, maxiter=args.fit_maxiter)
 
-    import numpy as np
-    print(np.array_repr(obsfit.parameters))
-
     # save fit results to file
     outputname = args.spectrumfile.split(".")[0]
     pmodel.save(obsfit, outputname, args.saveoutput)
@@ -107,11 +104,22 @@ def main():
     mpl.rc("xtick.minor", size=3, width=1)
     mpl.rc("ytick.minor", size=3, width=1)
 
-    fig, axs = plt.subplots(ncols=1, nrows=2, figsize=(15, 10),
-                            gridspec_kw={'height_ratios': [3, 1]},
-                            sharex=True)
+    fig, axs = plt.subplots(
+        ncols=1,
+        nrows=2,
+        figsize=(15, 10),
+        gridspec_kw={"height_ratios": [3, 1]},
+        sharex=True,
+    )
 
-    pmodel.plot(axs, obsdata["x"], obsdata["y"], obsdata["unc"], obsfit, scalefac_resid=args.scalefac_resid)
+    pmodel.plot(
+        axs,
+        obsdata["x"],
+        obsdata["y"],
+        obsdata["unc"],
+        obsfit,
+        scalefac_resid=args.scalefac_resid,
+    )
 
     # use the whitespace better
     fig.subplots_adjust(hspace=0)
