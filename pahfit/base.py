@@ -206,8 +206,8 @@ class PAHFITBase:
                         "amplitude": h2_features["amps_limits"][k],
                         "mean": h2_features["x_0_limits"][k],
                         "stddev": (
-                            h2_features["fwhms_limits"][k][0] / 2.355,
-                            h2_features["fwhms_limits"][k][1] / 2.355,
+                            h2_features["fwhms"][k]*0.9 / 2.355,
+                            h2_features["fwhms"][k]*1.1 / 2.355,
                         ),
                     },
                     fixed={
@@ -233,8 +233,8 @@ class PAHFITBase:
                         "amplitude": ion_features["amps_limits"][k],
                         "mean": ion_features["x_0_limits"][k],
                         "stddev": (
-                            ion_features["fwhms_limits"][k][0] / 2.355,
-                            ion_features["fwhms_limits"][k][1] / 2.355,
+                            ion_features["fwhms"][k] * 0.9 / 2.355,
+                            ion_features["fwhms"][k] * 1.1 / 2.355,
                         ),
                     },
                     fixed={
