@@ -89,6 +89,9 @@ def main():
     # fit the spectrum
     obsfit = fit_spectrum(obsdata, pmodel, maxiter=args.fit_maxiter)
 
+    import numpy as np
+    print(np.array_repr(obsfit.parameters))
+
     # save fit results to file
     outputname = args.spectrumfile.split(".")[0]
     pmodel.save(obsfit, outputname, args.saveoutput)
