@@ -45,10 +45,12 @@ def test_model_trimming():
         return pmodel
 
     # Case 0: the whole table
-    whole_pmodel = parse_and_init(packtable)
+    # whole_pmodel
+    _ = parse_and_init(packtable)
 
     # Case 1: Remove all BlackBody1D
-    nobb_pmodel = parse_and_init(packtable[packtable["Form"] != "BlackBody1D"])
+    # nobb_pmodel =
+    _ = parse_and_init(packtable[packtable["Form"] != "BlackBody1D"])
 
     # Case 2: Remove all Drude1D
 
