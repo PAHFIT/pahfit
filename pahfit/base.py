@@ -1,7 +1,6 @@
 from astropy.modeling.functional_models import Gaussian1D
 
-from pahfit.component_models import BlackBody1D, S07_attenuation, att_Drude1D
-
+from pahfit.component_models import BlackBody1D, ModifiedBlackBody1D, S07_attenuation, att_Drude1D
 from astropy.table import Table, vstack
 from astropy.modeling.physical_models import Drude1D
 
@@ -134,6 +133,9 @@ class PAHFITBase:
             # guess values and update starting point (if not set fixed) based on the input spectrum
             param_info = self.estimate_init(obs_x, obs_y, param_info)
 
+        if not param_info:
+            raise ValueError("No parameter information set.")
+
         self.param_info = param_info
 
         bb_info = param_info[0]
@@ -143,24 +145,15 @@ class PAHFITBase:
         att_info = param_info[4]
 
         # setup the model
+        self.model = None
         self.bb_info = bb_info
         if bb_info is not None:
-            # 1st component defines the overall model variable
-            self.model = BlackBody1D(
-                name=bb_info["names"][0],
-                temperature=bb_info["temps"][0],
-                amplitude=bb_info["amps"][0],
-                bounds={
-                    "temperature": bb_info["temps_limits"][0],
-                    "amplitude": bb_info["amps_limits"][0],
-                },
-                fixed={
-                    "temperature": bb_info["temps_fixed"][0],
-                    "amplitude": bb_info["amps_fixed"][0],
-                },
-            )
-            for k in range(1, len(bb_info["names"])):
-                self.model += BlackBody1D(
+            bbs=[]
+            for k in range(len(bb_info["names"])):
+                BBClass = (ModifiedBlackBody1D
+                           if bb_info["modified"][k]
+                           else BlackBody1D)
+                bbs.append(BBClass(
                     name=bb_info["names"][k],
                     temperature=bb_info["temps"][k],
                     amplitude=bb_info["amps"][k],
@@ -172,12 +165,14 @@ class PAHFITBase:
                         "temperature": bb_info["temps_fixed"][k],
                         "amplitude": bb_info["amps_fixed"][k],
                     },
-                )
+                ))
+            self.model = sum(bbs[1:], bbs[0])
 
         self.dust_features = dust_features
         if dust_features is not None:
+            df = []
             for k in range(len(dust_features["names"])):
-                self.model += Drude1D(
+                df.append(Drude1D(
                     name=dust_features["names"][k],
                     amplitude=dust_features["amps"][k],
                     x_0=dust_features["x_0"][k],
@@ -192,12 +187,17 @@ class PAHFITBase:
                         "x_0": dust_features["x_0_fixed"][k],
                         "fwhm": dust_features["fwhms_fixed"][k],
                     },
-                )
+                ))
+
+            df = sum(df[1:], df[0])
+            if self.model: self.model += df
+            else: self.model = df
 
         self.h2_features = h2_features
         if h2_features is not None:
+            h2 = []
             for k in range(len(h2_features["names"])):
-                self.model += Gaussian1D(
+                h2.append(Gaussian1D(
                     name=h2_features["names"][k],
                     amplitude=h2_features["amps"][k],
                     mean=h2_features["x_0"][k],
@@ -206,8 +206,8 @@ class PAHFITBase:
                         "amplitude": h2_features["amps_limits"][k],
                         "mean": h2_features["x_0_limits"][k],
                         "stddev": (
-                            h2_features["fwhms_limits"][k][0] / 2.355,
-                            h2_features["fwhms_limits"][k][1] / 2.355,
+                            h2_features["fwhms"][k]*0.9 / 2.355,
+                            h2_features["fwhms"][k]*1.1 / 2.355,
                         ),
                     },
                     fixed={
@@ -215,12 +215,16 @@ class PAHFITBase:
                         "mean": h2_features["x_0_fixed"][k],
                         "stddev": h2_features["fwhms_fixed"][k],
                     },
-                )
+                ))
+            h2 = sum(h2[1:], h2[0])
+            if self.model: self.model += h2
+            else: self.model = h2
 
         self.ion_features = ion_features
         if ion_features is not None:
+            ions=[]
             for k in range(len(ion_features["names"])):
-                self.model += Gaussian1D(
+                ions.append(Gaussian1D(
                     name=ion_features["names"][k],
                     amplitude=ion_features["amps"][k],
                     mean=ion_features["x_0"][k],
@@ -229,8 +233,8 @@ class PAHFITBase:
                         "amplitude": ion_features["amps_limits"][k],
                         "mean": ion_features["x_0_limits"][k],
                         "stddev": (
-                            ion_features["fwhms_limits"][k][0] / 2.355,
-                            ion_features["fwhms_limits"][k][1] / 2.355,
+                            ion_features["fwhms"][k] * 0.9 / 2.355,
+                            ion_features["fwhms"][k] * 1.1 / 2.355,
                         ),
                     },
                     fixed={
@@ -238,21 +242,26 @@ class PAHFITBase:
                         "mean": ion_features["x_0_fixed"][k],
                         "stddev": ion_features["fwhms_fixed"][k],
                     },
-                )
-
-        # apply the attenuation to *all* the components
-        self.model *= S07_attenuation(
-            name=att_info["names"][0],
-            tau_sil=att_info["amps"][0],
-            bounds={"tau_sil": att_info["amps_limits"][0]},
-            fixed={"tau_sil": att_info["amps_fixed"][0]},
-        )
-
+                ))
+            ions = sum(ions[1:], ions[0])
+            if self.model: self.model += ions
+            else: self.model = ions
+        
         # add additional att components to the model if necessary
+        if not self.model:
+            raise ValueError("No model components found")
+
         self.att_info = att_info
         if att_info is not None:
             for k in range(len(att_info["names"])):
-                if att_info["names"][k] != 'S07_att':  # Only loop through att components that can be parameterized
+                if att_info["names"][k] == 'S07_att':  # Only loop through att components that can be parameterized
+                    self.model *= S07_attenuation(
+                        name=att_info["names"][k],
+                        tau_sil=att_info["amps"][k],
+                        bounds={"tau_sil": att_info["amps_limits"][k]},
+                        fixed={"tau_sil": att_info["amps_fixed"][k]},
+                    )
+                else:
                     self.model *= att_Drude1D(
                         name=att_info["names"][k],
                         tau=att_info["amps"][k],
@@ -268,7 +277,7 @@ class PAHFITBase:
                     )
 
     @staticmethod
-    def plot(axs, x, y, yerr, model, scalefac_resid=2):
+    def plot(axs, x, y, yerr, model, model_samples=1000, scalefac_resid=2):
         """
         Plot model using axis object.
 
@@ -284,6 +293,8 @@ class PAHFITBase:
             observed spectrum uncertainties
         model : PAHFITBase model (astropy modeling CompoundModel)
             model giving all the components and parameters
+        model_samples : int
+            Total number of wavelength points to allocate to the model display
         scalefac_resid : float
             Factor multiplying the standard deviation of the residuals to adjust plot limits
         """
@@ -295,8 +306,10 @@ class PAHFITBase:
         if hasattr(yerr, "value"):
             yerr = yerr.value
 
-        # spectrum and best fit model
+        # Fine x samples for model fit
+        x_mod = np.linspace(min(x), max(x), model_samples)
 
+        # spectrum and best fit model
         ax = axs[0]
         ax.set_yscale("linear")
         ax.set_xscale("log")
@@ -308,18 +321,22 @@ class PAHFITBase:
         ax_att.tick_params(which='minor', direction="in", length=5)
         ax_att.tick_params(which='major', direction='in', length=10)
         ax_att.minorticks_on()
+
         # get the extinction model (probably a better way to do this)
+        ext_model = None
         for cmodel in model:
             if isinstance(cmodel, S07_attenuation):
-                ext_model = cmodel(x)
+                ext_model = cmodel(x_mod)
 
         # get additional extinction components that can be
         # characterized by functional forms (Drude profile in this case)
         for cmodel in model:
             if isinstance(cmodel, att_Drude1D):
-                ext_model *= cmodel(x)
-
-        ax_att.plot(x, ext_model, "k--", alpha=0.5)
+                if ext_model is not None:
+                    ext_model *= cmodel(x_mod)
+                else:
+                    ext_model = cmodel(x_mod)
+        ax_att.plot(x_mod, ext_model, "k--", alpha=0.5)
         ax_att.set_ylabel("Attenuation")
         ax_att.set_ylim(0, 1.1)
 
@@ -338,22 +355,22 @@ class PAHFITBase:
             if isinstance(cmodel, BlackBody1D):
                 cont_components.append(cmodel)
                 # plot as we go
-                ax.plot(x, cmodel(x) * ext_model / x, "#FFB000", alpha=0.5)
+                ax.plot(x_mod, cmodel(x_mod) * ext_model / x_mod, "#FFB000", alpha=0.5)
         cont_model = cont_components[0]
         for cmodel in cont_components[1:]:
             cont_model += cmodel
-        cont_y = cont_model(x)
+        cont_y = cont_model(x_mod)
 
-        # now plot the dust and gas lines
+        # now plot the dust bands and lines
         for cmodel in model:
             if isinstance(cmodel, Gaussian1D):
-                ax.plot(x, (cont_y + cmodel(x)) * ext_model / x, "#DC267F", alpha=0.5)
+                ax.plot(x_mod, (cont_y + cmodel(x_mod)) * ext_model / x_mod, "#DC267F", alpha=0.5)
             if isinstance(cmodel, Drude1D):
-                ax.plot(x, (cont_y + cmodel(x)) * ext_model / x, "#648FFF", alpha=0.5)
+                ax.plot(x_mod, (cont_y + cmodel(x_mod)) * ext_model / x_mod, "#648FFF", alpha=0.5)
 
-        ax.plot(x, cont_y * ext_model / x, "#785EF0", alpha=1)
+        ax.plot(x_mod, cont_y * ext_model / x_mod, "#785EF0", alpha=1)
 
-        ax.plot(x, model(x) / x, "#FE6100", alpha=1)
+        ax.plot(x_mod, model(x_mod) / x_mod, "#FE6100", alpha=1)
         ax.errorbar(x, y / x, yerr=yerr / x,
                     fmt='o', markeredgecolor='k', markerfacecolor='none',
                     ecolor='k', elinewidth=0.2, capsize=0.5, markersize=6)
@@ -368,7 +385,8 @@ class PAHFITBase:
                               "Total Continuum Emissions",
                               "Continuum Components"], prop={'size': 10}, loc="best", facecolor="white", framealpha=1,
                   ncol=3)
-        # residuals
+
+        # residuals, lower sub-figure
         res = (y - model(x)) / x
         std = np.std(res)
         ax = axs[1]
@@ -389,7 +407,7 @@ class PAHFITBase:
         ax.set_xlabel(r"$\lambda$ [$\mu m$]")
         ax.set_ylabel('Residuals [%]')
 
-        # non scientific x-axis
+        # scalar x-axis marks
         ax.xaxis.set_minor_formatter(mpl.ticker.ScalarFormatter())
         ax.xaxis.set_major_formatter(mpl.ticker.ScalarFormatter())
 
@@ -519,7 +537,7 @@ class PAHFITBase:
         for component in obs_fit:
             comp_type = component.__class__.__name__
 
-            if comp_type == "BlackBody1D":
+            if isinstance(component, BlackBody1D):
                 bb_table.add_row(
                     [
                         component.name,
@@ -534,7 +552,7 @@ class PAHFITBase:
                         component.amplitude.fixed,
                     ]
                 )
-            elif comp_type == "Drude1D":
+            elif isinstance(component,Drude1D):
 
                 # Calculate feature strength.
                 strength = pah_feature_strength(component.amplitude.value,
@@ -574,7 +592,7 @@ class PAHFITBase:
                         eqw
                     ]
                 )
-            elif comp_type == "Gaussian1D":
+            elif isinstance(component,Gaussian1D):
 
                 # Calculate feature strength.
                 strength = line_strength(component.amplitude.value,
@@ -614,7 +632,7 @@ class PAHFITBase:
                         eqw
                     ]
                 )
-            elif comp_type == "S07_attenuation":
+            elif isinstance(component,S07_attenuation):
                 att_table.add_row(
                     [
                         component.name,
@@ -626,7 +644,7 @@ class PAHFITBase:
                     ]
                 )
 
-            elif comp_type == "att_Drude1D":
+            elif isinstance(component,att_Drude1D):
                 att_funct_table.add_row(
                     [
                         component.name,
@@ -675,10 +693,12 @@ class PAHFITBase:
             param_info argument.
         """
         # Getting indices for the different components
-        bb_ind = np.where(pack_table["Form"] == "BlackBody1D")[0]
+        bb_ind = np.where((t["Form"] == "BlackBody1D") |
+                          (t["Form"] == "ModifiedBlackBody1D"))[0]
         df_ind = np.where(pack_table["Form"] == "Drude1D")[0]
         ga_ind = np.where(pack_table["Form"] == "Gaussian1D")[0]
-        at_ind = np.where((pack_table["Form"] == "S07_attenuation") | (pack_table["Form"] == "att_Drude1D"))[0]
+        at_ind = np.where((pack_table["Form"] == "S07_attenuation") |
+                          (pack_table["Form"] == "att_Drude1D"))[0]
 
         # now split the gas emission lines between H2 and ions
         names = [str(i) for i in pack_table["Name"][ga_ind]]
@@ -705,7 +725,8 @@ class PAHFITBase:
             "amps_limits": _ingest_limits(
                 pack_table["amp_min"][bb_ind].data, pack_table["amp_max"][bb_ind].data
             ),
-            "amps_fixed": _ingest_fixed(pack_table["amp_fixed"][bb_ind].data),
+            "amps_fixed": _ingest_fixed(t["amp_fixed"][bb_ind].data),
+            "modified": np.array(t["Form"][bb_ind] == "ModifiedBlackBody1D")
         }
 
         # Creating the dust_features dict
@@ -788,10 +809,7 @@ class PAHFITBase:
             "fwhms_fixed": _ingest_fixed(pack_table["fwhm_fixed"][at_ind].data),
         }
 
-        # Create output tuple
-        readout = (bb_info, df_info, h2_info, ion_info, att_info)
-
-        return readout
+        return (bb_info, df_info, h2_info, ion_info, att_info)
 
     @staticmethod
     def read(filename, tformat=None):
