@@ -799,24 +799,26 @@ class PAHFITBase:
             }
 
         # Create the attenuation dict
-        att_info = {
-            "names": np.array(pack_table["Name"][at_ind].data),
-            "x_0": np.array(pack_table["x_0"][at_ind].data),
-            "x_0_limits": _ingest_limits(
-                pack_table["x_0_min"][at_ind].data, pack_table["x_0_max"][at_ind].data
-            ),
-            "x_0_fixed": _ingest_fixed(pack_table["x_0_fixed"][at_ind].data),
-            "amps": np.array(pack_table["amp"][at_ind].data),
-            "amps_limits": _ingest_limits(
-                pack_table["amp_min"][at_ind].data, pack_table["amp_max"][at_ind].data
-            ),
-            "amps_fixed": _ingest_fixed(pack_table["amp_fixed"][at_ind].data),
-            "fwhms": np.array(pack_table["fwhm"][at_ind].data),
-            "fwhms_limits": _ingest_limits(
-                pack_table["fwhm_min"][at_ind].data, pack_table["fwhm_max"][at_ind].data
-            ),
-            "fwhms_fixed": _ingest_fixed(pack_table["fwhm_fixed"][at_ind].data),
-        }
+        att_info = None
+        if len(at_ind) > 0:
+            att_info = {
+                "names": np.array(pack_table["Name"][at_ind].data),
+                "x_0": np.array(pack_table["x_0"][at_ind].data),
+                "x_0_limits": _ingest_limits(
+                    pack_table["x_0_min"][at_ind].data, pack_table["x_0_max"][at_ind].data
+                ),
+                "x_0_fixed": _ingest_fixed(pack_table["x_0_fixed"][at_ind].data),
+                "amps": np.array(pack_table["amp"][at_ind].data),
+                "amps_limits": _ingest_limits(
+                    pack_table["amp_min"][at_ind].data, pack_table["amp_max"][at_ind].data
+                ),
+                "amps_fixed": _ingest_fixed(pack_table["amp_fixed"][at_ind].data),
+                "fwhms": np.array(pack_table["fwhm"][at_ind].data),
+                "fwhms_limits": _ingest_limits(
+                    pack_table["fwhm_min"][at_ind].data, pack_table["fwhm_max"][at_ind].data
+                ),
+                "fwhms_fixed": _ingest_fixed(pack_table["fwhm_fixed"][at_ind].data),
+            }
 
         return (bb_info, df_info, h2_info, ion_info, att_info)
 

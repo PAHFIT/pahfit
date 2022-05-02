@@ -50,7 +50,7 @@ def test_model_trimming():
     _ = parse_and_init(packtable)
 
     # Case 1, 2, and 3 (no BB, Gauss, Drude)
-    remove_forms = ["BlackBody1D", "Gaussian1D", "Drude1D"]
+    remove_forms = ["BlackBody1D", "Gaussian1D", "Drude1D", "att_Drude1D"]
     for form in remove_forms:
         _ = parse_and_init(packtable[packtable["Form"] != form])
 
