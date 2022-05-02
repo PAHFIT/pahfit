@@ -3,6 +3,7 @@ import numpy as np
 from pahfit.base import PAHFITBase
 from pahfit.helpers import find_packfile
 
+
 def test_model_trimming():
     """
     Goal
@@ -48,13 +49,10 @@ def test_model_trimming():
     # whole_pmodel
     _ = parse_and_init(packtable)
 
-    # Case 1: Remove all BlackBody1D
-    # nobb_pmodel =
-    _ = parse_and_init(packtable[packtable["Form"] != "BlackBody1D"])
-
-    # Case 2: Remove all Drude1D
-
-    # Case 3: Remove all Gaussian1D
+    # Case 1, 2, and 3 (no BB, Gauss, Drude)
+    remove_forms = ["BlackBody1D", "Gaussian1D", "Drude1D"]
+    for form in remove_forms:
+        _ = parse_and_init(packtable[packtable["Form"] != form])
 
 
 if __name__ == "__main__":
