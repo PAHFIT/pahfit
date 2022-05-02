@@ -693,8 +693,8 @@ class PAHFITBase:
             param_info argument.
         """
         # Getting indices for the different components
-        bb_ind = np.where((t["Form"] == "BlackBody1D") |
-                          (t["Form"] == "ModifiedBlackBody1D"))[0]
+        bb_ind = np.where((pack_table["Form"] == "BlackBody1D") |
+                          (pack_table["Form"] == "ModifiedBlackBody1D"))[0]
         df_ind = np.where(pack_table["Form"] == "Drude1D")[0]
         ga_ind = np.where(pack_table["Form"] == "Gaussian1D")[0]
         at_ind = np.where((pack_table["Form"] == "S07_attenuation") |
@@ -725,8 +725,8 @@ class PAHFITBase:
             "amps_limits": _ingest_limits(
                 pack_table["amp_min"][bb_ind].data, pack_table["amp_max"][bb_ind].data
             ),
-            "amps_fixed": _ingest_fixed(t["amp_fixed"][bb_ind].data),
-            "modified": np.array(t["Form"][bb_ind] == "ModifiedBlackBody1D")
+            "amps_fixed": _ingest_fixed(pack_table["amp_fixed"][bb_ind].data),
+            "modified": np.array(pack_table["Form"][bb_ind] == "ModifiedBlackBody1D")
         }
 
         # Creating the dust_features dict
