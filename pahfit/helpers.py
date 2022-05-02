@@ -18,6 +18,38 @@ from astropy.modeling.functional_models import Gaussian1D
 __all__ = ["read_spectrum", "initialize_model", "fit_spectrum", "calculate_compounds"]
 
 
+def find_packfile(packfile):
+    """Determine packfile path.
+
+    If packfile not in current directory, try to find one in the packs
+    directory that comes with PAHFIT. If nothing is found, throw an
+    error.
+
+    Parameters
+    ----------
+    packfile : str
+        Name or path of the pack file.
+
+    Returns
+    -------
+    packfile_found : str
+        Full path of the pack file. Will be a file in pahfit/packs when
+        the given file name was not found.
+
+    """
+    if os.path.isfile(packfile):
+        packfile_found = packfile
+    else:
+        pack_path = pkg_resources.resource_filename("pahfit", "packs/")
+        test_packfile = "{}/{}".format(pack_path, packfile)
+        if os.path.isfile(test_packfile):
+            packfile_found = test_packfile
+        else:
+            raise ValueError("Input packfile {} not found".format(packfile))
+
+    return packfile_found
+
+
 def read_spectrum(specfile, colnames=["wavelength", "flux", "sigma"]):
     """
     Read in a spectrum and convert intput units to the expected internal PAHFIT units.
@@ -85,20 +117,13 @@ def initialize_model(packfile, obsdata, estimate_start=False):
         PAHFIT model
     """
 
-    # read in the pack file
-    if not os.path.isfile(packfile):
-        pack_path = pkg_resources.resource_filename("pahfit", "packs/")
-        test_packfile = "{}/{}".format(pack_path, packfile)
-        if os.path.isfile(test_packfile):
-            packfile = test_packfile
-        else:
-            raise ValueError("Input packfile {} not found".format(packfile))
+    packfile_found = find_packfile(packfile)
 
     pmodel = PAHFITBase(
         obsdata["x"].value,
         obsdata["y"].value,
         estimate_start=estimate_start,
-        filename=packfile,
+        filename=packfile_found,
     )
 
     return pmodel
@@ -122,18 +147,9 @@ def initialize_trimmed_model(packfile, obsdata):
         PAHFIT model based on trimmed science pack table
 
     """
-    # If packfile not in current directory, try to find one of the same
-    # name that comes with PAHFIT
-    if not os.path.isfile(packfile):
-        pack_path = pkg_resources.resource_filename("pahfit", "packs/")
-        test_packfile = "{}/{}".format(pack_path, packfile)
-        if os.path.isfile(test_packfile):
-            packfile = test_packfile
-        else:
-            raise ValueError("Input packfile {} not found".format(packfile))
-
     # read in and edit the table before we parse it
-    t = Table.read(packfile, format="ipac")
+    packfile_found = find_packfile(packfile)
+    t = Table.read(packfile_found, format="ipac")
 
     # determine wavelength range
     w = obsdata["x"].value
@@ -146,7 +162,7 @@ def initialize_trimmed_model(packfile, obsdata):
     # Only keep drudes and gauss with center within 1 FWHM
     is_drude_or_gauss = np.logical_or(t["Form"] == "Drude1D", t["Form"] == "Gaussian1D")
     x0 = t[is_drude_or_gauss]["x_0"]
-    fwhm = t[is_drude_or_gauss]['fwhm']
+    fwhm = t[is_drude_or_gauss]["fwhm"]
     keep_row[is_drude_or_gauss] = np.logical_and(wmin < x0 + fwhm, x0 - fwhm < wmax)
 
     # now parse the trimmed table
@@ -268,7 +284,7 @@ def calculate_compounds(obsdata, pmodel):
 
     for cmodel in pmodel.model:
         if isinstance(cmodel, Gaussian1D):
-            if cmodel.name[0:2] == 'H2':
+            if cmodel.name[0:2] == "H2":
                 h2_features.append(cmodel)
     h2_features_model = h2_features[0]
     for cmodel in h2_features[1:]:
@@ -279,7 +295,7 @@ def calculate_compounds(obsdata, pmodel):
 
     for cmodel in pmodel.model:
         if isinstance(cmodel, Gaussian1D):
-            if cmodel.name[0:2] != 'H2':
+            if cmodel.name[0:2] != "H2":
                 atomic_features.append(cmodel)
     atomic_features_model = atomic_features[0]
     for cmodel in atomic_features[1:]:
