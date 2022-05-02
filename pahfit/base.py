@@ -770,12 +770,16 @@ class PAHFITBase:
             components of that type were specified.
         """
         # Getting indices for the different components
-        bb_ind = np.where((pack_table["Form"] == "BlackBody1D") |
-                          (pack_table["Form"] == "ModifiedBlackBody1D"))[0]
+        bb_ind = np.where(
+            (pack_table["Form"] == "BlackBody1D")
+            | (pack_table["Form"] == "ModifiedBlackBody1D")
+        )[0]
         df_ind = np.where(pack_table["Form"] == "Drude1D")[0]
         ga_ind = np.where(pack_table["Form"] == "Gaussian1D")[0]
-        at_ind = np.where((pack_table["Form"] == "S07_attenuation") |
-                          (pack_table["Form"] == "att_Drude1D"))[0]
+        at_ind = np.where(
+            (pack_table["Form"] == "S07_attenuation")
+            | (pack_table["Form"] == "att_Drude1D")
+        )[0]
 
         # now split the gas emission lines between H2 and ions
         names = [str(i) for i in pack_table["Name"][ga_ind]]
@@ -797,15 +801,19 @@ class PAHFITBase:
                 "names": np.array(pack_table["Name"][bb_ind].data),
                 "temps": np.array(pack_table["temp"][bb_ind].data),
                 "temps_limits": _ingest_limits(
-                    pack_table["temp_min"][bb_ind].data, pack_table["temp_max"][bb_ind].data
+                    pack_table["temp_min"][bb_ind].data,
+                    pack_table["temp_max"][bb_ind].data,
                 ),
                 "temps_fixed": _ingest_fixed(pack_table["temp_fixed"][bb_ind].data),
                 "amps": np.array(pack_table["amp"][bb_ind].data),
                 "amps_limits": _ingest_limits(
-                    pack_table["amp_min"][bb_ind].data, pack_table["amp_max"][bb_ind].data
+                    pack_table["amp_min"][bb_ind].data,
+                    pack_table["amp_max"][bb_ind].data,
                 ),
                 "amps_fixed": _ingest_fixed(pack_table["amp_fixed"][bb_ind].data),
-                "modified": np.array(pack_table["Form"][bb_ind] == "ModifiedBlackBody1D")
+                "modified": np.array(
+                    pack_table["Form"][bb_ind] == "ModifiedBlackBody1D"
+                ),
             }
 
         # Creating the dust_features dict
@@ -815,17 +823,20 @@ class PAHFITBase:
                 "names": np.array(pack_table["Name"][df_ind].data),
                 "x_0": np.array(pack_table["x_0"][df_ind].data),
                 "x_0_limits": _ingest_limits(
-                    pack_table["x_0_min"][df_ind].data, pack_table["x_0_max"][df_ind].data
+                    pack_table["x_0_min"][df_ind].data,
+                    pack_table["x_0_max"][df_ind].data,
                 ),
                 "x_0_fixed": _ingest_fixed(pack_table["x_0_fixed"][df_ind].data),
                 "amps": np.array(pack_table["amp"][df_ind].data),
                 "amps_limits": _ingest_limits(
-                    pack_table["amp_min"][df_ind].data, pack_table["amp_max"][df_ind].data
+                    pack_table["amp_min"][df_ind].data,
+                    pack_table["amp_max"][df_ind].data,
                 ),
                 "amps_fixed": _ingest_fixed(pack_table["amp_fixed"][df_ind].data),
                 "fwhms": np.array(pack_table["fwhm"][df_ind].data),
                 "fwhms_limits": _ingest_limits(
-                    pack_table["fwhm_min"][df_ind].data, pack_table["fwhm_max"][df_ind].data
+                    pack_table["fwhm_min"][df_ind].data,
+                    pack_table["fwhm_max"][df_ind].data,
                 ),
                 "fwhms_fixed": _ingest_fixed(pack_table["fwhm_fixed"][df_ind].data),
             }
@@ -837,17 +848,20 @@ class PAHFITBase:
                 "names": np.array(pack_table["Name"][h2_ind].data),
                 "x_0": np.array(pack_table["x_0"][h2_ind].data),
                 "x_0_limits": _ingest_limits(
-                    pack_table["x_0_min"][h2_ind].data, pack_table["x_0_max"][h2_ind].data
+                    pack_table["x_0_min"][h2_ind].data,
+                    pack_table["x_0_max"][h2_ind].data,
                 ),
                 "x_0_fixed": _ingest_fixed(pack_table["x_0_fixed"][h2_ind].data),
                 "amps": np.array(pack_table["amp"][h2_ind].data),
                 "amps_limits": _ingest_limits(
-                    pack_table["amp_min"][h2_ind].data, pack_table["amp_max"][h2_ind].data
+                    pack_table["amp_min"][h2_ind].data,
+                    pack_table["amp_max"][h2_ind].data,
                 ),
                 "amps_fixed": _ingest_fixed(pack_table["amp_fixed"][h2_ind].data),
                 "fwhms": np.array(pack_table["fwhm"][h2_ind].data),
                 "fwhms_limits": _ingest_limits(
-                    pack_table["fwhm_min"][h2_ind].data, pack_table["fwhm_max"][h2_ind].data
+                    pack_table["fwhm_min"][h2_ind].data,
+                    pack_table["fwhm_max"][h2_ind].data,
                 ),
                 "fwhms_fixed": _ingest_fixed(pack_table["fwhm_fixed"][h2_ind].data),
             }
@@ -859,17 +873,20 @@ class PAHFITBase:
                 "names": np.array(pack_table["Name"][ion_ind].data),
                 "x_0": np.array(pack_table["x_0"][ion_ind].data),
                 "x_0_limits": _ingest_limits(
-                    pack_table["x_0_min"][ion_ind].data, pack_table["x_0_max"][ion_ind].data
+                    pack_table["x_0_min"][ion_ind].data,
+                    pack_table["x_0_max"][ion_ind].data,
                 ),
                 "x_0_fixed": _ingest_fixed(pack_table["x_0_fixed"][ion_ind].data),
                 "amps": np.array(pack_table["amp"][ion_ind].data),
                 "amps_limits": _ingest_limits(
-                    pack_table["amp_min"][ion_ind].data, pack_table["amp_max"][ion_ind].data
+                    pack_table["amp_min"][ion_ind].data,
+                    pack_table["amp_max"][ion_ind].data,
                 ),
                 "amps_fixed": _ingest_fixed(pack_table["amp_fixed"][ion_ind].data),
                 "fwhms": np.array(pack_table["fwhm"][ion_ind].data),
                 "fwhms_limits": _ingest_limits(
-                    pack_table["fwhm_min"][ion_ind].data, pack_table["fwhm_max"][ion_ind].data
+                    pack_table["fwhm_min"][ion_ind].data,
+                    pack_table["fwhm_max"][ion_ind].data,
                 ),
                 "fwhms_fixed": _ingest_fixed(pack_table["fwhm_fixed"][ion_ind].data),
             }
@@ -881,17 +898,20 @@ class PAHFITBase:
                 "names": np.array(pack_table["Name"][at_ind].data),
                 "x_0": np.array(pack_table["x_0"][at_ind].data),
                 "x_0_limits": _ingest_limits(
-                    pack_table["x_0_min"][at_ind].data, pack_table["x_0_max"][at_ind].data
+                    pack_table["x_0_min"][at_ind].data,
+                    pack_table["x_0_max"][at_ind].data,
                 ),
                 "x_0_fixed": _ingest_fixed(pack_table["x_0_fixed"][at_ind].data),
                 "amps": np.array(pack_table["amp"][at_ind].data),
                 "amps_limits": _ingest_limits(
-                    pack_table["amp_min"][at_ind].data, pack_table["amp_max"][at_ind].data
+                    pack_table["amp_min"][at_ind].data,
+                    pack_table["amp_max"][at_ind].data,
                 ),
                 "amps_fixed": _ingest_fixed(pack_table["amp_fixed"][at_ind].data),
                 "fwhms": np.array(pack_table["fwhm"][at_ind].data),
                 "fwhms_limits": _ingest_limits(
-                    pack_table["fwhm_min"][at_ind].data, pack_table["fwhm_max"][at_ind].data
+                    pack_table["fwhm_min"][at_ind].data,
+                    pack_table["fwhm_max"][at_ind].data,
                 ),
                 "fwhms_fixed": _ingest_fixed(pack_table["fwhm_fixed"][at_ind].data),
             }
@@ -980,9 +1000,9 @@ class PAHFITBase:
         # dust (1), h2 (2), and ion (3)
         for j in range(1, 4):
             if param_info[j] is not None:
-                for i, fix in enumerate(param_info[j]['amps_fixed']):
+                for i, fix in enumerate(param_info[j]["amps_fixed"]):
                     if fix is False:
                         amp_guess = 0.5 * np.median(obs_y)
-                        param_info[j]['amps'][i] = amp_guess
+                        param_info[j]["amps"][i] = amp_guess
 
         return param_info
