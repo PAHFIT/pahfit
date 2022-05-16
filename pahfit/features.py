@@ -34,9 +34,9 @@ def _value_bounds(val, bounds):
 
       bounds: A two element iterable specifying (min, max) bounds.
         Each of min and max can be a numerical value, None (for no
-        bound), or a string ending in an 'o' for an absolute or '%'
-        for a percentage offset from the value (necessarily negative
-        for min bound, positive for max).
+        bound), or a string ending in an '#' for an absolute offset or
+        '%' for a percentage offset from the value (necessarily
+        negative for min bound, positive for max).
 
     Examples:
     ---------
@@ -44,7 +44,7 @@ def _value_bounds(val, bounds):
       A bound of ('-1.5%', '0%') would indicate a minimum bound
         1.5% below the value, and a max bound at the value itself.
 
-      A bound of ('-0.1o',None) would indicate a minimum bound 0.1 below
+      A bound of ('-0.1#', None) would indicate a minimum bound 0.1 below
         the value, and no maximum bound.
 
     Returns:
@@ -67,7 +67,7 @@ def _value_bounds(val, bounds):
         if isinstance(b, str):
             if b.endswith('%'):
                 b = val * (1. + float(b[:-1]) / 100.)
-            elif b.endswith('o'):
+            elif b.endswith('#'):
                 b = val + float(b[:-1])
             else:
                 raise PAHFITFeatureError(f"Incorrectly formatted bound {b}")
