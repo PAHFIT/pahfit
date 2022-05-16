@@ -58,8 +58,8 @@ def _value_bounds(val, bounds):
 
       ValueError: if bounds are specified and the value does not fall
         between them.
-
     """
+    
     if not bounds:
         return((val,) + (np.ma.masked,)*2)
     ret = [val]
@@ -111,7 +111,6 @@ class Features(Table):
     _group_attrs = ('bounds', 'features', 'kind') # group-level attributes 
     _param_attrs = ('value', 'bounds') # Each parameter can have these attributes
     _no_bounds = ('geometry', 'model') # String attributes (no bounds)
-
     
     @classmethod
     def read(cls, file, *args, **kwargs):

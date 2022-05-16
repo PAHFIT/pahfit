@@ -1,0 +1,2 @@
+class PAHFITFeatureError(Exception):
+    pass
