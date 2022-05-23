@@ -20,6 +20,7 @@ tables are therefore available for pahfit.features.Features.
 import os
 import numpy as np
 from astropy.table import vstack, Table, TableAttribute
+from astropy.table.pprint import TableFormatter
 from astropy.io.misc import yaml
 import astropy.units as u
 from pkg_resources import resource_filename
@@ -86,40 +87,67 @@ def value_bounds(val, bounds):
         raise PAHFITFeatureError(f"Value <{ret[0]}> is not between bounds: {ret[1:]}")
     return tuple(ret)
 
+def fmt_func(fmt):
+    def fmt(v):
+        if v[0] == np.ma.masked: return "  <n/a>"
+        if v[1] == np.ma.masked: return f'{v["val"]:{fmt}} (Fixed)'
+        return f'{v["val"]:{fmt}} ({v["min"]:{fmt}}, {v["max"]:{fmt}})'
+    return fmt
+
+class BoundedParTableFormatter(TableFormatter):
+    """Format bounded parameters.
+    Bounded parameters are 3 field structured array rows, with fields
+    'var', 'min', and 'max'
+    """
+    def _pformat_table(self, table, *args, **kwargs):
+        bpcols = []
+        for col in table.columns.values():
+            if len(col.dtype) == 3:
+                bpcols.append((col, col.info.format))
+                col.info.format = fmt_func(col.info.format or "g")
+        try:
+            return super()._pformat_table(table, *args, **kwargs)
+        finally:
+            for col, fmt in bpcols:
+                col.info.format = fmt
+
 class Features(Table):
     """A class for holding PAHFIT features and their associated
     parameter information.  Note that each parameter has an associated
     `kind', and that each kind has an associated set of allowable
     parameters (see _kind_params, below).
     """
+    TableFormatter = BoundedParTableFormatter
 
     param_covar = TableAttribute(default=[])
-    _kind_params = {'starlight_continuum': ('temperature',
-                                            'tau'),
-                    'dust_continuum':      ('temperature',
-                                            'tau'),
-                    'line':                ('wavelength',
+    _kind_params = {'starlight_continuum': {'temperature',
+                                            'tau'},
+                    'dust_continuum':      {'temperature',
+                                            'tau'},
+                    'line':                {'wavelength',
                                             'fwhm',
-                                            'power'),
-                    'dust_feature':        ('wavelength',
+                                            'power'},
+                    'dust_feature':        {'wavelength',
                                             'fwhm',
-                                            'power'),
-                    'attenuation':         ('model',
+                                            'power'},
+                    'attenuation':         {'model',
                                             'tau',
-                                            'geometry'),
-                    'absorption':          ('wavelength',
+                                            'geometry'},
+                    'absorption':          {'wavelength',
                                             'fwhm',
                                             'tau',
-                                            'geometry')}
+                                            'geometry'}}
 
     _units = {'wavelength': u.um, 'fwhm': u.um}
-    _group_attrs = ('bounds', 'features', 'kind') # group-level attributes 
-    _param_attrs = ('value', 'bounds') # Each parameter can have these attributes
-    _no_bounds = ('geometry', 'model') # String attributes (no bounds)
+    _group_attrs = ('bounds', 'features', 'kind')  # group-level attributes
+    _param_attrs = ('value', 'bounds')  # Each parameter can have these attributes
+    _no_bounds = ('geometry', 'model')  # String attributes (no bounds)
+    _bounded_dtype = [('val','f4'),('min','f4'),('max','f4')] # dtype for bounded vars
+    _default_fixed = ('fwhm') # when not specified, these parameters are fixed
     
     @classmethod
     def read(cls, file, *args, **kwargs):
-        """Read a table from file.  
+        """Read a table from file.
 
         If reading a YAML file, read it in as a science pack and
         return the new table. Otherwise, use astropy's normal Table
@@ -128,7 +156,7 @@ class Features(Table):
         if file.endswith(".yaml") or file.endswith(".yml"):
             return cls._read_scipack(file)
         else:
-            return super().read(file, *args, **kwargs) 
+            return super().read(file, *args, **kwargs)
 
     @classmethod
     def _read_scipack(cls, file):
@@ -230,7 +258,7 @@ class Features(Table):
                                              f"parameter list(s):\n\t{file}")
             else: # Just one standalone feature
                 cls._add_feature(kind, feat_tables, name, **elem)
-        return(cls._construct_table(feat_tables))
+        return cls._construct_table(feat_tables)
 
     @classmethod
     def _add_feature(cls, kind: str, t: dict, name: str, *,
@@ -274,24 +302,32 @@ class Features(Table):
 
     @classmethod
     def _construct_table(cls, inp: dict):
-        """Construct a masked table with units from input dictionary INP."""
+        """Construct a masked table with units from input dictionary
+        INP.  INP is a dictionary with feature names as the key, and a
+        dictionary of feature parameters as value.  Each value in the
+        feature parameter dictionary is either a value or tuple of 3
+        values for bounds.
+        """
         tables=[]
         for (kind, features) in inp.items():
-            t = cls([dict(name=k, **v) for k,v in features.items()])
+            kind_params = cls._kind_params[kind] #All params for this kind
+            rows = []
+            for (name, params) in features.items():
+                for missing in kind_params - params.keys():
+                    if missing in cls._no_bounds:
+                        params[missing] = 0.0
+                    else:
+                        if missing in cls._default_fixed:
+                            params[missing] = value_bounds(0.0, bounds=None)
+                        else: # Semi-open by default
+                            params[missing] = value_bounds(0.0, bounds=(0.0, None))
+                rows.append(dict(name=name, **params))
+            dt = [str if p in cls._no_bounds else cls._bounded_dtype
+                  for p in kind_params]
+            t = cls(rows, names=('name', *kind_params), dtype=[str, *dt])
             for p in cls._kind_params[kind]:
-                if p not in t.colnames:
-                    empty = Table.MaskedColumn(name = p, length = len(t),
-                                               shape = (None if p in cls._no_bounds
-                                                        else (3,)), 
-                                               mask = True,
-                                               dtype = (str if p in cls._no_bounds
-                                                        else None),
-                                               unit = cls._units.get(p))
-                    t.add_column(empty)
-                else:
-                    t[p].unit = cls._units.get(p) # Default None
-                if p not in cls._no_bounds:
-                    t[p].info.format = "7.3f" # Nice format
+                if not p in cls._no_bounds:
+                    t[p].info.format = "7.3f" # Nice format (customized by Formatter)
             tables.append(t)
         tables = vstack(tables)
-        return tables.group_by('group')
+        return tables
