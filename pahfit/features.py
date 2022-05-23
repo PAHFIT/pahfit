@@ -25,18 +25,24 @@ import astropy.units as u
 from pkg_resources import resource_filename
 from pahfit.errors import PAHFITFeatureError
 
-def _value_bounds(val, bounds):
+def value_bounds(val, bounds):
     """Compute bounds for a bounded value.
 
     Arguments:
     ----------
       val: The value to bound.
 
-      bounds: A two element iterable specifying (min, max) bounds.
-        Each of min and max can be a numerical value, None (for no
-        bound), or a string ending in an '#' for an absolute offset or
-        '%' for a percentage offset from the value (necessarily
-        negative for min bound, positive for max).
+      bounds: Either None for no relevant bounds (i.e. fixed), or a
+        two element iterable specifying (min, max) bounds.  Each of
+        min and max can be a numerical value, None (for infinite
+        bounds, either negative or positive, as appropriate), or a
+        string ending in:
+    
+          #: an absolute offset from the value
+          %: a percentage offset from the value
+
+        Offsets are necessarily negative for min bound, positive for
+        max bounds.
 
     Examples:
     ---------
@@ -45,7 +51,7 @@ def _value_bounds(val, bounds):
         1.5% below the value, and a max bound at the value itself.
 
       A bound of ('-0.1#', None) would indicate a minimum bound 0.1 below
-        the value, and no maximum bound.
+        the value, and infinite maximum bound.
 
     Returns:
     -------
@@ -58,12 +64,13 @@ def _value_bounds(val, bounds):
 
       ValueError: if bounds are specified and the value does not fall
         between them.
+
     """
     
     if not bounds:
-        return((val,) + (np.ma.masked,)*2)
+        return (val,) + 2*(np.ma.masked,) # Fixed
     ret = [val]
-    for b in bounds:
+    for i,b in enumerate(bounds):
         if isinstance(b, str):
             if b.endswith('%'):
                 b = val * (1. + float(b[:-1]) / 100.)
@@ -72,14 +79,12 @@ def _value_bounds(val, bounds):
             else:
                 raise PAHFITFeatureError(f"Incorrectly formatted bound {b}")
         elif b is None:
-            b = np.ma.masked
-        
+            b = np.inf if i else -np.inf
         ret.append(b)
 
-    if (ret[1] is not np.ma.masked and val < ret[1] or
-        ret[2] is not np.ma.masked and val > ret[2]):
+    if (val < ret[1] or val > ret[2]):
         raise PAHFITFeatureError(f"Value <{ret[0]}> is not between bounds: {ret[1:]}")
-    return(tuple(ret))
+    return tuple(ret)
 
 class Features(Table):
     """A class for holding PAHFIT features and their associated
@@ -262,7 +267,7 @@ class Features(Table):
                 b = bounds
             try:
                 t[kind][name][param] = (value if param in cls._no_bounds
-                                        else _value_bounds(value, b))
+                                        else value_bounds(value, b))
             except ValueError as e:
                 raise PAHFITFeatureError("Error initializing value and bounds for"
                                          f" {name} ({kind}, {group}):\n\t{e}")
