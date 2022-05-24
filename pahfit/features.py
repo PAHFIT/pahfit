@@ -302,7 +302,7 @@ class Features(Table):
             t = cls(rows, names=table_columns) #, dtype=dt)
             for p in cls._kind_params[kind]:
                 if not p in cls._no_bounds:
-                    t[p].info.format = "7.3f" # Nice format (customized by Formatter)
+                    t[p].info.format = "8.4g" # Nice format (customized by Formatter)
             tables.append(t)
         tables = vstack(tables)
         return tables
