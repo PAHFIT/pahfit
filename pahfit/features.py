@@ -20,7 +20,6 @@ tables are therefore available for pahfit.features.Features.
 import os
 import numpy as np
 from astropy.table import vstack, Table, TableAttribute
-from astropy.table.pprint import TableFormatter
 from astropy.io.misc import yaml
 import astropy.units as u
 from pkg_resources import resource_filename
@@ -87,37 +86,12 @@ def value_bounds(val, bounds):
         raise PAHFITFeatureError(f"Value <{ret[0]}> is not between bounds: {ret[1:]}")
     return tuple(ret)
 
-def fmt_func(fmt):
-    def fmt(v):
-        if v[0] == np.ma.masked: return "  <n/a>"
-        if v[1] == np.ma.masked: return f'{v["val"]:{fmt}} (Fixed)'
-        return f'{v["val"]:{fmt}} ({v["min"]:{fmt}}, {v["max"]:{fmt}})'
-    return fmt
-
-class BoundedParTableFormatter(TableFormatter):
-    """Format bounded parameters.
-    Bounded parameters are 3 field structured array rows, with fields
-    'var', 'min', and 'max'
-    """
-    def _pformat_table(self, table, *args, **kwargs):
-        bpcols = []
-        for col in table.columns.values():
-            if len(col.dtype) == 3:
-                bpcols.append((col, col.info.format))
-                col.info.format = fmt_func(col.info.format or "g")
-        try:
-            return super()._pformat_table(table, *args, **kwargs)
-        finally:
-            for col, fmt in bpcols:
-                col.info.format = fmt
-
 class Features(Table):
     """A class for holding PAHFIT features and their associated
     parameter information.  Note that each parameter has an associated
     `kind', and that each kind has an associated set of allowable
     parameters (see _kind_params, below).
     """
-    TableFormatter = BoundedParTableFormatter
 
     param_covar = TableAttribute(default=[])
     _kind_params = {'starlight_continuum': {'temperature',
@@ -141,7 +115,7 @@ class Features(Table):
     _units = {'wavelength': u.um, 'fwhm': u.um}
     _group_attrs = ('bounds', 'features', 'kind')  # group-level attributes
     _param_attrs = ('value', 'bounds')  # Each parameter can have these attributes
-    _no_bounds = ('geometry', 'model')  # String attributes (no bounds)
+    _no_bounds = ('name', 'group', 'geometry', 'model')  # String attributes (no bounds)
     _bounded_dtype = [('val','f4'),('min','f4'),('max','f4')] # dtype for bounded vars
     _default_fixed = ('fwhm') # when not specified, these parameters are fixed
     
@@ -322,9 +296,10 @@ class Features(Table):
                         else: # Semi-open by default
                             params[missing] = value_bounds(0.0, bounds=(0.0, None))
                 rows.append(dict(name=name, **params))
-            dt = [str if p in cls._no_bounds else cls._bounded_dtype
-                  for p in kind_params]
-            t = cls(rows, names=('name', *kind_params), dtype=[str, *dt])
+            table_columns = rows[0].keys()
+            # dt = [str if p in cls._no_bounds else cls._bounded_dtype
+            #       for p in table_columns]
+            t = cls(rows, names=table_columns) #, dtype=dt)
             for p in cls._kind_params[kind]:
                 if not p in cls._no_bounds:
                     t[p].info.format = "7.3f" # Nice format (customized by Formatter)
