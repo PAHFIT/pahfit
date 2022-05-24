@@ -66,7 +66,7 @@ def value_bounds(val, bounds):
         between them.
 
     """
-    
+    if val is None: val = np.ma.masked
     if not bounds:
         return (val,) + 2*(np.ma.masked,) # Fixed
     ret = [val]
@@ -148,7 +148,7 @@ class Features(Table):
           table: A filled pahfit.features.Features table.
         """
         feat_tables=dict()
-        #tbase = Table(names=cls._col_common, dtype=(str,)*len(cls._col_common))
+
         if not os.path.isfile(file):
             pack_path = resource_filename("pahfit", "packs")
             file = os.path.join(pack_path, file)
@@ -158,7 +158,6 @@ class Features(Table):
         except IOError as e:
             raise PAHFITFeatureError("Error reading science pack file\n"
                                      f"\t{file}\n\t{repr(e)}")
-        
         for (name, elem) in scipack.items():
             try: keys = elem.keys()
             except AttributeError:
@@ -208,9 +207,15 @@ class Features(Table):
                         if bounds and not 'bounds' in v: # inherit bounds
                             v['bounds'] = bounds
                         cls._add_feature(kind, feat_tables, n, group=name, **v)
-                elif hasLists: 
-                    llen = [len(v) for v in elem.values()
-                            if isinstance(v, (tuple,list,dict))]
+                elif hasLists:
+                    llen = []
+                    for k,v in elem.items():
+                        if k in cls._group_attrs: continue
+                        if not isinstance(v, (tuple,list,dict)):
+                            raise PAHFITFeatureError(f"All non-group parameters in {name} "
+                                                     f"must be lists or dicts:\n\t{file}")
+                        llen.append(len(v))
+
                     if not all(x == llen[0] for x in llen):
                         raise PAHFITFeatureError(f"All parameter lists in group {name} "
                                                  f"must be the same length:\n\t{file}")
