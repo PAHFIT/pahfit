@@ -19,12 +19,12 @@ tables are therefore available for pahfit.features.Features.
 
 import os
 import numpy as np
-from astropy.table import vstack, Table, TableAttribute, MaskedColumn
+from astropy.table import vstack, Table, TableAttribute
 from astropy.io.misc import yaml
 import astropy.units as u
 from pkg_resources import resource_filename
 from pahfit.errors import PAHFITFeatureError
-from astropy.table.pprint import TableFormatter
+from pahfit.features_format import BoundedMaskedColumn, BoundedParTableFormatter
 
 def value_bounds(val, bounds):
     """Compute bounds for a bounded value.
@@ -87,38 +87,6 @@ def value_bounds(val, bounds):
         raise PAHFITFeatureError(f"Value <{ret[0]}> is not between bounds: {ret[1:]}")
     return tuple(ret)
 
-def fmt_func(fmt):
-    def _fmt(v):
-        if np.ma.is_masked(v[0]): return "  <n/a>"
-        if np.ma.is_masked(v[1]): return f'{v[0]:{fmt}} (Fixed)'
-        return f'{v[0]:{fmt}} ({v[1]:{fmt}}, {v[2]:{fmt}})'
-    return _fmt
-
-class BoundedMaskedColumn(MaskedColumn):
-    _omit_shape = False
-    @property
-    def shape(self):
-        sh = super().shape
-        return sh[0:-1] if self._omit_shape and len(sh)>1 else sh
-
-class BoundedParTableFormatter(TableFormatter):
-    """Format bounded parameters.
-    Bounded parameters are 3-field structured arrays, with fields
-    'var', 'min', and 'max'.
-    """
-    def _pformat_table(self, table, *args, **kwargs):
-        bpcols = []
-        try:
-            colsh = [(col, col.shape) for col in table.columns.values()]
-            BoundedMaskedColumn._omit_shape = True
-            for col, sh in colsh:
-                if len(sh) == 2 and sh[1] == 3:
-                    bpcols.append((col, col.info.format))
-                    col.info.format = fmt_func(col.info.format or "g")
-            return super()._pformat_table(table, *args, **kwargs)
-        finally:
-            BoundedMaskedColumn._omit_shape = False
-            for col, fmt in bpcols: col.info.format = fmt
 
 class Features(Table):
     """A class for holding PAHFIT features and their associated
