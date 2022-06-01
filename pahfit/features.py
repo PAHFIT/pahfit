@@ -340,9 +340,7 @@ class Features(Table):
                             params[missing] = value_bounds(0.0, bounds=(0.0, None))
                 rows.append(dict(name=name, **params))
             table_columns = rows[0].keys()
-            # dt = [str if p in cls._no_bounds else cls._bounded_dtype
-            #       for p in table_columns]
-            t = cls(rows, names=table_columns) #, dtype=dt)
+            t = cls(rows, names=table_columns)
             for p in cls._kind_params[kind]:
                 if not p in cls._no_bounds:
                     t[p].info.format = "0.4g" # Nice format (customized by Formatter)
