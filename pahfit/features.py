@@ -283,6 +283,7 @@ class Features(Table):
         if not kind in t: t[kind] = {}
         if not name in t[kind]: t[kind][name] = {}
         t[kind][name]['group'] = group
+        t[kind][name]['kind'] = kind
         for (param, val) in pars.items():
             if not param in cls._kind_params[kind]: continue
             if isinstance(val, dict): # A param attribute dictionary
