@@ -149,7 +149,7 @@ class Features(Table):
                                             'tau',
                                             'geometry'}}
 
-    _units = {'wavelength': u.um, 'fwhm': u.um}
+    _units = {'temperature': u.K, 'wavelength': u.um, 'fwhm': u.um}
     _group_attrs = ('bounds', 'features', 'kind')  # group-level attributes
     _param_attrs = ('value', 'bounds')  # Each parameter can have these attributes
     _no_bounds = ('name', 'group', 'geometry', 'model')  # String attributes (no bounds)
@@ -347,4 +347,7 @@ class Features(Table):
                     t[p].info.format = "0.4g" # Nice format (customized by Formatter)
             tables.append(t)
         tables = vstack(tables)
+        for cn, col in tables.columns.items():
+            if cn in cls._units:
+                col.unit = cls._units[cn]
         return tables
