@@ -349,4 +349,5 @@ class Features(Table):
         for cn, col in tables.columns.items():
             if cn in cls._units:
                 col.unit = cls._units[cn]
+        tables.add_index('name')
         return tables
