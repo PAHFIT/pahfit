@@ -6,12 +6,13 @@ from astropy.modeling import Fittable1DModel
 from astropy.modeling import Parameter
 from astropy.table import Table
 
-
-__all__ = ["BlackBody1D", "S07_attenuation", "att_Drude1D"]
+__all__ = ["BlackBody1D", "ModifiedBlackBody1D", "S07_attenuation", "att_Drude1D"]
 
 
 class BlackBody1D(Fittable1DModel):
     """
+    A blackbody component.
+
     Current astropy BlackBody1D does not play well with Lorentz1D and Gauss1D
     maybe, need to check again, possibly a units issue
     """
@@ -25,11 +26,20 @@ class BlackBody1D(Fittable1DModel):
         """
         return (
             amplitude
-            * ((9.7 / x) ** 2)
             * 3.97289e13
             / x ** 3
             / (np.exp(1.4387752e4 / x / temperature) - 1.0)
         )
+
+
+class ModifiedBlackBody1D(BlackBody1D):
+    """
+    Modified blackbody with an emissivity propoportional to nu^2
+    """
+
+    @staticmethod
+    def evaluate(x, amplitude, temperature):
+        return BlackBody1D.evaluate(x, amplitude, temperature) * ((9.7 / x) ** 2)
 
 
 class S07_attenuation(Fittable1DModel):
@@ -68,7 +78,7 @@ class S07_attenuation(Fittable1DModel):
         new_f = f(in_x)
 
         return new_f
-
+     
 
     def evaluate(self, in_x, tau_si):
         if tau_si == 0.0:
@@ -82,6 +92,7 @@ class att_Drude1D(Fittable1DModel):
     """
     Attenuation components that can be parameterized by Drude profiles.
     """
+
     tau = Parameter()
     x_0 = Parameter()
     fwhm = Parameter()
