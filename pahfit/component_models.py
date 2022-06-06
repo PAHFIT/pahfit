@@ -89,7 +89,6 @@ class att_Drude1D(Fittable1DModel):
     @staticmethod
     def evaluate(x, tau, x_0, fwhm):
         if tau == 0.0:
-            print(np.full((len(x)), 1.0))
             return np.full((len(x)), 1.0)
         else:
             profile = Drude1D(amplitude=1.0, fwhm=fwhm, x_0=x_0)
