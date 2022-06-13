@@ -1,0 +1,47 @@
+---
+PAHFIT Instrument Pack, see https://github.com/PAHFIT/pahfit/wiki/File-Formats for more information
+
+# This is the Instrument Pack for ISO/SWS Speed 2.
+# For each SWS band, this file first provides the wavelength range covered (in microns).
+# The resolving power (lambda / delta_lambda)
+# is represented by a polynomial of degree 3, and this file
+# lists the coefficients CC of that polynomial, i.e.
+# R = CC[0] + CC[1] * lambda + CC[2] * lambda^2 + CC[3] * lambda^3
+# where lambda is expressed in microns as well. 
+
+1a:
+  range: [2.38,2.60]
+  coefficients: [3.906250E-03,8.442227E+02,3.906250E-03,-9.765625E-04]
+1b:
+  range: [2.60,3.02]
+  coefficients: [-1.831055E-04,5.590174E+02,-1.831055E-04,1.907349E-05]
+1d:
+  range: [3.02,3.52]
+  coefficients: [-9.155273E-04,5.710976E+02,-3.204346E-04,2.861023E-05]
+1e:
+  range: [3.52,4.08]
+  coefficients: [1.831055E-04,3.285352E+02,0.000000E+00,-2.861023E-06]
+2a:
+  range: [4.08,5.30]
+  coefficients: [-1.907349E-05,3.217116E+02,-3.099442E-06,2.086163E-07]
+2b:
+  range: [5.30,7.00]
+  coefficients: [3.814697E-06,1.425097E+02,3.576279E-07,-2.607703E-08]
+2c:
+  range: [7.00,12.00]
+  coefficients: [-1.172871E+02,1.538552E+02,-3.251809E+00,4.745455E-01]
+3a:
+  range: [12.00,16.50]
+  coefficients: [-8.106232E-06,8.792151E+01,-1.490116E-07,3.492460E-09]
+3c:
+  range: [16.50,19.50]
+  coefficients: [-3.662109E-04,9.470191E+01,-3.099442E-06,5.215406E-08]
+3d:
+  range: [19.50,27.50]
+  coefficients: [1.907349E-06,3.974856E+01,1.303852E-08,-7.275958E-11]
+3e:
+  range: [27.50,29.00]
+  coefficients: [1.875000E-01,4.360352E+01,5.493164E-04,-9.536743E-06]
+4:
+  range: [29.00,45.20]
+  coefficients: [-2.503395E-06,4.255319E+01,-6.053597E-09,4.729372E-11]
