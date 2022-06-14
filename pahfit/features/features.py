@@ -20,11 +20,22 @@ tables are therefore available for pahfit.features.Features.
 import os
 import numpy as np
 from astropy.table import vstack, Table, TableAttribute
-from astropy.io.misc import yaml
+from astropy.io.misc.yaml import yaml
 import astropy.units as u
 from pkg_resources import resource_filename
 from pahfit.errors import PAHFITFeatureError
 from pahfit.features.features_format import BoundedMaskedColumn, BoundedParTableFormatter
+
+
+class UniqueKeyLoader(yaml.SafeLoader):
+    def construct_mapping(self, node, deep=False):
+        mapping = set()
+        for key_node, value_node in node.value:
+            key = self.construct_object(key_node, deep=deep)
+            if key in mapping:
+                raise PAHFITFeatureError(f"Duplicate {key!r} key found in YAML.")
+            mapping.add(key)
+        return super().construct_mapping(node, deep)
 
 def value_bounds(val, bounds):
     """Compute bounds for a bounded value.
@@ -159,7 +170,7 @@ class Features(Table):
             file = os.path.join(pack_path, file)
         try:
             with open(file) as fd:
-                scipack = yaml.load(fd)
+                scipack = yaml.load(fd, Loader = UniqueKeyLoader)
         except IOError as e:
             raise PAHFITFeatureError("Error reading science pack file\n"
                                      f"\t{file}\n\t{repr(e)}")
