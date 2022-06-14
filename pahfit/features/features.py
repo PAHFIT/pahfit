@@ -24,7 +24,7 @@ from astropy.io.misc import yaml
 import astropy.units as u
 from pkg_resources import resource_filename
 from pahfit.errors import PAHFITFeatureError
-from pahfit.features_format import BoundedMaskedColumn, BoundedParTableFormatter
+from pahfit.features.features_format import BoundedMaskedColumn, BoundedParTableFormatter
 
 def value_bounds(val, bounds):
     """Compute bounds for a bounded value.
