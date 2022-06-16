@@ -133,7 +133,7 @@ class Features(Table):
     _param_attrs = ('value', 'bounds')  # Each parameter can have these attributes
     _no_bounds = ('name', 'group', 'geometry', 'model')  # String attributes (no bounds)
     _bounded_dtype = [('val','f4'),('min','f4'),('max','f4')] # dtype for bounded vars
-    _default_fixed = ('fwhm') # when not specified, these parameters are fixed
+    _default_fixed = ('fwhm') # when not specified, these parameters are fixed at zero
     
     @classmethod
     def read(cls, file, *args, **kwargs):
@@ -218,7 +218,7 @@ class Features(Table):
                                                      "cannot specify "
                                                      f"'features': {name}\n\t{file}")
                     bounds = elem.pop('bounds')
-                if hasFeatures:
+                if hasFeatures: # our group uses a features: key
                     for (n,v) in elem['features'].items():
                         if bounds and not 'bounds' in v: # inherit bounds
                             v['bounds'] = bounds
@@ -241,7 +241,7 @@ class Features(Table):
                         if isinstance(elem[k], dict):
                             if not feat_names: # First names win
                                 feat_names = list(elem[k].keys())
-                            elem[k] = list(elem[k].values()) # turn back into list
+                            elem[k] = list(elem[k].values()) # turn back into a value list
                     if not feat_names: # no names: construct one for each group feature 
                         feat_names = [f"{name}{x:02}" for x in range(ngroup)]
                     for i in range(ngroup): # Iterate over list(s) adding feature
@@ -249,7 +249,7 @@ class Features(Table):
                         cls._add_feature(kind, feat_tables, feat_names[i],
                                          group=name, bounds=bounds, **v)
                 else:
-                    raise PAHFITFeatureError(f"Group {name} needs 'features' or"
+                    raise PAHFITFeatureError(f"Group {name} needs either 'features' or"
                                              f"parameter list(s):\n\t{file}")
             else: # Just one standalone feature
                 cls._add_feature(kind, feat_tables, name, **elem)
