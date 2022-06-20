@@ -1,0 +1,79 @@
+|                Name|               Form|   temp|temp_min|temp_max|temp_fixed|   amp|amp_min|amp_max|amp_fixed|      x_0|  x_0_min|  x_0_max|x_0_fixed|    fwhm|fwhm_min|fwhm_max|fwhm_fixed|
+|                char|               char| double|  double|  double|      char|double| double| double|     char|   double|   double|   double|     char|  double|  double|  double|      char|
+|                    |                   |       |        |        |          |      |       |       |         |         |         |         |         |        |        |        |          |
+|                null|               null|   null|    null|    null|      null|  null|   null|   null|     null|     null|     null|     null|     null|    null|    null|    null|      null|
+                  BB0         BlackBody1D 40000.0      0.0      nan      False  1e-10     0.0     nan     False      null      null      null      null      null     null     null       null 
+                  BB1 ModifiedBlackBody1D  1500.0      0.0      nan       True    0.0     0.0     nan      True      null      null      null      null      null     null     null       null 
+                  BB2 ModifiedBlackBody1D   330.0    315.0    385.0      False  1e-10     0.0     nan     False      null      null      null      null      null     null     null       null 
+                  BB3 ModifiedBlackBody1D   270.0    243.0    297.0      False  1e-10     0.0     nan     False      null      null      null      null      null     null     null       null 
+                  BB4 ModifiedBlackBody1D   100.0      0.0      nan       True    0.0     0.0     nan      True      null      null      null      null      null     null     null       null 
+                  BB5 ModifiedBlackBody1D    85.0      0.0      nan       True    0.0     0.0     nan      True      null      null      null      null      null     null     null       null 
+                  BB6 ModifiedBlackBody1D    74.0     66.6     81.4      False  1e-10     0.0     nan     False      null      null      null      null      null     null     null       null 
+                  BB7 ModifiedBlackBody1D    40.0      0.0      nan       True    0.0     0.0     nan      True      null      null      null      null      null     null     null       null 
+                  BB8 ModifiedBlackBody1D    17.0     15.3     18.7       True    0.0     0.0     nan      True      null      null      null      null      null     null     null       null 
+                  DF0             Drude1D    null     null     null       null  100.0     0.0     nan     False      3.29    3.2571    3.3229      True    0.0418  0.03762  0.04598       True 
+                  DF1             Drude1D    null     null     null       null  100.0     0.0     nan     False       3.4     3.366     3.434      True    0.0299  0.02691  0.03289       True 
+                  DF2             Drude1D    null     null     null       null  100.0     0.0     nan     False      3.47    3.4353    3.5047      True       0.1     0.09     0.11       True 
+                  DF3             Drude1D    null     null     null       null  100.0     0.0     nan     False     5.242   5.18958   5.29442      True   0.05766 0.051894 0.063426       True 
+                  DF4             Drude1D    null     null     null       null  100.0     0.0     nan     False     5.329   5.27571   5.38229      True   0.04263 0.038367 0.046893       True 
+                  DF5             Drude1D    null     null     null       null  100.0     0.0     nan     False       5.7     5.643     5.757      True    0.1995  0.17955  0.21945       True 
+                  DF6             Drude1D    null     null     null       null  100.0     0.0     nan     False     6.026   5.96574   6.08626      True     0.099   0.0891   0.1089       True 
+                  DF7             Drude1D    null     null     null       null  100.0     0.0     nan     False      6.22    6.1578    6.2822      True    0.1866  0.16794  0.20526       True 
+                  DF8             Drude1D    null     null     null       null  100.0     0.0     nan     False      6.29    6.2271    6.3529      True     0.502   0.4518   0.5522       True 
+                  DF9             Drude1D    null     null     null       null  100.0     0.0     nan     False      6.69    6.6231    6.7569      True    0.4683  0.42147  0.51513       True 
+                 DF10             Drude1D    null     null     null       null  100.0     0.0     nan     False      7.42    7.3458    7.4942      True   0.93492 0.841428 1.028412       True 
+                 DF11             Drude1D    null     null     null       null  100.0     0.0     nan     False       7.6     7.524     7.676      True    0.3344  0.30096  0.36784       True 
+                 DF12             Drude1D    null     null     null       null  100.0     0.0     nan     False      7.85    7.7715    7.9285      True   0.41605 0.374445 0.457655       True 
+                 DF13             Drude1D    null     null     null       null  100.0     0.0     nan     False      8.33    8.2467    8.4133      True    0.4165  0.37485  0.45815       True 
+                 DF14             Drude1D    null     null     null       null  100.0     0.0     nan     False      8.61    8.5239    8.6961      True   0.33579 0.302211 0.369369       True 
+                 DF15             Drude1D    null     null     null       null  100.0     0.0     nan     False     10.68   10.5732   10.7868      True    0.2136  0.19224  0.23496       True 
+                 DF16             Drude1D    null     null     null       null  100.0     0.0     nan     False      11.0     10.89     11.11      True    0.0631  0.05679  0.06941       True 
+                 DF17             Drude1D    null     null     null       null  100.0     0.0     nan     False     11.23   11.1177   11.3423      True   0.13476 0.121284 0.148236       True 
+                 DF18             Drude1D    null     null     null       null  100.0     0.0     nan     False     11.33   11.2167   11.4433      True   0.36256 0.326304 0.398816       True 
+                 DF19             Drude1D    null     null     null       null  100.0     0.0     nan     False     11.99   11.8701   12.1099      True   0.53955 0.485595 0.593505       True 
+                 DF20             Drude1D    null     null     null       null  100.0     0.0     nan     False     12.62   12.4938   12.7462      True   0.53004 0.477036 0.583044       True 
+                 DF21             Drude1D    null     null     null       null  100.0     0.0     nan     False     12.79   12.6621   12.9179      True    0.1143  0.10287  0.12573       True 
+                 DF22             Drude1D    null     null     null       null  100.0     0.0     nan     False     13.48   13.3452   13.6148      True    0.5392  0.48528  0.59312       True 
+                 DF23             Drude1D    null     null     null       null  100.0     0.0     nan     False     14.04   13.8996   14.1804      True   0.22464 0.202176 0.247104       True 
+                 DF24             Drude1D    null     null     null       null  100.0     0.0     nan     False     14.19   14.0481   14.3319      True   0.35475 0.319275 0.390225       True 
+                 DF25             Drude1D    null     null     null       null  100.0     0.0     nan     False      15.9    15.741    16.059      True     0.318   0.2862   0.3498       True 
+                 DF26             Drude1D    null     null     null       null  100.0     0.0     nan     False     16.43   16.2657   16.6145      True    0.0655  0.05895  0.07205       True 
+                 DF27             Drude1D    null     null     null       null  100.0     0.0     nan     False     17.04   16.8696   17.2104      True    1.1076  0.99684  1.21836       True 
+                 DF28             Drude1D    null     null     null       null  100.0     0.0     nan     False    17.375  17.20125  17.54875      True    0.2083  0.18747  0.22913       True 
+                 DF29             Drude1D    null     null     null       null  100.0     0.0     nan     False     17.87   17.6913   18.0487      True   0.28592 0.257328 0.314512       True 
+                 DF30             Drude1D    null     null     null       null  100.0     0.0     nan     False     18.92   18.7308   19.1092      True   0.35948 0.323532 0.395428       True 
+          H2 1-0 Q(1)          Gaussian1D    null     null     null       null  100.0     0.0     nan     False  2.406592  2.382526  2.430658      True  0.004813 0.004332 0.005295       True 
+          H2 1-0 Q(2)          Gaussian1D    null     null     null       null  100.0     0.0     nan     False  2.413439  2.389305  2.437573      True  0.004827 0.004344 0.005310       True 
+          H2 1-0 Q(3)          Gaussian1D    null     null     null       null  100.0     0.0     nan     False   2.42373  2.399493  2.447967      True  0.004847 0.004363 0.005332       True  
+          H2 1-0 O(3)          Gaussian1D    null     null     null       null  100.0     0.0     nan     False   2.80251  2.774485  2.830535      True  0.005605 0.005044 0.006166       True 
+          H2 2-1 O(3)          Gaussian1D    null     null     null       null  100.0     0.0     nan     False   2.97406  2.944319  3.003801      True  0.005948 0.005353 0.006543       True 
+          H2 1-0 O(4)          Gaussian1D    null     null     null       null  100.0     0.0     nan     False  3.003868  2.973829  3.033907      True  0.006008 0.005407 0.006609       True 
+          H2 1-0 O(5)          Gaussian1D    null     null     null       null  100.0     0.0     nan     False  3.234988  3.202638  3.267338      True  0.006470 0.005823 0.007117       True 
+          H2 0-0 S(6)          Gaussian1D    null     null     null       null  100.0     0.0     nan     False    6.1088  6.047712  6.169888      True  0.012218 0.010995 0.013439       True 
+          H2 0-0 S(5)          Gaussian1D    null     null     null       null  100.0     0.0     nan     False    6.9091  6.840009  6.978191      True  0.013818 0.012436 0.015200       True 
+          H2 0-0 S(3)          Gaussian1D    null     null     null       null  100.0     0.0     nan     False    9.6649  9.568251  9.761549      True  0.019330 0.017397 0.021263       True 
+          H2 0-0 S(2)          Gaussian1D    null     null     null       null  100.0     0.0     nan     False   12.2785 12.155715 12.401285      True  0.024557 0.022101 0.027013       True 
+          H2 0-0 S(1)          Gaussian1D    null     null     null       null  100.0     0.0     nan     False   17.0346 16.864254 17.204946      True  0.034069 0.030662 0.037476       True 
+            HI (13-5)          Gaussian1D    null     null     null       null  100.0     0.0     nan     False     2.675   2.64825   2.70175      True   0.00535 0.004815 0.005885       True 
+            HI (12-5)          Gaussian1D    null     null     null       null  100.0     0.0     nan     False     2.757   2.72943   2.78457      True  0.005514 0.004963 0.006065       True 
+            HI (11-5)          Gaussian1D    null     null     null       null  100.0     0.0     nan     False     2.872   2.84328   2.90072      True  0.005744 0.005170 0.006318       True 
+            HI (10-5)          Gaussian1D    null     null     null       null  100.0     0.0     nan     False     3.038   3.00762   3.06838      True  0.006076 0.005468 0.006684       True 
+             HI (9-5)          Gaussian1D    null     null     null       null  100.0     0.0     nan     False     3.296   3.26304   3.32896      True  0.006592 0.005933 0.007251       True 
+             HI (6-5)          Gaussian1D    null     null     null       null  100.0     0.0     nan     False     7.458   7.38342   7.53258      True  0.014916 0.013424 0.016408       True 
+             HI (8-6)          Gaussian1D    null     null     null       null  100.0     0.0     nan     False     7.502   7.42698   7.57702      True  0.015004 0.013504 0.016504       True 
+             HI (9-7)          Gaussian1D    null     null     null       null  100.0     0.0     nan     False    11.309  11.19591  11.42209      True  0.022618 0.020356 0.024880       True 
+             HI (7-6)          Gaussian1D    null     null     null       null  100.0     0.0     nan     False  12.37189 12.248171 12.495609      True  0.024744 0.022269 0.027218       True 
+             HI (8-7)          Gaussian1D    null     null     null       null  100.0     0.0     nan     False 19.061898 18.871279 19.252517      True  0.038124 0.034311 0.041936       True 
+              Br_beta          Gaussian1D    null     null     null       null  100.0     0.0     nan     False   2.62587  2.599611  2.652129      True  0.005252 0.004727 0.005777       True 
+             Pf_gamma          Gaussian1D    null     null     null       null  100.0     0.0     nan     False   3.70456  3.667514  3.741606      True  0.007409 0.006668 0.008150       True 
+             Br_alpha          Gaussian1D    null     null     null       null  100.0     0.0     nan     False   4.05226  4.011737  4.092783      True  0.008105 0.007294 0.008915       True 
+              Pf_beta          Gaussian1D    null     null     null       null  100.0     0.0     nan     False   4.65378  4.607242  4.700318      True  0.009308 0.008377 0.010238       True 
+   [ArII] 2P1/2-2P3/2          Gaussian1D    null     null     null       null  100.0     0.0     nan     False   6.98527  6.915417  7.055123      True  0.013971 0.012574 0.015368       True 
+      [ArIII] 3P1-3P2          Gaussian1D    null     null     null       null  100.0     0.0     nan     False   8.99138  8.901466  9.081294      True  0.017983 0.016184 0.019781       True 
+    [SIV] 2P3/2-2P1/2          Gaussian1D    null     null     null       null  100.0     0.0     nan     False   10.5105 10.405395 10.615605      True  0.021021 0.018919 0.023123       True 
+   [NeII] 2P1/2-2P3/2          Gaussian1D    null     null     null       null  100.0     0.0     nan     False    12.813  12.68487  12.94113      True  0.025626 0.023063 0.028189       True 
+      [NeIII] 3P1-3P2          Gaussian1D    null     null     null       null  100.0     0.0     nan     False    15.555  15.39945  15.71055      True   0.03111 0.027999 0.034221       True 
+       [SIII] 3P2-3P1          Gaussian1D    null     null     null       null  100.0     0.0     nan     False    18.713  18.52587  18.90013      True  0.037426 0.033683 0.041169       True 
+      [FeIII] 5D3-5D4          Gaussian1D    null     null     null       null  100.0     0.0     nan     False    22.925  22.69575  23.15425      True   0.04585 0.041265 0.050435       True  
+ [FeII] a6D7/2-a6D9/2          Gaussian1D    null     null     null       null  100.0     0.0     nan     False    25.985  25.72515  26.24485      True   0.05197 0.046773 0.057167       True 
+              S07_att     S07_attenuation    null     null     null       null    1.0     0.0    10.0     False      null      null      null      null      null     null     null       null 
