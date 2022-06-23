@@ -132,7 +132,6 @@ class Features(Table):
     _group_attrs = ('bounds', 'features', 'kind')  # group-level attributes
     _param_attrs = ('value', 'bounds')  # Each parameter can have these attributes
     _no_bounds = ('name', 'group', 'geometry', 'model')  # String attributes (no bounds)
-    _bounded_dtype = [('val','f4'),('min','f4'),('max','f4')] # dtype for bounded vars
     
     @classmethod
     def read(cls, file, *args, **kwargs):
