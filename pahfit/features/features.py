@@ -110,7 +110,7 @@ class Features(Table):
     MaskedColumn = BoundedMaskedColumn
     
     param_covar = TableAttribute(default=[])
-    _kind_params = {'starlight_continuum': {'temperature',
+    _kind_params = {'starlight':           {'temperature',
                                             'tau'},
                     'dust_continuum':      {'temperature',
                                             'tau'},
