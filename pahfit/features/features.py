@@ -10,7 +10,7 @@ resolution.
 
 The main class, Features, inherits from astropy.table.Table.  All the
 grouping, sorting, selection, and indexing operations from astropy
-tables are therefore available for pahfit.features.Features.
+tables are therefore also available for pahfit.features.Features.
 
   Usage:
 
@@ -115,7 +115,7 @@ class Features(Table):
                     'dust_continuum':      {'temperature',
                                             'tau'},
                     'line':                {'wavelength',
-                                            'fwhm',
+                                           #  'fwhm', Instrument Pack detail!
                                             'power'},
                     'dust_feature':        {'wavelength',
                                             'fwhm',
@@ -133,7 +133,6 @@ class Features(Table):
     _param_attrs = ('value', 'bounds')  # Each parameter can have these attributes
     _no_bounds = ('name', 'group', 'geometry', 'model')  # String attributes (no bounds)
     _bounded_dtype = [('val','f4'),('min','f4'),('max','f4')] # dtype for bounded vars
-    _default_fixed = ('fwhm') # when not specified, these parameters are fixed at zero
     
     @classmethod
     def read(cls, file, *args, **kwargs):
@@ -258,8 +257,8 @@ class Features(Table):
     @classmethod
     def _add_feature(cls, kind: str, t: dict, name: str, *,
                      bounds=None, group='_none_', **pars):
-        """Adds an individual feature to the dictionary t."""
-        if not kind in t: t[kind] = {}
+        """Adds an individual feature to the passed dictionary t."""
+        if not kind in t: t[kind] = {} # group by kind
         if not name in t[kind]: t[kind][name] = {}
         t[kind][name]['group'] = group
         t[kind][name]['kind'] = kind
@@ -313,10 +312,7 @@ class Features(Table):
                     if missing in cls._no_bounds:
                         params[missing] = 0.0
                     else:
-                        if missing in cls._default_fixed:
-                            params[missing] = value_bounds(0.0, bounds=None)
-                        else: # Semi-open by default
-                            params[missing] = value_bounds(0.0, bounds=(0.0, None))
+                        params[missing] = value_bounds(0.0, bounds=(0.0, None))
                 rows.append(dict(name=name, **params))
             table_columns = rows[0].keys()
             t = cls(rows, names=table_columns)
