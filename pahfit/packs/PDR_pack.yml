@@ -1,0 +1,239 @@
+# PAHFIT Classic Model Pack
+ # Implements the IDL-based PAHFIT v1.2 model
+ # v0.1, May 2022
+
+ #######################
+ # Starlight continuum #
+ #######################
+ starlight:
+     kind: starlight
+     temperature: 5000
+
+ ##################
+ # Dust continuum #
+ ##################
+ dust_cont: # Modified Blackbodies
+     kind: dust_continuum
+     temperature: [1500, 330, 270, 100, 85, 74, 40, 17]
+
+ ##############################
+ # H_2 Line Emission Features #
+ ##############################
+ H2_lines:
+     kind: line
+     wavelength:
+         H2_Q(1): 2.406592 
+         H2_Q(2): 2.413439 
+         H2_Q(3): 2.42373
+         H2_Q(8): 2.52802
+         H2_Q(1): 2.550985  
+         H2_O(3)_2.8: 2.80251  
+         H2_O(3)_2.9: 2.97406
+         H2_O(4): 3.003868 
+         H2_O(5): 3.234988 
+         H2_S(7): 5.5115  
+         H2_S(6): 6.1088 
+         H2_S(5): 6.9091 
+         H2_S(4): 8.0258 
+         H2_S(3): 9.6649
+         H2_S(2): 12.2785 
+         H2_S(1): 17.0346 
+           
+ ##############################
+ # Atomic_H Line Emission Features #
+ ##############################
+ atomic_H_lines:
+     kind: line
+     wavelength:
+         HI_2.6:     2.675   
+         HI_2.7:     2.757   
+         HI_2.8:     2.872   
+         HI_3.0:     3.038   
+         HI_3.2:     3.296   
+         HI_7.4:     7.458   
+         HI_7.5:     7.502   
+         HI_11.3:    11.309  
+         HI_12.3:    12.37189 
+         HI_19.0:    19.061898 
+         Br_beta:    2.62587  
+         Pf_gamma:   3.70456       
+         Br_alpha:   4.05226  
+         Pf_beta:    4.65378
+           
+ ################################
+ # Ionic Line Emission Features #
+ ################################
+ ionic_lines:
+     kind: line
+     wavelength:
+         '[ArII]':            6.98527  
+         '[ArIII]_8.9':       8.99138  
+         '[SIV]':             10.5105 
+         '[NeII]':            12.813  
+         '[ClII]':            14.3678 
+         '[NeIII]':           15.555  
+         '[SIII]':            18.713  
+         '[ArIII]_21.8':      21.8302 
+         '[FeIII]':           22.925   
+         '[OIV]':             25.8903 
+         '[FeII]':            25.985
+
+ #################
+ # Dust Features #
+ #################
+ PAH_3.3:
+     kind: dust_feature
+     wavelength: 3.29
+     fwhm: 0.0418 
+
+ PAH_3.4:
+     kind: dust_feature
+     wavelength: 3.4
+     fwhm: 0.0299
+ 
+ PAH_3.47:
+     kind: dust_feature
+     wavelength: 3.47
+     fwhm: 0.1
+
+ PAH_5.24:
+     kind: dust_feature
+     wavelength: 5.242
+     fwhm: 0.05766
+
+ PAH_5.32:
+     kind: dust_feature
+     wavelength: 5.329
+     fwhm: 0.04263
+
+ PAH_5.7:
+     kind: dust_feature
+     wavelength: 5.7
+     fwhm: 0.1995
+
+ PAH_6.02:
+     kind: dust_feature
+     wavelength: 6.026
+     fwhm: 0.099
+
+ PAH_6.2_cmp:
+     kind: dust_feature
+     features:
+         PAH_6.22:
+             wavelength: 6.22
+             fwhm: 0.1866
+         PAH_6.29:
+             wavelength: 6.29
+             fwhm: 0.502
+
+ PAH_6.7:
+     kind: dust_feature
+     wavelength: 6.69
+     fwhm: 0.4683
+
+ PAH_7.7_cmp:
+     kind: dust_feature
+     features:
+         PAH_7.7a:
+             wavelength: 7.42
+             fwhm: 0.93492
+         PAH_7.7b:
+             wavelength: 7.6
+             fwhm: 0.3344
+         PAH_7.7c:
+             wavelength: 7.85
+             fwhm: 0.41605
+
+ PAH_8.3:
+     kind: dust_feature
+     wavelength: 8.33
+     fwhm: 0.4165
+
+ PAH_8.6:
+     kind: dust_feature
+     wavelength: 8.61
+     fwhm: 0.33579
+
+ PAH_10.7:
+     kind: dust_feature
+     wavelength: 10.68
+     fwhm: 0.2136
+
+ PAH_11.0:
+     kind: dust_feature
+     wavelength: 11.0
+     fwhm: 0.0631
+
+ PAH_11.3_cmp:
+     kind: dust_feature
+     features:    
+         PAH_11.3a:
+             wavelength: 11.23
+             fwhm: 0.13476
+         PAH_11.3b:
+             wavelength: 11.33
+             fwhm: 0.36256
+
+ PAH_12:
+     kind: dust_feature
+     wavelength: 11.99
+     fwhm: 0.53955
+
+ PAH_12.6_cmp:
+     kind: dust_feature
+     features:    
+         PAH_12.6a:
+             wavelength: 12.62
+             fwhm: 0.53004
+         PAH_12.6b:
+             wavelength: 12.79
+             fwhm: 0.1143
+
+ PAH_13.48:
+     kind: dust_feature
+     wavelength: 13.48
+     fwhm: 0.5392
+
+ PAH_14.04:
+     kind: dust_feature
+     wavelength: 14.04
+     fwhm: 0.22464
+
+ PAH_14.19:
+     kind: dust_feature
+     wavelength: 14.19
+     fwhm: 0.35475
+
+ PAH_15.9:
+     kind: dust_feature
+     wavelength: 15.9
+     fwhm: 0.318
+
+ PAH_17_cmp:
+     kind: dust_feature
+     features:    
+         PAH_17a: 
+             wavelength: 16.43
+             fwhm: 0.0655
+         PAH_17b:
+             wavelength: 17.04
+             fwhm: 1.1076
+         PAH_17c:
+             wavelength: 17.375
+             fwhm: 0.2083
+         PAH_17d:
+             wavelength: 17.87
+             fwhm: 0.28592
+
+ PAH_18.92:
+     kind: dust_feature
+     wavelength: 18.92
+     fwhm: 0.35948
+
+ ##########################
+ # Attenuation Model      #
+ ##########################
+ silicate:
+     kind: attenuation
+     model: S07_attenuation
+     geometry: mixed
