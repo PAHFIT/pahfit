@@ -82,7 +82,7 @@ class S07_attenuation(Fittable1DModel):
         else:
             spline_x = kvt_wav
             spline_y = kvt_int
-            
+
         intfunc = interpolate.interp1d(spline_x, spline_y)
         in_x_spline = in_x[in_x < max(kvt_wav)]
         new_spline_y = intfunc(in_x_spline)
