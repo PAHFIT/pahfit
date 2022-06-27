@@ -6,7 +6,7 @@
 # Starlight continuum #
 #######################
 starlight:
-    kind: starlight_continuum
+    kind: starlight
     temperature: 5000
 
 ##################
