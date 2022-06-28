@@ -37,6 +37,7 @@ class UniqueKeyLoader(yaml.SafeLoader):
             mapping.add(key)
         return super().construct_mapping(node, deep)
 
+
 def value_bounds(val, bounds):
     """Compute bounds for a bounded value.
 
@@ -49,7 +50,7 @@ def value_bounds(val, bounds):
         min and max can be a numerical value, None (for infinite
         bounds, either negative or positive, as appropriate), or a
         string ending in:
-    
+
           #: an absolute offset from the value
           %: a percentage offset from the value
 
@@ -70,7 +71,7 @@ def value_bounds(val, bounds):
 
       The value, if unbounded, or a 3 element tuple (value, min, max).
         Any missing bound is replaced with the numpy `masked' value.
-    
+
     Raises:
     -------
 
@@ -78,11 +79,12 @@ def value_bounds(val, bounds):
         between them.
 
     """
-    if val is None: val = np.ma.masked
+    if val is None:
+        val = np.ma.masked
     if not bounds:
-        return (val,) + 2*(np.ma.masked,) # Fixed
+        return (val,) + 2 * (np.ma.masked,)  # Fixed
     ret = [val]
-    for i,b in enumerate(bounds):
+    for i, b in enumerate(bounds):
         if isinstance(b, str):
             if b.endswith('%'):
                 b = val * (1. + float(b[:-1]) / 100.)
@@ -108,31 +110,20 @@ class Features(Table):
 
     TableFormatter = BoundedParTableFormatter
     MaskedColumn = BoundedMaskedColumn
-    
+
     param_covar = TableAttribute(default=[])
-    _kind_params = {'starlight':           {'temperature',
-                                            'tau'},
-                    'dust_continuum':      {'temperature',
-                                            'tau'},
-                    'line':                {'wavelength',
-                                           #  'fwhm', Instrument Pack detail!
-                                            'power'},
-                    'dust_feature':        {'wavelength',
-                                            'fwhm',
-                                            'power'},
-                    'attenuation':         {'model',
-                                            'tau',
-                                            'geometry'},
-                    'absorption':          {'wavelength',
-                                            'fwhm',
-                                            'tau',
-                                            'geometry'}}
+    _kind_params = {'starlight': {'temperature', 'tau'},
+                    'dust_continuum': {'temperature', 'tau'},
+                    'line': {'wavelength', 'power'},  # 'fwhm', Instrument Pack detail!
+                    'dust_feature': {'wavelength', 'fwhm', 'power'},
+                    'attenuation': {'model', 'tau', 'geometry'},
+                    'absorption': {'wavelength', 'fwhm', 'tau', 'geometry'}}
 
     _units = {'temperature': u.K, 'wavelength': u.um, 'fwhm': u.um}
     _group_attrs = set(('bounds', 'features', 'kind'))  # group-level attributes
-    _param_attrs = set(('value', 'bounds')) # Each parameter can have these attributes
-    _no_bounds = set(('name', 'group', 'geometry', 'model')) # String attributes (no bounds)
-    
+    _param_attrs = set(('value', 'bounds'))  # Each parameter can have these attributes
+    _no_bounds = set(('name', 'group', 'geometry', 'model'))  # String attributes (no bounds)
+
     @classmethod
     def read(cls, file, *args, **kwargs):
         """Read a table from file.
@@ -161,28 +152,32 @@ class Features(Table):
 
           table: A filled pahfit.features.Features table.
         """
-        feat_tables=dict()
+
+        feat_tables = dict()
 
         if not os.path.isfile(file):
             pack_path = resource_filename("pahfit", "packs")
             file = os.path.join(pack_path, file)
         try:
             with open(file) as fd:
-                scipack = yaml.load(fd, Loader = UniqueKeyLoader)
+                scipack = yaml.load(fd, Loader=UniqueKeyLoader)
         except IOError as e:
             raise PAHFITFeatureError("Error reading science pack file\n"
                                      f"\t{file}\n\t{repr(e)}")
         for (name, elem) in scipack.items():
-            try: keys = elem.keys()
+            try:
+                keys = elem.keys()
             except AttributeError:
                 raise PAHFITFeatureError("Invalid science pack"
                                          f" format at {name}\n\t{file}")
 
-            try: kind = elem.pop('kind')
+            try:
+                kind = elem.pop('kind')
             except KeyError:
                 raise PAHFITFeatureError(f"No kind found for {name}\n\t{file}")
-            
-            try: valid_params = cls._kind_params[kind]
+
+            try:
+                valid_params = cls._kind_params[kind]
             except KeyError:
                 raise PAHFITFeatureError(f"Unknown kind {kind} for {name}\n\t{file}")
             unknown_params = [x for x in keys
@@ -192,17 +187,17 @@ class Features(Table):
                                          f" {', '.join(unknown_params)}\n\t{file}")
 
             hasFeatures = 'features' in elem
-            hasLists = any(k not in cls._group_attrs and
-                           (isinstance(v, (tuple,list)) or
-                            (isinstance(v, dict) and 
-                             cls._param_attrs.isdisjoint(v.keys())))
-                           for (k,v) in elem.items())
+            hasLists = any(k not in cls._group_attrs
+                           and (isinstance(v, (tuple, list))
+                                or (isinstance(v, dict)
+                                    and cls._param_attrs.isdisjoint(v.keys())))
+                           for (k, v) in elem.items())
             if hasFeatures and hasLists:
                 raise PAHFITFeatureError("A single group cannot contain both 'features'"
                                          f" and parameter list(s): {name}\n\t{file}")
             isGroup = (hasFeatures or hasLists)
             bounds = None
-            if isGroup: # A named group of features
+            if isGroup:  # A named group of features
                 if 'bounds' in elem:
                     if not isinstance(elem['bounds'], dict):
                         for p in cls._no_bounds:
@@ -218,15 +213,16 @@ class Features(Table):
                                                      "cannot specify "
                                                      f"'features': {name}\n\t{file}")
                     bounds = elem.pop('bounds')
-                if hasFeatures: # our group uses a features dict
-                    for (n,v) in elem['features'].items():
-                        if bounds and not 'bounds' in v: # inherit bounds
+                if hasFeatures:  # our group uses a features dict
+                    for n, v in elem['features'].items():
+                        if bounds and 'bounds' not in v:  # inherit bounds
                             v['bounds'] = bounds
                         cls._add_feature(kind, feat_tables, n, group=name, **v)
-                elif hasLists: # a "shortcut" feature group, using lists
+                elif hasLists:  # a "shortcut" feature group, using lists
                     llen = []
-                    for k,v in elem.items():
-                        if k in cls._group_attrs: continue
+                    for k, v in elem.items():
+                        if k in cls._group_attrs:
+                            continue
                         if not isinstance(v, (tuple, list, dict)):
                             raise PAHFITFeatureError(f"All non-group parameters in {name} "
                                                      f"must be lists or dicts:\n\t{file}")
@@ -237,21 +233,21 @@ class Features(Table):
                                                  f"must be the same length:\n\t{file}")
                     ngroup = llen[0]
                     feat_names = None
-                    for (k,v) in elem.items():
+                    for k, v in elem.items():
                         if isinstance(elem[k], dict):
-                            if not feat_names: # First names win
+                            if not feat_names:  # First names win
                                 feat_names = list(elem[k].keys())
-                            elem[k] = list(elem[k].values()) # turn back into a value list
-                    if not feat_names: # no names: construct one for each group feature 
+                            elem[k] = list(elem[k].values())  # turn back into a value list
+                    if not feat_names:  # no names: construct one for each group feature
                         feat_names = [f"{name}{x:02}" for x in range(ngroup)]
-                    for i in range(ngroup): # Iterate over list(s) adding feature
+                    for i in range(ngroup):  # Iterate over list(s) adding feature
                         v = {k: elem[k][i] for k in valid_params if k in elem}
                         cls._add_feature(kind, feat_tables, feat_names[i],
                                          group=name, bounds=bounds, **v)
                 else:
                     raise PAHFITFeatureError(f"Group {name} needs either 'features' or"
                                              f"parameter list(s):\n\t{file}")
-            else: # Just one standalone feature
+            else:  # Just one standalone feature
                 cls._add_feature(kind, feat_tables, name, **elem)
         return cls._construct_table(feat_tables)
 
@@ -259,19 +255,22 @@ class Features(Table):
     def _add_feature(cls, kind: str, t: dict, name: str, *,
                      bounds=None, group='_none_', **pars):
         """Adds an individual feature to the passed dictionary t."""
-        if not kind in t: t[kind] = {} # group by kind
-        if not name in t[kind]: t[kind][name] = {}
+        if kind not in t:
+            t[kind] = {}  # group by kind
+        if name not in t[kind]:
+            t[kind][name] = {}
         t[kind][name]['group'] = group
         t[kind][name]['kind'] = kind
         for (param, val) in pars.items():
-            if not param in cls._kind_params[kind]: continue
-            if isinstance(val, dict): # A param attribute dictionary
-                unknown_attrs = [x for x in val.keys() if not x in cls._param_attrs]
+            if param not in cls._kind_params[kind]:
+                continue
+            if isinstance(val, dict):  # A param attribute dictionary
+                unknown_attrs = [x for x in val.keys() if x not in cls._param_attrs]
                 if unknown_attrs:
                     raise PAHFITFeatureError("Unknown parameter attributes for"
                                              f" {name} ({kind}, {group}): "
                                              f"{', '.join(unknown_attrs)}")
-                if not 'value' in val:
+                if 'value' not in val:
                     raise PAHFITFeatureError("Missing 'value' attribute for "
                                              f"{name} ({kind}, {group})")
                 value = val['value']
@@ -280,14 +279,14 @@ class Features(Table):
                         raise PAHFITFeatureError("Parameter {param} cannot have bounds: "
                                                  f"{name} ({kind}, {group})")
                     bounds = val['bounds']
-            else: 
-                value = val # a bare value
+            else:
+                value = val  # a bare value
             if isinstance(bounds, dict):
                 b = bounds.get(param)
                 if b and param in cls._no_bounds:
                     raise PAHFITFeatureError("Parameter {param} cannot have bounds: "
                                              f"{name} ({kind}, {group})")
-            else: # Simple bounds
+            else:  # Simple bounds
                 b = bounds
             try:
                 t[kind][name][param] = (value if param in cls._no_bounds
@@ -304,9 +303,9 @@ class Features(Table):
         feature parameter dictionary is either a value or tuple of 3
         values for bounds.
         """
-        tables=[]
+        tables = []
         for (kind, features) in inp.items():
-            kind_params = cls._kind_params[kind] #All params for this kind
+            kind_params = cls._kind_params[kind]  # All params for this kind
             rows = []
             for (name, params) in features.items():
                 for missing in kind_params - params.keys():
@@ -318,8 +317,8 @@ class Features(Table):
             table_columns = rows[0].keys()
             t = cls(rows, names=table_columns)
             for p in cls._kind_params[kind]:
-                if not p in cls._no_bounds:
-                    t[p].info.format = "0.4g" # Nice format (customized by Formatter)
+                if p not in cls._no_bounds:
+                    t[p].info.format = "0.4g"  # Nice format (customized by Formatter)
             tables.append(t)
         tables = vstack(tables)
         for cn, col in tables.columns.items():
