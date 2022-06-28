@@ -129,9 +129,9 @@ class Features(Table):
                                             'geometry'}}
 
     _units = {'temperature': u.K, 'wavelength': u.um, 'fwhm': u.um}
-    _group_attrs = ('bounds', 'features', 'kind')  # group-level attributes
-    _param_attrs = ('value', 'bounds')  # Each parameter can have these attributes
-    _no_bounds = ('name', 'group', 'geometry', 'model')  # String attributes (no bounds)
+    _group_attrs = set(('bounds', 'features', 'kind'))  # group-level attributes
+    _param_attrs = set(('value', 'bounds')) # Each parameter can have these attributes
+    _no_bounds = set(('name', 'group', 'geometry', 'model')) # String attributes (no bounds)
     
     @classmethod
     def read(cls, file, *args, **kwargs):
@@ -193,7 +193,9 @@ class Features(Table):
 
             hasFeatures = 'features' in elem
             hasLists = any(k not in cls._group_attrs and
-                           isinstance(v, (tuple,list,dict))
+                           (isinstance(v, (tuple,list)) or
+                            (isinstance(v, dict) and 
+                             cls._param_attrs.isdisjoint(v.keys())))
                            for (k,v) in elem.items())
             if hasFeatures and hasLists:
                 raise PAHFITFeatureError("A single group cannot contain both 'features'"
@@ -216,16 +218,16 @@ class Features(Table):
                                                      "cannot specify "
                                                      f"'features': {name}\n\t{file}")
                     bounds = elem.pop('bounds')
-                if hasFeatures: # our group uses a features: key
+                if hasFeatures: # our group uses a features dict
                     for (n,v) in elem['features'].items():
                         if bounds and not 'bounds' in v: # inherit bounds
                             v['bounds'] = bounds
                         cls._add_feature(kind, feat_tables, n, group=name, **v)
-                elif hasLists:
+                elif hasLists: # a "shortcut" feature group, using lists
                     llen = []
                     for k,v in elem.items():
                         if k in cls._group_attrs: continue
-                        if not isinstance(v, (tuple,list,dict)):
+                        if not isinstance(v, (tuple, list, dict)):
                             raise PAHFITFeatureError(f"All non-group parameters in {name} "
                                                      f"must be lists or dicts:\n\t{file}")
                         llen.append(len(v))
