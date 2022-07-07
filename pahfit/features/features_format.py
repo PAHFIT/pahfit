@@ -25,7 +25,10 @@ class BoundedMaskedColumn(MaskedColumn):
         sh = super().shape
         return sh[0:-1] if self._omit_shape and len(sh) > 1 else sh
 
+    def is_fixed(self):
+        return ma.getmask(self)[:,1:].all(1)
 
+        
 class BoundedParTableFormatter(TableFormatter):
     """Format bounded parameters.
     Bounded parameters are 3-field structured arrays, with fields
