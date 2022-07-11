@@ -80,19 +80,21 @@ class S07_attenuation(Fittable1DModel):
         # fmt: on
 
         # Extend kvt profile to shorter wavelengths
-        kvt_wav_short = in_x[in_x < min(kvt_wav)]
-        kvt_int_short_tmp = min(kvt_int) * np.exp(2.03 * (kvt_wav_short - min(kvt_wav)))
-        # Since kvt_int_shoft_tmp does not reach min(kvt_int),
-        # we scale it to stitch it.
-        kvt_int_short = kvt_int_short_tmp * (kvt_int[0] / max(kvt_int_short_tmp))
+        if min(in_x) < min(kvt_wav):
+            kvt_wav_short = in_x[in_x < min(kvt_wav)]
+            kvt_int_short_tmp = min(kvt_int) * np.exp(2.03 * (kvt_wav_short - min(kvt_wav)))
+            # Since kvt_int_shoft_tmp does not reach min(kvt_int),
+            # we scale it to stitch it.
+            kvt_int_short = kvt_int_short_tmp * (kvt_int[0] / max(kvt_int_short_tmp))
 
-        spline_x = np.concatenate([kvt_wav_short, kvt_wav])
-        spline_y = np.concatenate([kvt_int_short, kvt_int])
+            spline_x = np.concatenate([kvt_wav_short, kvt_wav])
+            spline_y = np.concatenate([kvt_int_short, kvt_int])
+        else:
+            spline_x = kvt_wav
+            spline_y = kvt_int
 
-        # spline_rep = interpolate.splrep(spline_x, spline_y)
         intfunc = interpolate.interp1d(spline_x, spline_y)
         in_x_spline = in_x[in_x < max(kvt_wav)]
-        # new_spline_y = interpolate.splev(in_x_spline, spline_rep, der=0)
         new_spline_y = intfunc(in_x_spline)
 
         nf = Drude1D(amplitude=0.4, x_0=18.0, fwhm=0.247 * 18.0)
