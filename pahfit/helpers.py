@@ -1,6 +1,8 @@
 import os
 import pkg_resources
 
+import numpy as np
+
 import astropy.units as u
 from astropy.table import Table
 
@@ -14,6 +16,38 @@ from astropy.modeling.functional_models import Gaussian1D
 
 
 __all__ = ["read_spectrum", "initialize_model", "fit_spectrum", "calculate_compounds"]
+
+
+def find_packfile(packfile):
+    """Determine packfile path.
+
+    If packfile not in current directory, try to find one in the packs
+    directory that comes with PAHFIT. If nothing is found, throw an
+    error.
+
+    Parameters
+    ----------
+    packfile : str
+        Name or path of the pack file.
+
+    Returns
+    -------
+    packfile_found : str
+        Full path of the pack file. Will be a file in pahfit/packs when
+        the given file name was not found.
+
+    """
+    if os.path.isfile(packfile):
+        packfile_found = packfile
+    else:
+        pack_path = pkg_resources.resource_filename("pahfit", "packs/")
+        test_packfile = "{}/{}".format(pack_path, packfile)
+        if os.path.isfile(test_packfile):
+            packfile_found = test_packfile
+        else:
+            raise ValueError("Input packfile {} not found".format(packfile))
+
+    return packfile_found
 
 
 def read_spectrum(specfile, colnames=["wavelength", "flux", "sigma"]):
@@ -83,23 +117,68 @@ def initialize_model(packfile, obsdata, estimate_start=False):
         PAHFIT model
     """
 
-    # read in the pack file
-    if not os.path.isfile(packfile):
-        pack_path = pkg_resources.resource_filename("pahfit", "packs/")
-        test_packfile = "{}/{}".format(pack_path, packfile)
-        if os.path.isfile(test_packfile):
-            packfile = test_packfile
-        else:
-            raise ValueError("Input packfile {} not found".format(packfile))
+    packfile_found = find_packfile(packfile)
 
     pmodel = PAHFITBase(
         obsdata["x"].value,
         obsdata["y"].value,
         estimate_start=estimate_start,
-        filename=packfile,
+        filename=packfile_found,
     )
 
     return pmodel
+
+
+def initialize_trimmed_model(packfile, obsdata):
+    """
+    Initialize a model based on the packfile, ignoring components outside of the wavelength range.
+
+    Parameters
+    ----------
+    packfile : string
+        file with the PAHFIT pack information
+
+    obsdata : dict
+        observed data where x = wavelength, y = SED, and unc = uncertainties
+
+    Returns
+    -------
+    pmodel: PAHFITBase model
+        PAHFIT model based on trimmed science pack table
+
+    """
+    # read in and edit the table before we parse it
+    packfile_found = find_packfile(packfile)
+    t = Table.read(packfile_found, format="ipac")
+
+    # determine wavelength range
+    w = obsdata["x"].value
+    wmin = np.amin(w)
+    wmax = np.amax(w)
+
+    # decide which rows we are going to keep
+    keep_row = np.full(len(t), True)
+
+    # Only keep drudes and gauss with center within 1 FWHM
+    is_drude_or_gauss = np.logical_or(t["Form"] == "Drude1D", t["Form"] == "Gaussian1D")
+    x0 = t[is_drude_or_gauss]["x_0"]
+    fwhm = t[is_drude_or_gauss]["fwhm"]
+    keep_row[is_drude_or_gauss] = np.logical_and(wmin < x0 + fwhm, x0 - fwhm < wmax)
+
+    # now parse the trimmed table
+    print("Keeping these rows")
+    print(t[keep_row])
+    param_info = PAHFITBase.parse_table(t[keep_row])
+
+    # and create a new model (and don't pass a file name, so that the
+    # current contents of param_info are used)
+    trimmed_model = PAHFITBase(
+        obsdata["x"].value,
+        obsdata["y"].value,
+        estimate_start=True,
+        param_info=param_info,
+    )
+    return trimmed_model
 
 
 def fit_spectrum(obsdata, pmodel, maxiter=1000, verbose=True):
@@ -205,7 +284,7 @@ def calculate_compounds(obsdata, pmodel):
 
     for cmodel in pmodel.model:
         if isinstance(cmodel, Gaussian1D):
-            if cmodel.name[0:2] == 'H2':
+            if cmodel.name[0:2] == "H2":
                 h2_features.append(cmodel)
     h2_features_model = h2_features[0]
     for cmodel in h2_features[1:]:
@@ -216,7 +295,7 @@ def calculate_compounds(obsdata, pmodel):
 
     for cmodel in pmodel.model:
         if isinstance(cmodel, Gaussian1D):
-            if cmodel.name[0:2] != 'H2':
+            if cmodel.name[0:2] != "H2":
                 atomic_features.append(cmodel)
     atomic_features_model = atomic_features[0]
     for cmodel in atomic_features[1:]:
