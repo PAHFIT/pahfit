@@ -156,7 +156,7 @@ class Features(Table):
         feat_tables = dict()
 
         if not os.path.isfile(file):
-            pack_path = resource_filename("pahfit", "packs")
+            pack_path = resource_filename("pahfit", "packs/science")
             file = os.path.join(pack_path, file)
         try:
             with open(file) as fd:
