@@ -337,7 +337,7 @@ class PAHFITBase:
             yerr = yerr.value
 
         # Fine x samples for model fit
-        x_mod = np.linspace(min(x), max(x), model_samples)
+        x_mod = np.logspace(np.log10(min(x)), np.log10(max(x)), model_samples)
 
         # spectrum and best fit model
         ax = axs[0]
