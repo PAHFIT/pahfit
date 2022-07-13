@@ -6,7 +6,7 @@ defining wavelength-dependent unresolved-line resolution, and range.
 Note that individual spectral ranges are called 'segments', and PAHFIT
 accepts a pre-defined list of segments, as fully-qualified
 heirarchical names, e.g. 'iso.sws.speed0.3a'.  For the full list of
-telescopes, instruments, and instrument modes, see TBD.
+supported telescopes, instruments, and instrument modes, see TBD.
 """
 
 import glob, os
@@ -18,6 +18,7 @@ from pahfit.errors import PAHFITPackError
 packs = {}
 
 def read_instrument_packs():
+    """Read all instrument packs into the 'packs' variable."""
     for pack in glob.glob(resource_filename("pahfit", "packs/instrument/*.yaml")):
         try:
             with open(pack) as fd:
