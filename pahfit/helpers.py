@@ -40,7 +40,7 @@ def find_packfile(packfile):
     if os.path.isfile(packfile):
         packfile_found = packfile
     else:
-        pack_path = pkg_resources.resource_filename("pahfit", "packs/")
+        pack_path = pkg_resources.resource_filename("pahfit", "packs/science/")
         test_packfile = "{}/{}".format(pack_path, packfile)
         if os.path.isfile(test_packfile):
             packfile_found = test_packfile
