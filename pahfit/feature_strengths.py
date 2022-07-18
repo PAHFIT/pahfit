@@ -101,7 +101,7 @@ def featcombine(ftable):
         dtype=("U25", "float64", "float64", "float64", "float64", "float64"))
 
     # Get indices of dust features.
-    df_ind = np.concatenate(np.argwhere(ftable["Form"] == "Drude1D"))
+    df_ind = np.concatenate(np.argwhere(ftable["Form"] == "AreaDrude1D"))
 
     # Get table subset containing only the dust features.
     dfs = ftable[df_ind[0]:df_ind[-1] + 1]

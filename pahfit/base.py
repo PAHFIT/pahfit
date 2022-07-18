@@ -627,7 +627,7 @@ class PAHFITBase:
             elif isinstance(component, AreaDrude1D):
 
                 # Calculate feature strength.
-                strength = component.area.value
+                strength = component.area.value*1e-12
 
                 strength_unc = None
 
@@ -651,10 +651,10 @@ class PAHFITBase:
                         component.x_0.bounds[0],
                         component.x_0.bounds[1],
                         component.x_0.fixed,
-                        component.amplitude.value,
-                        component.amplitude.bounds[0],
-                        component.amplitude.bounds[1],
-                        component.amplitude.fixed,
+                        component.area.value,
+                        component.area.bounds[0],
+                        component.area.bounds[1],
+                        component.area.fixed,
                         component.fwhm.value,
                         component.fwhm.bounds[0],
                         component.fwhm.bounds[1],
@@ -667,7 +667,7 @@ class PAHFITBase:
             elif isinstance(component, AreaGaussian1D):
 
                 # Calculate feature strength.
-                strength = component.area.value
+                strength = component.area.value*1e-12
 
                 strength_unc = None
 
@@ -676,7 +676,7 @@ class PAHFITBase:
                     eqw = eqws(
                         comp_type,
                         component.mean.value,
-                        component.amplitude.value,
+                        component.area.value,
                         component.stddev.value,
                         obs_fit,
                     )
@@ -691,10 +691,10 @@ class PAHFITBase:
                         component.mean.bounds[0],
                         component.mean.bounds[1],
                         component.mean.fixed,
-                        component.amplitude.value,
-                        component.amplitude.bounds[0],
-                        component.amplitude.bounds[1],
-                        component.amplitude.fixed,
+                        component.area.value,
+                        component.area.bounds[0],
+                        component.area.bounds[1],
+                        component.area.fixed,
                         2.355 * component.stddev.value,
                         2.355 * component.stddev.bounds[0],
                         2.355 * component.stddev.bounds[1],
