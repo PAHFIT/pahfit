@@ -1,11 +1,16 @@
-from astropy.modeling.functional_models import Gaussian1D
-from pahfit.component_models import BlackBody1D
+from pahfit.component_models import (
+    BlackBody1D,
+    ModifiedBlackBody1D,
+    S07_attenuation,
+    att_Drude1D,
+    AreaGaussian1D,
+    AreaDrude1D
+)
 
 import numpy as np
 
 from astropy import constants as const
 from astropy.table import Table
-from astropy.modeling.physical_models import Drude1D
 
 from scipy import integrate
 
@@ -115,7 +120,7 @@ def featcombine(ftable):
     return cftable
 
 
-def eqws(comp_type, x_0, amp, fwhm_stddev, obs_fit):
+def eqws(comp_type, x_0, area, fwhm_stddev, obs_fit):
     """
     Calculate the emission features equivalent width
     (integral[(I_nu-I_cont)/I_cont d_lam]) in microns.
@@ -136,7 +141,7 @@ def eqws(comp_type, x_0, amp, fwhm_stddev, obs_fit):
         the equivalent width of the feature
     """
     # Check if the emission component is Gaussian and calculate fwhm.
-    if comp_type == 'Gaussian1D':
+    if comp_type == 'AreaGaussian1D':
         fwhm = 2 * fwhm_stddev * np.sqrt(2 * np.log(2))
     else:
         fwhm = fwhm_stddev
@@ -158,14 +163,14 @@ def eqws(comp_type, x_0, amp, fwhm_stddev, obs_fit):
         cont_model += cmodel
     continuum = np.nan_to_num(cont_model(lam))
 
-    if comp_type == 'Drude1D':
-        drude = Drude1D(amplitude=amp,
+    if comp_type == 'AreaDrude1D':
+        drude = AreaDrude1D(area=area,
                         x_0=x_0,
                         fwhm=fwhm)
         lnu = drude(lam)
 
-    elif comp_type == 'Gaussian1D':
-        gauss = Gaussian1D(amplitude=amp,
+    elif comp_type == 'AreaGaussian1D':
+        gauss = AreaGaussian1D(area=area,
                            mean=x_0,
                            stddev=fwhm_stddev)
         lnu = gauss(lam)

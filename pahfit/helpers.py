@@ -10,9 +10,9 @@ from astropy.modeling.fitting import LevMarLSQFitter
 
 from pahfit.base import PAHFITBase
 
-from pahfit.component_models import BlackBody1D, S07_attenuation
-from astropy.modeling.physical_models import Drude1D
-from astropy.modeling.functional_models import Gaussian1D
+from pahfit.component_models import BlackBody1D, S07_attenuation, AreaDrude1D, AreaGaussian1D
+#from astropy.modeling.physical_models import Drude1D
+#from astropy.modeling.functional_models import Gaussian1D
 
 
 __all__ = ["read_spectrum", "initialize_model", "fit_spectrum", "calculate_compounds"]
@@ -273,7 +273,7 @@ def calculate_compounds(obsdata, pmodel):
     dust_features = []
 
     for cmodel in pmodel.model:
-        if isinstance(cmodel, Drude1D):
+        if isinstance(cmodel, AreaDrude1D):
             dust_features.append(cmodel)
     dust_features_model = dust_features[0]
     for cmodel in dust_features[1:]:
@@ -283,7 +283,7 @@ def calculate_compounds(obsdata, pmodel):
     h2_features = []
 
     for cmodel in pmodel.model:
-        if isinstance(cmodel, Gaussian1D):
+        if isinstance(cmodel, AreaGaussian1D):
             if cmodel.name[0:2] == "H2":
                 h2_features.append(cmodel)
     h2_features_model = h2_features[0]
@@ -294,7 +294,7 @@ def calculate_compounds(obsdata, pmodel):
     atomic_features = []
 
     for cmodel in pmodel.model:
-        if isinstance(cmodel, Gaussian1D):
+        if isinstance(cmodel, AreaGaussian1D):
             if cmodel.name[0:2] != "H2":
                 atomic_features.append(cmodel)
     atomic_features_model = atomic_features[0]
