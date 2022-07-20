@@ -23,28 +23,27 @@ irs:
     sl:
         '1':
             range: [7.51, 14.78]
-            coefficients: [0.0, 8.2667, 0.0, 0.0]
+            coefficients: [0.0, 8.2667]
         '2':
             range: [5.24, 7.6]
-            coefficients: [0.0, 16.5333, 0.0, 0.0]
+            coefficients: [0.0, 16.5333]
         '3':
             range: [7.34, 8.7]
-            coefficients: [0.0, 8.2667, 0.0, 0.0]
+            coefficients: [0.0, 8.2667]
     ll:
         '1':
             range: [19.4, 21.65]
-            coefficients: [0.0, 2.9524, 0.0, 0.0]
+            coefficients: [0.0, 2.9524]
         '2':
             range: [14.2, 21.1]
-            coefficients: [0.0, 5.9048, 0.0, 0.0]
+            coefficients: [0.0, 5.9048]
         '3':
             range: [19.4, 21.65]
-            coefficients: [0.0, 2.9524, 0.0, 0.0]
-
+            coefficients: [0.0, 2.9524]
     sh:
         range: [9.9661, 19.4386]
-        coefficients: [600., 0.0, 0.0, 0.0]
+        coefficients: [600.]
     lh:
         range: [19.1095, 37.1661]
-        coefficients: [600., 0.0, 0.0, 0.0]
+        coefficients: [600.]
 
