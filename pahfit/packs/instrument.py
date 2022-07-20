@@ -57,13 +57,17 @@ def pack_element(segment):
             raise PAHFITPackError(f"Could not locate instrument segment {key} of {segment}")
     if d.get('polynomial') is None:
         try:
-            d['polynomial'] = Polynomial(d['coefficients'])
+            d['polynomial'] = Polynomial(d['coefficients'], domain=d['range'])
         except KeyError:
             raise PAHFITPackError(f"Incomplete segment name {segment}")
 
     return d
 
-    
+def resolution(segment, wave_micron):
+    p = pack_element(segment)['polynomial']
+    return p(wave_micron)
+
+
 def fwhm(segment, wave_micron):
     """Return the FWHM for SEGMENT at one more more wavelengths.
 
@@ -80,9 +84,7 @@ def fwhm(segment, wave_micron):
     The full-width at half maximum of an unresolved line spread
     function, at the relevant wavelength(s).
     """
-
-    p = pack_element(segment)['polynomial']
-    return wave_micron/p(wave_micron)
+    return wave_micron/resolution(segment, wave_micron)
 
 def wave_range(segment):
     """Return the segment wavelength range (a two element list) in microns."""
