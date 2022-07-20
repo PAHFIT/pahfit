@@ -1,6 +1,17 @@
 # PAHFIT Classic Model Pack
-# Implements the IDL-based PAHFIT v1.2 model
-# v0.1, May 2022
+# Implements the IDL-based PAHFIT v1.2 model of Smith et al., 2007
+#
+#  v0.1, May 2022
+#
+# Note that the IDL PAHFIT model was originally designed only for
+# Spitzer/IRS spectra, and included:
+# 
+#   - a fixed +-0.05 micron undertainty bounds on all line wavelengths
+#   - fixed line FWHM "breaks" with fractional bounds of 10%
+#   
+# Since FWHM is now a detail of the instrument pack (see
+# packs/instrument/spitzer.yaml), some small fitting differences are
+# anticipated, even when applying to Spitzer/IRS spectra.
 
 #######################
 # Starlight continuum #
