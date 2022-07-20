@@ -1,0 +1,49 @@
+# ---
+# PAHFIT Instrument Pack, see https://github.com/PAHFIT/pahfit/wiki/File-Formats for more information
+
+# This is the Instrument Pack for JWST spectroscopic observations.
+# The resolving power (lambda / delta_lambda, where delta_lamba is the
+# FWHM of the resolution element) is represented by a polynomial of
+# degree 3, and this file lists the coefficients CC of that
+# polynomial, i.e.
+#
+# R = CC[0] + CC[1] * lambda + CC[2] * lambda^2 + CC[3] * lambda^3 + ...
+#
+# where lambda is expressed in microns as well. 
+#
+# Resolution data from:
+#
+#  NIRSPEC: fits to resolution/dispersion curves [1]
+#  MIRI: TBD
+# [1]https://jwst-docs.stsci.edu/jwst-near-infrared-spectrograph/nirspec-instrumentation/nirspec-dispersers-and-filters#NIRSpecDispersersandFilters-DispersioncurvesfortheNIRSpecdispersers
+#
+# v0.1 July 2022
+
+nirspec:
+    prism:
+        range: [0.5, 6]
+        coefficients: [118.673035, 201.54498, 87.37993, -35.558907, 82.88188, 110.60916, -171.3971, -108.33989, 136.90254]
+
+    g140:
+        medium:
+            range: [0.5, 2.]
+            coefficients: [891.6646, 539.4452, 4.216203]
+        high:
+            range: [0.5, 1.9]
+            coefficients: [2291.3574, 1404.4167, 88.98144, 36.30806]
+
+    g235:
+        medium:
+            range: [1.5, 3.5]
+            coefficients: [1064.852, 431.03555, 3.3509896]
+        high:
+            range: [1.5, 3.11]
+            coefficients: [2646.0334, 992.6818, 52.8571, 17.77239]
+
+    g395:
+        medium:
+            range: [2.5, 6.]
+            coefficients: [1.0767772e+03, 4.4848569e+02, 3.7253866e+00, 7.2353613e-01]
+        high:
+            range: [2.5, 6]
+            coefficients: [2925.7283, 1327.8862, 106.61604, 20.827995, -10.031256]
