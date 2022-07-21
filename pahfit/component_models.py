@@ -147,8 +147,17 @@ class AreaGaussian1D(Fittable1DModel):
     @staticmethod
     def evaluate(x, area, mean, stddev):
         """
-      AreaGaussian1D model function.
-      """
+        Spectral line features.
+        Calculation is for a Gaussian profile.
+        The integrated intensity of the Gaussian profile is 
+        I = (sqrt(pi/log2))*(c * central intensity * fwhm / mean^2)
+        Parameters
+        ----------
+        area : float
+        stddev : float
+        mean (x_0) : float
+        """
+
         return ((1e14*area*(mean**2)/(np.sqrt(2*np.pi)*299792458*1e6*stddev)) * np.exp(
           -0.5 * (x - mean) ** 2 / stddev ** 2))
 
@@ -162,8 +171,16 @@ class AreaDrude1D(Fittable1DModel):
     @staticmethod
     def evaluate(x, area, x_0, fwhm):
         """
-        AreaDrude1D model function.
-        Integrated Intensity of Drude profile is I = (pi*c/2)*(central intensity * fractional fwhm / central wavelength)
+        Smith, et al. (2007) dust features model.
+        Calculation is for a Drude profile (equation defining it is present is setion 4.1.4).
+        The integrated intensity of the drude profile is 
+        I = (pi*c/2)*(central intensity * fractional fwhm / central wavelength)
+        
+        Parameters
+        ----------
+        area : float
+        fwhm : float
+        central intensity (x_0) : float
         """
         frac_fwhm = fwhm/x_0
         return (((1e14*2 /(np.pi * 299792458*1e6 ))*(area * x_0 / frac_fwhm)*(frac_fwhm**2)/

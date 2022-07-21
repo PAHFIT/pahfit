@@ -1,5 +1,3 @@
-#from astropy.modeling.functional_models import Gaussian1D
-
 from pahfit.component_models import (
     BlackBody1D,
     ModifiedBlackBody1D,
@@ -9,7 +7,6 @@ from pahfit.component_models import (
     AreaDrude1D
 )
 from astropy.table import Table, vstack
-#from astropy.modeling.physical_models import Drude1D
 
 from scipy import interpolate
 
