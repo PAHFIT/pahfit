@@ -36,7 +36,7 @@
 #   26.05 1440 -67  -12  
 # [1]https://jwst-docs.stsci.edu/jwst-near-infrared-spectrograph/nirspec-instrumentation/nirspec-dispersers-and-filters#NIRSpecDispersersandFilters-DispersioncurvesfortheNIRSpecdispersers
 #
-# v0.1 July 2022
+# v0.2 July 2022
 
 nirspec:
     prism:
@@ -65,3 +65,45 @@ nirspec:
         high:
             range: [2.87, 5.27]
             coefficients: [2925.7283, 1327.8862, 106.61604, 20.827995, -10.031256]
+miri:
+    mrs:
+        ch1:
+            A:
+                range: [4.9, 5.74]
+                coefficients: [ 8.4645410e+03, -2.4806001e+03,  2.9600000e+02]
+            B:
+                range: [5.66, 6.63]
+                coefficients: [ 1.3785873e+04, -3.8733003e+03,  3.6100000e+02]
+            C:
+                range: [6.53, 7.65]
+                coefficients: [ 9.0737793e+03, -2.0355999e+03,  1.7800000e+02]
+        ch2:
+            A:
+                range: [7.51, 8.76]
+                coefficients: [-1.3392804e+04,  3.8513999e+03, -2.1800000e+02]
+            B:
+                range: [8.67, 10.15]
+                coefficients: [-3.0707996e+03,  1.0530000e+03, -4.0000000e+01]
+            C:
+                range: [10.01, 11.71]
+                coefficients: [-1.4632270e+04,  3.0245999e+03, -1.2700000e+02]
+        ch3:
+            A:
+                range: [11.55, 13.47]
+                coefficients: [-6.9051500e+04,  1.1490000e+04, -4.5800000e+02]
+            B:
+                range: [13.29, 15.52]
+                coefficients: [ 3.2627500e+03, -1.9200000e+02,  9.0000000e+00]
+            C:
+                range: [15.41, 18.02]
+                coefficients: [-1.2368500e+04,  1.4890000e+03, -3.6000000e+01]
+        ch4:
+            A:
+                range: [17.71, 20.94]
+                coefficients: [-1.1510681e+04,  1.2088000e+03, -2.7000000e+01]
+            B:
+                range: [20.69, 24.44]
+                coefficients: [-4.5252500e+03,  5.4800000e+02, -1.2000000e+01]
+            C:
+                range: [23.22, 28.1]
+                coefficients: [-4.9578794e+03,  5.5819995e+02, -1.2000000e+01]
