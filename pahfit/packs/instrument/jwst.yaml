@@ -4,7 +4,7 @@
 # This is the Instrument Pack for JWST spectroscopic observations.
 # The resolving power (lambda / delta_lambda, where delta_lamba is the
 # FWHM of the resolution element) is represented by a polynomial of
-# degree 3, and this file lists the coefficients CC of that
+# arbitrary degree.  This file lists the coefficients CC of that
 # polynomial, i.e.
 #
 # R = CC[0] + CC[1] * lambda + CC[2] * lambda^2 + CC[3] * lambda^3 + ...
@@ -13,8 +13,27 @@
 #
 # Resolution data from:
 #
-#  NIRSPEC: fits to resolution/dispersion curves [1]
-#  MIRI: TBD
+#  NIRSPEC: Fits to the JDox NIRESPEC resolution/dispersion curves [1]
+#  MIRI: From Labiano+ 2021
+#  https://doi.org/10.1051/0004-6361/202140614, with wavelength offset
+#  and polynomial parameters:
+#
+#  resolution = a + b (lam - lam0) + c (lam - lam0)^2  (lam in microns)
+#  
+#  lam0   a    b    c
+#  ====================
+#   5.3   3632 657  296  
+#   6.15  3619 567  361  
+#   7.1   3594 492  178  
+#   8.15  3516 298  -218 
+#   9.4   3293 301  -40  
+#   10.9  3247 256  -127 
+#   12.5  3011 40   -458 
+#   14.5  2371 69   9    
+#   16.75 2472 283  -36  
+#   19.2  1745 172  -27  
+#   22.25 1727 14   -12  
+#   26.05 1440 -67  -12  
 # [1]https://jwst-docs.stsci.edu/jwst-near-infrared-spectrograph/nirspec-instrumentation/nirspec-dispersers-and-filters#NIRSpecDispersersandFilters-DispersioncurvesfortheNIRSpecdispersers
 #
 # v0.1 July 2022
