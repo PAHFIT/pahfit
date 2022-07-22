@@ -57,7 +57,7 @@ def pack_element(segment):
             raise PAHFITPackError(f"Could not locate instrument segment {key} of {segment}")
     if d.get('polynomial') is None:
         try:
-            d['polynomial'] = Polynomial(d['coefficients'], domain=d['range'])
+            d['polynomial'] = Polynomial(d['coefficients'])
         except KeyError:
             raise PAHFITPackError(f"Incomplete segment name {segment}")
 
