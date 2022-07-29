@@ -9,13 +9,15 @@ heirarchical names, e.g. 'iso.sws.speed0.3a'.  For the full list of
 supported telescopes, instruments, and instrument modes, see TBD.
 """
 
-import glob, os
+import glob
+import os
 from numpy.polynomial import Polynomial
 from astropy.io.misc import yaml
 from pkg_resources import resource_filename
 from pahfit.errors import PAHFITPackError
 
 packs = {}
+
 
 def read_instrument_packs():
     """Read all instrument packs into the 'packs' variable."""
@@ -29,7 +31,7 @@ def read_instrument_packs():
         else:
             telescope = os.path.basename(pack).rstrip('.yaml')
             packs[telescope] = p
-            
+
 
 def pack_element(segment):
     """Return the pack element for the given segment name.
@@ -72,12 +74,14 @@ def ins_name(path, tree):
     else:
         yield path
 
+
 def instruments():
     """Return the fully qualified set of supported instrument names."""
     if len(packs) == 0:
         read_instrument_packs()
     return ins_name('', packs)
-        
+
+
 def resolution(segment, wave_micron):
     p = pack_element(segment)['polynomial']
     return p(wave_micron)
@@ -99,10 +103,12 @@ def fwhm(segment, wave_micron):
     The full-width at half maximum of an unresolved line spread
     function, at the relevant wavelength(s).
     """
-    return wave_micron/resolution(segment, wave_micron)
+    return wave_micron / resolution(segment, wave_micron)
+
 
 def wave_range(segment):
     """Return the segment wavelength range (a two element list) in microns."""
     return pack_element(segment)['range']
+
 
 read_instrument_packs()
