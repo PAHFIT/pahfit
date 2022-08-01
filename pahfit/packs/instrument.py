@@ -66,20 +66,21 @@ def pack_element(segment):
     return d
 
 
-def ins_name(path, tree):
+def _ins_name(path, tree):
+    """Generator for instrument names."""
     if isinstance(tree, dict) and not tree.get("range"):
         _dot = "." if len(path) > 0 else ""
         for key, sub in tree.items():
-            yield from ins_name(f"{path}{_dot}{key}", sub)
+            yield from _ins_name(f"{path}{_dot}{key}", sub)
     else:
         yield path
 
 
 def instruments():
-    """Return the fully qualified set of supported instrument names."""
+    """Returns fully qualified set of supported instrument names."""
     if len(packs) == 0:
         read_instrument_packs()
-    return ins_name('', packs)
+    return _ins_name('', packs)
 
 
 def resolution(segment, wave_micron):
