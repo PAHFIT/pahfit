@@ -10,6 +10,7 @@ from astropy.modeling.fitting import LevMarLSQFitter
 
 from pahfit.base import PAHFITBase
 from pahfit.instrument import wave_range
+from pahfit.features import Features
 
 from pahfit.component_models import BlackBody1D, S07_attenuation
 from astropy.modeling.physical_models import Drude1D
@@ -142,7 +143,7 @@ def initialize_model(packfile, instrumentname, obsdata, estimate_start=False):
     return pmodel
 
 
-def initialize_trimmed_model(packfile, obsdata):
+def initialize_trimmed_model(packfile, obsdata, instrumentname):
     """
     Initialize a model based on the packfile, ignoring components outside of the wavelength range.
 
@@ -162,7 +163,7 @@ def initialize_trimmed_model(packfile, obsdata):
     """
     # read in and edit the table before we parse it
     packfile_found = find_packfile(packfile)
-    t = Table.read(packfile_found, format="ipac")
+    t = Features.read(packfile_found)
 
     # determine wavelength range
     w = obsdata["x"].value
@@ -173,8 +174,8 @@ def initialize_trimmed_model(packfile, obsdata):
     keep_row = np.full(len(t), True)
 
     # Only keep drudes and gauss with center within 1 FWHM
-    is_drude_or_gauss = np.logical_or(t["Form"] == "Drude1D",
-                                      t["Form"] == "Gaussian1D")
+    is_drude_or_gauss = np.logical_or(t["kind"] == "dust_feature",
+                                      t["kind"] == "line")
     x0 = t[is_drude_or_gauss]["x_0"]
     fwhm = t[is_drude_or_gauss]["fwhm"]
     keep_row[is_drude_or_gauss] = np.logical_and(wmin < x0 + fwhm,
@@ -184,6 +185,12 @@ def initialize_trimmed_model(packfile, obsdata):
     print("Keeping these rows")
     print(t[keep_row])
     param_info = PAHFITBase.parse_table(t[keep_row])
+    param_info[2] = PAHFITBase.update_dictionary(param_info[2],
+                                                 instrumentname,
+                                                 update_fwhms=True)
+    param_info[3] = PAHFITBase.update_dictionary(param_info[3],
+                                                 instrumentname,
+                                                 update_fwhms=True)
 
     # and create a new model (and don't pass a file name, so that the
     # current contents of param_info are used)

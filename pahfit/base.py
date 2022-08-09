@@ -789,7 +789,11 @@ class PAHFITBase:
     @staticmethod
     def update_dictionary(feature_dict, instrumentname, update_fwhms=False):
         """
-        Update parameter dictionary based on the instrument name
+        Update parameter dictionary based on the instrument name.
+        Based on the instrument name, this function removes the 
+        features outside of the wavelength range and
+        updates the FWHMs of the lines. 
+
 
         Parameters
         ----------
@@ -834,9 +838,8 @@ class PAHFITBase:
 
         if update_fwhms:
             x_0_val = feature_dict['x_0']
-            print(x_0_val)
             fwhm_val = fwhm(instrumentname, x_0_val)
-            print(fwhm_val)
+            feature_dict.update({'fwhms': fwhm_val})
 
         return feature_dict
 
@@ -1046,6 +1049,10 @@ class PAHFITBase:
                 "fwhms_fixed":
                 _ingest_fixed(pack_table["fwhm"][:, 1][at_ind]),
             }
+
+        if att_info["names"] == 'silicate':
+            name_array = np.array(['S07_att'])
+            att_info.update({'names': name_array})
 
         return (bb_info, df_info, h2_info, ion_info, att_info)
 
