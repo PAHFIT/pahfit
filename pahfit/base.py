@@ -4,7 +4,7 @@ from pahfit.component_models import (
     S07_attenuation,
     att_Drude1D,
     AreaGaussian1D,
-    AreaDrude1D
+    AreaDrude1D,
 )
 from astropy.table import Table, vstack
 
@@ -624,7 +624,7 @@ class PAHFITBase:
             elif isinstance(component, AreaDrude1D):
 
                 # Calculate feature strength.
-                strength = component.area.value*1e-12
+                strength = component.area.value * 1e-12
 
                 strength_unc = None
 
@@ -664,7 +664,7 @@ class PAHFITBase:
             elif isinstance(component, AreaGaussian1D):
 
                 # Calculate feature strength.
-                strength = component.area.value*1e-12
+                strength = component.area.value * 1e-12
 
                 strength_unc = None
 

@@ -10,9 +10,15 @@ from astropy.modeling.fitting import LevMarLSQFitter
 
 from pahfit.base import PAHFITBase
 
-from pahfit.component_models import BlackBody1D, S07_attenuation, AreaDrude1D, AreaGaussian1D
-#from astropy.modeling.physical_models import Drude1D
-#from astropy.modeling.functional_models import Gaussian1D
+from pahfit.component_models import (
+    BlackBody1D,
+    S07_attenuation,
+    AreaDrude1D,
+    AreaGaussian1D,
+)
+
+# from astropy.modeling.physical_models import Drude1D
+# from astropy.modeling.functional_models import Gaussian1D
 
 
 __all__ = ["read_spectrum", "initialize_model", "fit_spectrum", "calculate_compounds"]

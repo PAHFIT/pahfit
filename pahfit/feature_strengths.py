@@ -4,7 +4,7 @@ from pahfit.component_models import (
     S07_attenuation,
     att_Drude1D,
     AreaGaussian1D,
-    AreaDrude1D
+    AreaDrude1D,
 )
 
 import numpy as np
@@ -36,7 +36,7 @@ def pah_feature_strength(ampl, fwhm, x_0):
     """
 
     # TODO: Use input units to determine conversion and feature strength units.
-    strength = (np.pi * const.c.to('micron/s') / 2) * (ampl * fwhm / x_0**2) * 1e-26
+    strength = (np.pi * const.c.to("micron/s") / 2) * (ampl * fwhm / x_0**2) * 1e-26
 
     return strength
 
@@ -63,7 +63,11 @@ def line_strength(ampl, mean, stddev):
 
     # TODO: Use input units to determine conversion and line strength units.
     fwhm = 2 * stddev * np.sqrt(2 * np.log(2))
-    strength = ((np.sqrt(np.pi / np.log(2))) * const.c.to('micron/s').value / 2) * (ampl * fwhm / mean**2) * 1e-26
+    strength = (
+        ((np.sqrt(np.pi / np.log(2))) * const.c.to("micron/s").value / 2)
+        * (ampl * fwhm / mean**2)
+        * 1e-26
+    )
 
     return strength
 
@@ -81,41 +85,49 @@ def featcombine(ftable):
         Astropy table containing combined dust feature strengths.
     """
     # Define combined strength dictionary.
-    cfdic = {'PAH_62': {'range': [6.2, 6.3]},
-             'PAH_77_C': {'range': [7.3, 7.9]},
-             'PAH_83': {'range': [8.3, 8.4]},
-             'PAH_86': {'range': [8.6, 8.7]},
-             'PAH_113_C': {'range': [11.2, 11.4]},
-             'PAH_120': {'range': [11.9, 12.1]},
-             'PAH_126_C': {'range': [12.6, 12.7]},
-             'PAH_136': {'range': [13.4, 13.6]},
-             'PAH_142': {'range': [14.1, 14.2]},
-             'PAH_164': {'range': [16.4, 16.5]},
-             'PAH_17_C': {'range': [16.4, 17.9]},
-             'PAH_174': {'range': [17.35, 17.45]}
-             }
+    cfdic = {
+        "PAH_62": {"range": [6.2, 6.3]},
+        "PAH_77_C": {"range": [7.3, 7.9]},
+        "PAH_83": {"range": [8.3, 8.4]},
+        "PAH_86": {"range": [8.6, 8.7]},
+        "PAH_113_C": {"range": [11.2, 11.4]},
+        "PAH_120": {"range": [11.9, 12.1]},
+        "PAH_126_C": {"range": [12.6, 12.7]},
+        "PAH_136": {"range": [13.4, 13.6]},
+        "PAH_142": {"range": [14.1, 14.2]},
+        "PAH_164": {"range": [16.4, 16.5]},
+        "PAH_17_C": {"range": [16.4, 17.9]},
+        "PAH_174": {"range": [17.35, 17.45]},
+    }
 
     # Create combined strength, unc, and eqw table.
     cftable = Table(
         names=("Name", "range_min", "range_max", "strength", "strength_unc", "eqw"),
-        dtype=("U25", "float64", "float64", "float64", "float64", "float64"))
+        dtype=("U25", "float64", "float64", "float64", "float64", "float64"),
+    )
 
     # Get indices of dust features.
     df_ind = np.concatenate(np.argwhere(ftable["Form"] == "AreaDrude1D"))
 
     # Get table subset containing only the dust features.
-    dfs = ftable[df_ind[0]:df_ind[-1] + 1]
+    dfs = ftable[df_ind[0] : df_ind[-1] + 1]
 
     # Iterate keys and calculate combined strengths.
     for feat in cfdic.keys():
-        mask = np.logical_and(dfs['x_0'] >= cfdic[feat]['range'][0], dfs['x_0'] <= cfdic[feat]['range'][-1])
-        cftable.add_row([feat,
-                         cfdic[feat]['range'][0],
-                         cfdic[feat]['range'][-1],
-                         np.sum(dfs[mask]['strength']),
-                         None,
-                         np.sum(dfs[mask]['eqw'])
-                         ])
+        mask = np.logical_and(
+            dfs["x_0"] >= cfdic[feat]["range"][0],
+            dfs["x_0"] <= cfdic[feat]["range"][-1],
+        )
+        cftable.add_row(
+            [
+                feat,
+                cfdic[feat]["range"][0],
+                cfdic[feat]["range"][-1],
+                np.sum(dfs[mask]["strength"]),
+                None,
+                np.sum(dfs[mask]["eqw"]),
+            ]
+        )
 
     return cftable
 
@@ -141,14 +153,14 @@ def eqws(comp_type, x_0, area, fwhm_stddev, obs_fit):
         the equivalent width of the feature
     """
     # Check if the emission component is Gaussian and calculate fwhm.
-    if comp_type == 'AreaGaussian1D':
+    if comp_type == "AreaGaussian1D":
         fwhm = 2 * fwhm_stddev * np.sqrt(2 * np.log(2))
     else:
         fwhm = fwhm_stddev
 
     # Get range and wavelength region for integration.
     low = x_0 - (fwhm * 6)
-    lmin = low if low > 0 else 0.
+    lmin = low if low > 0 else 0.0
     lmax = x_0 + (fwhm * 6)
     # lam = np.arange(100) / 99 * (lmax - lmin) + lmin
     lam = np.linspace(lmin, lmax, num=100)
@@ -163,16 +175,12 @@ def eqws(comp_type, x_0, area, fwhm_stddev, obs_fit):
         cont_model += cmodel
     continuum = np.nan_to_num(cont_model(lam))
 
-    if comp_type == 'AreaDrude1D':
-        drude = AreaDrude1D(area=area,
-                        x_0=x_0,
-                        fwhm=fwhm)
+    if comp_type == "AreaDrude1D":
+        drude = AreaDrude1D(area=area, x_0=x_0, fwhm=fwhm)
         lnu = drude(lam)
 
-    elif comp_type == 'AreaGaussian1D':
-        gauss = AreaGaussian1D(area=area,
-                           mean=x_0,
-                           stddev=fwhm_stddev)
+    elif comp_type == "AreaGaussian1D":
+        gauss = AreaGaussian1D(area=area, mean=x_0, stddev=fwhm_stddev)
         lnu = gauss(lam)
 
     # Following the EQW calculation in IDL PAHFIT, we define a default broad limit (bl).
