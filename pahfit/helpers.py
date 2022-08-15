@@ -136,6 +136,7 @@ def initialize_model(packfile, instrumentname, obsdata, estimate_start=False):
     pmodel = PAHFITBase(
         obsdata["x"].value,
         obsdata["y"].value,
+        instrumentname,
         estimate_start=estimate_start,
         filename=packfile_found,
     )

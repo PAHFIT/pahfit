@@ -80,7 +80,7 @@ class SciPackExGal:
         # rest for for the dust emission
         bb_temps = [5000.0, 300.0, 200.0, 135.0, 90.0, 65.0, 50.0, 40.0, 35.0]
         n_bb = len(bb_temps)
-        bb_names = ["StellarBB"] + ["ContMBB{}".format(k) for k in range(n_bb - 1)]
+        bb_names = ["starlight"] + [f"dust_cont{k:02}" for k in range(n_bb - 1)]
         bb_amps = np.full(n_bb, 1.0e-10)
         self.bb_info = {
             "names": bb_names,
