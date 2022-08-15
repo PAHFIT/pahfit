@@ -2,17 +2,24 @@ import numpy as np
 
 from pahfit.PAHFIT_Spitzer_Exgal import InstPackSpitzerIRSSLLL, SciPackExGal
 from pahfit.helpers import read_spectrum, initialize_model
+from pahfit.instrument import wave_range
 
 
 def test_classic_pack():
+    """Compares param_info between one that was constructed from the classic
+    input file, and one that has been hardcoded."""
     # first use the static code to generate the feature dictonaries
     # instrument pack
     spitzer_sl_ll_pack = InstPackSpitzerIRSSLLL()
     # science pack
     sci_pack = SciPackExGal(spitzer_sl_ll_pack)
-    oparam_info = (sci_pack.bb_info, sci_pack.dust_features,
-                   sci_pack.h2_features, sci_pack.ion_features,
-                   sci_pack.att_info)
+    oparam_info = (
+        sci_pack.bb_info,
+        sci_pack.dust_features,
+        sci_pack.h2_features,
+        sci_pack.ion_features,
+        sci_pack.att_info,
+    )
 
     # now read in the equivalent info from a file
 
@@ -21,8 +28,23 @@ def test_classic_pack():
     obsdata = read_spectrum(spectrumfile)
 
     # setup the model
-    packfile = "scipack_ExGal_SpitzerIRSSLLL.ipac"
-    pmodel = initialize_model(packfile, obsdata)
+    packfile = "classic.yaml"
+    # changed this to the yaml file + instrument model paradigm. Not
+    # entirely correct for that reason. Since the new code modifies line
+    # widths, this will probably still fail.
+    instrumentname = "spitzer.irs.sl.2"
+    # For now, we can hack the obsdata to the right wavelength range
+    # like this (eventually we want an approximate instrument model over
+    # the entire range, or something that splits up the input spectrum)
+    wave_instrument = wave_range(instrumentname)
+    keep_wavs = (wave_instrument[0] < obsdata["x"].value) & (
+        obsdata["x"].value < wave_instrument[1]
+    )
+    obsdata["x"] = obsdata["x"][keep_wavs]
+    obsdata["y"] = obsdata["y"][keep_wavs]
+    obsdata["unc"] = obsdata["unc"][keep_wavs]
+    pmodel = initialize_model(packfile, instrumentname, obsdata)
+
     nparam_info = pmodel.param_info
 
     # check the different dictonaries are equivalent
@@ -44,8 +66,6 @@ def test_classic_pack():
                     else:
                         assert o2 == n2
             elif isinstance(oparam_info[k][ckey][0], float):
-                np.testing.assert_allclose(oparam_info[k][ckey],
-                                           nparam_info[k][ckey])
+                np.testing.assert_allclose(oparam_info[k][ckey], nparam_info[k][ckey])
             else:
-                np.testing.assert_equal(oparam_info[k][ckey],
-                                        nparam_info[k][ckey])
+                np.testing.assert_equal(oparam_info[k][ckey], nparam_info[k][ckey])
