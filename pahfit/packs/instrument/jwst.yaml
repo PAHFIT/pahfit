@@ -1,0 +1,109 @@
+# ---
+# PAHFIT Instrument Pack, see https://github.com/PAHFIT/pahfit/wiki/File-Formats for more information
+
+# This is the Instrument Pack for JWST spectroscopic observations.
+# The resolving power (lambda / delta_lambda, where delta_lamba is the
+# FWHM of the resolution element) is represented by a polynomial of
+# arbitrary degree.  This file lists the coefficients CC of that
+# polynomial, i.e.
+#
+# R = CC[0] + CC[1] * lambda + CC[2] * lambda^2 + CC[3] * lambda^3 + ...
+#
+# where lambda is expressed in microns as well. 
+#
+# Resolution data from:
+#
+#  NIRSPEC: Fits to the JDox NIRESPEC resolution/dispersion curves [1]
+#  MIRI: From Labiano+ 2021
+#  https://doi.org/10.1051/0004-6361/202140614, with wavelength offset
+#  and polynomial parameters:
+#
+#  resolution = a + b (lam - lam0) + c (lam - lam0)^2  (lam in microns)
+#  
+#  lam0   a    b    c
+#  ====================
+#   5.3   3632 657  296  
+#   6.15  3619 567  361  
+#   7.1   3594 492  178  
+#   8.15  3516 298  -218 
+#   9.4   3293 301  -40  
+#   10.9  3247 256  -127 
+#   12.5  3011 40   -458 
+#   14.5  2371 69   9    
+#   16.75 2472 283  -36  
+#   19.2  1745 172  -27  
+#   22.25 1727 14   -12  
+#   26.05 1440 -67  -12  
+# [1]https://jwst-docs.stsci.edu/jwst-near-infrared-spectrograph/nirspec-instrumentation/nirspec-dispersers-and-filters#NIRSpecDispersersandFilters-DispersioncurvesfortheNIRSpecdispersers
+#
+# v0.2 July 2022
+
+nirspec:
+    prism:
+        range: [0.6, 5.3]
+        coefficients: [118.673035, 201.54498, 87.37993, -35.558907, 82.88188, 110.60916, -171.3971, -108.33989, 136.90254]
+    g140:
+        medium:
+            range: [0.9, 1.89]
+            coefficients: [891.6646, 539.4452, 4.216203]
+        high:
+            range: [0.95, 1.89]
+            coefficients: [2291.3574, 1404.4167, 88.98144, 36.30806]
+
+    g235:
+        medium:
+            range: [1.66, 3.17]
+            coefficients: [1064.852, 431.03555, 3.3509896]
+        high:
+            range: [1.66, 3.17]
+            coefficients: [2646.0334, 992.6818, 52.8571, 17.77239]
+
+    g395:
+        medium:
+            range: [2.87, 5.27]
+            coefficients: [1.0767772e+03, 4.4848569e+02, 3.7253866e+00, 7.2353613e-01]
+        high:
+            range: [2.87, 5.27]
+            coefficients: [2925.7283, 1327.8862, 106.61604, 20.827995, -10.031256]
+miri:
+    mrs:
+        ch1:
+            A:
+                range: [4.9, 5.74]
+                coefficients: [ 8.4645410e+03, -2.4806001e+03,  2.9600000e+02]
+            B:
+                range: [5.66, 6.63]
+                coefficients: [ 1.3785873e+04, -3.8733003e+03,  3.6100000e+02]
+            C:
+                range: [6.53, 7.65]
+                coefficients: [ 9.0737793e+03, -2.0355999e+03,  1.7800000e+02]
+        ch2:
+            A:
+                range: [7.51, 8.76]
+                coefficients: [-1.3392804e+04,  3.8513999e+03, -2.1800000e+02]
+            B:
+                range: [8.67, 10.15]
+                coefficients: [-3.0707996e+03,  1.0530000e+03, -4.0000000e+01]
+            C:
+                range: [10.01, 11.71]
+                coefficients: [-1.4632270e+04,  3.0245999e+03, -1.2700000e+02]
+        ch3:
+            A:
+                range: [11.55, 13.47]
+                coefficients: [-6.9051500e+04,  1.1490000e+04, -4.5800000e+02]
+            B:
+                range: [13.29, 15.52]
+                coefficients: [ 3.2627500e+03, -1.9200000e+02,  9.0000000e+00]
+            C:
+                range: [15.41, 18.02]
+                coefficients: [-1.2368500e+04,  1.4890000e+03, -3.6000000e+01]
+        ch4:
+            A:
+                range: [17.71, 20.94]
+                coefficients: [-1.1510681e+04,  1.2088000e+03, -2.7000000e+01]
+            B:
+                range: [20.69, 24.44]
+                coefficients: [-4.5252500e+03,  5.4800000e+02, -1.2000000e+01]
+            C:
+                range: [23.22, 28.1]
+                coefficients: [-4.9578794e+03,  5.5819995e+02, -1.2000000e+01]
