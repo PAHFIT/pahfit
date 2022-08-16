@@ -20,12 +20,11 @@ class BlackBody1D(Fittable1DModel):
 
     @staticmethod
     def evaluate(x, amplitude, temperature):
-        """
-        """
+        """ """
         return (
             amplitude
             * 3.97289e13
-            / x ** 3
+            / x**3
             / (np.exp(1.4387752e4 / x / temperature) - 1.0)
         )
 
@@ -82,7 +81,9 @@ class S07_attenuation(Fittable1DModel):
         # Extend kvt profile to shorter wavelengths
         if min(in_x) < min(kvt_wav):
             kvt_wav_short = in_x[in_x < min(kvt_wav)]
-            kvt_int_short_tmp = min(kvt_int) * np.exp(2.03 * (kvt_wav_short - min(kvt_wav)))
+            kvt_int_short_tmp = min(kvt_int) * np.exp(
+                2.03 * (kvt_wav_short - min(kvt_wav))
+            )
             # Since kvt_int_shoft_tmp does not reach min(kvt_int),
             # we scale it to stitch it.
             kvt_int_short = kvt_int_short_tmp * (kvt_int[0] / max(kvt_int_short_tmp))
@@ -141,15 +142,16 @@ class AreaGaussian1D(Fittable1DModel):
     area = Parameter(min=0.0)
     mean = Parameter(min=0.0)
 
-  # Ensure stddev makes sense if its bounds are not explicitly set.
-  # stddev must be non-zero and positive.
-    stddev = Parameter(default=1, min=0.0) 
+    # Ensure stddev makes sense if its bounds are not explicitly set.
+    # stddev must be non-zero and positive.
+    stddev = Parameter(default=1, min=0.0)
+
     @staticmethod
     def evaluate(x, area, mean, stddev):
         """
         Spectral line features.
         Calculation is for a Gaussian profile.
-        The integrated intensity of the Gaussian profile is 
+        The integrated intensity of the Gaussian profile is
         I = (sqrt(pi/log2))*(c * central intensity * fwhm / mean^2)
         Parameters
         ----------
@@ -158,8 +160,9 @@ class AreaGaussian1D(Fittable1DModel):
         mean (x_0) : float
         """
 
-        return ((1e14*area*(mean**2)/(np.sqrt(2*np.pi)*299792458*1e6*stddev)) * np.exp(
-          -0.5 * (x - mean) ** 2 / stddev ** 2))
+        return (
+            1e14 * area * (mean**2) / (np.sqrt(2 * np.pi) * 299792458 * 1e6 * stddev)
+        ) * np.exp(-0.5 * (x - mean) ** 2 / stddev**2)
 
 
 class AreaDrude1D(Fittable1DModel):
@@ -173,15 +176,19 @@ class AreaDrude1D(Fittable1DModel):
         """
         Smith, et al. (2007) dust features model.
         Calculation is for a Drude profile (equation defining it is present is setion 4.1.4).
-        The integrated intensity of the drude profile is 
+        The integrated intensity of the drude profile is
         I = (pi*c/2)*(central intensity * fractional fwhm / central wavelength)
-        
+
         Parameters
         ----------
         area : float
         fwhm : float
         central intensity (x_0) : float
         """
-        frac_fwhm = fwhm/x_0
-        return (((1e14*2 /(np.pi * 299792458*1e6 ))*(area * x_0 / frac_fwhm)*(frac_fwhm**2)/
-        (((x / x_0 - x_0 / x)**2 + frac_fwhm**2))))
+        frac_fwhm = fwhm / x_0
+        return (
+            (1e14 * 2 / (np.pi * 299792458 * 1e6))
+            * (area * x_0 / frac_fwhm)
+            * (frac_fwhm**2)
+            / (((x / x_0 - x_0 / x) ** 2 + frac_fwhm**2))
+        )
