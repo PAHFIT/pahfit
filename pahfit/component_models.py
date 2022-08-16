@@ -138,12 +138,12 @@ class att_Drude1D(Fittable1DModel):
 
 class AreaGaussian1D(Fittable1DModel):
 
-    area = Parameter(min = 0.0)
-    mean = Parameter(min =0.0)
+    area = Parameter(min=0.0)
+    mean = Parameter(min=0.0)
 
   # Ensure stddev makes sense if its bounds are not explicitly set.
   # stddev must be non-zero and positive.
-    stddev = Parameter(default=1, min = 0.0) 
+    stddev = Parameter(default=1, min=0.0) 
     @staticmethod
     def evaluate(x, area, mean, stddev):
         """
@@ -164,9 +164,9 @@ class AreaGaussian1D(Fittable1DModel):
 
 class AreaDrude1D(Fittable1DModel):
 
-    area = Parameter(min = 0.0)
-    x_0 = Parameter(min = 0.0)
-    fwhm = Parameter(default=1, min = 0.0)
+    area = Parameter(min=0.0)
+    x_0 = Parameter(min=0.0)
+    fwhm = Parameter(default=1, min=0.0)
 
     @staticmethod
     def evaluate(x, area, x_0, fwhm):
