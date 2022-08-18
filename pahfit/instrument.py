@@ -30,12 +30,13 @@ def read_instrument_packs():
             with open(pack) as fd:
                 p = yaml.load(fd)
         except IOError as e:
-            raise PAHFITPackError("Error reading instrument pack file\n"
-                                  f"\t{pack}\n\t{repr(e)}")
+            raise PAHFITPackError(
+                "Error reading instrument pack file\n" f"\t{pack}\n\t{repr(e)}"
+            )
         else:
-            telescope = os.path.basename(pack).rstrip('.yaml')
+            telescope = os.path.basename(pack).rstrip(".yaml")
             packs[telescope] = p
-    packs = dict(_ins_items('', packs))  # Flatten list
+    packs = dict(_ins_items("", packs))  # Flatten list
 
 
 def _ins_items(path, tree):
@@ -83,7 +84,7 @@ def pack_element(segments):
         if not sm:
             raise PAHFITPackError(f"Could not locate instrument segment {segment}")
         for s in sm:
-            if packs[s].get('polynomial') is None:
+            if packs[s].get("polynomial") is None:
                 try:
                     p = Polynomial(packs[s]['coefficients'])
                     packs[s]['polynomial'] = p
@@ -230,7 +231,7 @@ def wave_range(segment):
     matching), the return value is a list of two element lists [min,
     max].
     """
-    ret = [x['range'] for x in pack_element(segment)]
+    ret = [x["range"] for x in pack_element(segment)]
     if len(ret) == 1:
         return ret[0]
     else:
