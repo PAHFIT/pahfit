@@ -126,6 +126,23 @@ def instruments(match=None):
 
 
 def resolution(segment, wave_micron):
+    """
+    Parameters
+    ----------
+    segment: The fully qualified segment name, as a string.
+
+    wave_micron: The observed-frame (instrument-relative) wavelength
+        in microns, as a scalar or numpy array of size N.
+
+    Returns
+    -------
+    r: 1D array shape (N,) or 2D masked_array shape (N, 3)
+        The spectral resolution at the given wavelengths. In case of
+        multiple segments: r[:, 0] is mean resolution, r[:, 1] is min
+        resolution or masked., r[:, 2] is max resolution or masked. The
+        values of the latter two arrays are masked if only one segment
+        covers this wavelength.
+    """
     _packs = pack_element(segment)
     npk = len(_packs)
     if npk == 1:
@@ -159,16 +176,16 @@ def fwhm(segment, wave_micron):
       segment: The fully qualified segment name, as a string.
 
       wave_micron: The observed-frame (instrument-relative) wavelength
-        in microns, as a scalar or numpy array.
+        in microns, as a scalar or numpy array of size N.
 
     Returns:
     --------
 
     The full-width at half maxima of unresolved line spread functions
     at the relevant wavelength(s), either as a scalar (if only one
-    segment applied) or as a 3 element tuple of:
+    segment applied) or as a (N, 3) shape array of:
 
-      (value, low bound, high bound)
+      [[value, low bound, high bound], ...] for every wavelength
 
     """
 
@@ -178,6 +195,40 @@ def fwhm(segment, wave_micron):
         return ret[..., (0, 2, 1)]  # swap lower with upper (inverse!)
     else:
         return wave_micron / r
+
+
+def fwhm_recommendation(segment, wave_micron):
+    """Returns recommended parameters for the fwhm.
+
+    This function checks the shape of the output of fhwm(), and returns consistent values.
+    - Value as a starting point
+    - Min and max where there is segment overlap, masked where there is no overlap
+    - 'fixed' flag, False where there is overlap
+
+    Parameters
+    ----------
+    segment: The fully qualified segment name, as a string.
+
+    wave_micron: The observed-frame (instrument-relative) wavelength
+        in microns, as a scalar or numpy array of size N.
+
+    Returns
+    -------
+    Tuple of lists / arrays. Each one of size len(wave_micron)
+        (float, bool, float, float)
+        (fwhm, bool fixed, low bound, high bound)
+
+    """
+    N = len(wave_micron)
+    fwhm_output = fwhm(segment, wave_micron)
+    if len(fwhm_output.shape) == 1:
+        return fwhm_output, [True] * N, [0.] * N, [0.] * N
+    else:
+        # when a wavelength is covered by only one segment, the
+        # recommendation is to fix the fwhm. In case of multiple, it
+        # should be variable, between the given upper and lower bounds
+        fixed = fwhm_output[: , 1].mask
+        return fwhm_output[:, 0], fixed, fwhm_output[:, 1], fwhm_output[:, 2]
 
 
 def wave_range(segment):
@@ -193,7 +244,7 @@ def wave_range(segment):
         return ret
 
 
-def test_wave_range(wave_micron, segments):
+def test_wave_minmax(wave_micron, segments):
     """Return True if the instrument range encompasses the given wavelengths
 
     For now, it is just based on the mininum and maximum, but it could
@@ -215,6 +266,28 @@ def test_wave_range(wave_micron, segments):
     rmin = min(r[0] for r in ranges)
     rmax = max(r[1] for r in ranges)
     return rmin <= wmin and wmax <= rmax
+
+
+def test_waves_in_any_segment(wave_micron, segments):
+    """Test if each given wavelength is covered by at least one instrument
+
+    Parameters
+    ----------
+    wave_micron: dimensionless numpy array of wavelengths in micron
+
+    segments: list of segments
+
+    Returns
+    -------
+    np.array of bool, True where wave_micron[i] is is the range of any of the segments."""
+
+    # for each instrument range, test all the wavelengths (not necessarily sorted)
+    ranges = [x["range"] for x in pack_element(segments)]
+    in_range_per_segment = [
+        (rmin <= wave_micron) & (wave_micron <= rmax) for (rmin, rmax) in ranges
+    ]
+    in_range_any_segment = np.any(np.array(in_range_per_segment), axis=0)
+    return in_range_any_segment
 
 
 read_instrument_packs()

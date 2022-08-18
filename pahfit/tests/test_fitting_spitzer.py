@@ -5,13 +5,16 @@ from pahfit.helpers import read_spectrum, initialize_model, fit_spectrum
 
 def test_fitting_m101():
 
-    # read in the spectrum
+    # read in the spectrum (goes from 5.257 to 38.299)
     spectrumfile = "M101_Nucleus_irs.ipac"
     obsdata = read_spectrum(spectrumfile)
 
-    # setup the model
-    packfile = "scipack_ExGal_SpitzerIRSSLLL.ipac"
-    pmodel = initialize_model(packfile, obsdata, estimate_start=True)
+    # Setup the model. Keep the old pack as a comment for later reference.
+    # packfile = "scipack_ExGal_SpitzerIRSSLLL.ipac"
+    packfile = "classic.yaml"
+    # use a spitzer instrument model that covers the required range. SL1, SL2, LL1, LL2 should do
+    instrumentname = [f"spitzer.irs.{mode}" for mode in ('sl.2', 'sl.2', 'll.2', 'll.1')]
+    pmodel = initialize_model(packfile, instrumentname, obsdata, estimate_start=True)
 
     # fit the spectrum
     obsfit = fit_spectrum(obsdata, pmodel, maxiter=1000)
