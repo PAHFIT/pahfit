@@ -843,7 +843,7 @@ class PAHFITBase:
             feature_dict.update(
                 {
                     "fwhms": values,
-                    "fwhms_fixed": fixed.tolist(),
+                    "fwhms_fixed": fixed,
                     "fwhms_limits": list(zip(mins, maxes)),
                 }
             )
