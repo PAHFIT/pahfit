@@ -192,4 +192,28 @@ def wave_range(segment):
         return ret
 
 
+def test_wave_range(wave_micron, segments):
+    """Return True if the instrument range encompasses the given wavelengths
+
+    For now, it is just based on the mininum and maximum, but it could
+    check all the wavelengths in the future, to make sure that all
+    observational data is covered by a valid instrument model.
+
+    Parameters
+    ----------
+    wave_micron: 1D array-like (not quantity)
+        list of wavelengths in micron
+
+    segments: list of str
+        list of instrument segment names, as defined by the pack_element function
+
+    """
+    ranges = [x["range"] for x in pack_element(segments)]
+    wmin = min(wave_micron)
+    wmax = max(wave_micron)
+    rmin = min(r[0] for r in ranges)
+    rmax = max(r[1] for r in ranges)
+    return rmin <= wmin and wmax <= rmax
+
+
 read_instrument_packs()
