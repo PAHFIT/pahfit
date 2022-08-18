@@ -214,7 +214,6 @@ def fwhm(segment, wave_micron, **kwargs):
 
     The fwhm in microns for `wave_micron', in the format specified by
     `resolution'.
-
     """
 
     r = resolution(segment, wave_micron, **kwargs)
@@ -223,6 +222,40 @@ def fwhm(segment, wave_micron, **kwargs):
         return ret[..., (0, 2, 1)]  # swap lower with upper (inverse!)
     else:
         return wave_micron / r
+
+
+def fwhm_recommendation(segment, wave_micron):
+    """Returns recommended parameters for the fwhm.
+
+    This function checks the shape of the output of fhwm(), and returns consistent values.
+    - Value as a starting point
+    - Min and max where there is segment overlap, masked where there is no overlap
+    - 'fixed' flag, False where there is overlap
+
+    Parameters
+    ----------
+    segment: The fully qualified segment name, as a string.
+
+    wave_micron: The observed-frame (instrument-relative) wavelength
+        in microns, as a scalar or numpy array of size N.
+
+    Returns
+    -------
+    Tuple of lists / arrays. Each one of size len(wave_micron)
+        (float, bool, float, float)
+        (fwhm, bool fixed, low bound, high bound)
+
+    """
+    N = len(wave_micron)
+    fwhm_output = fwhm(segment, wave_micron)
+    if len(fwhm_output.shape) == 1:
+        return fwhm_output, [True] * N, [0.] * N, [0.] * N
+    else:
+        # when a wavelength is covered by only one segment, the
+        # recommendation is to fix the fwhm. In case of multiple, it
+        # should be variable, between the given upper and lower bounds
+        fixed = fwhm_output[: , 1].mask
+        return fwhm_output[:, 0], fixed, fwhm_output[:, 1], fwhm_output[:, 2]
 
 
 def wave_range(segment):
@@ -351,6 +384,28 @@ def within_segment(wave_micron, segments, fwhm_near=None, wave_bounds=None):
             rng[1] += s['range_fwhm'][1] * fwhm_near
         res.append((wave_micron >= rng[0]) & (wave_micron <= rng[1]))
     return np.any(res, 0)
+
+
+def test_waves_in_any_segment(wave_micron, segments):
+    """Test if each given wavelength is covered by at least one instrument
+
+    Parameters
+    ----------
+    wave_micron: dimensionless numpy array of wavelengths in micron
+
+    segments: list of segments
+
+    Returns
+    -------
+    np.array of bool, True where wave_micron[i] is is the range of any of the segments."""
+
+    # for each instrument range, test all the wavelengths (not necessarily sorted)
+    ranges = [x["range"] for x in pack_element(segments)]
+    in_range_per_segment = [
+        (rmin <= wave_micron) & (wave_micron <= rmax) for (rmin, rmax) in ranges
+    ]
+    in_range_any_segment = np.any(np.array(in_range_per_segment), axis=0)
+    return in_range_any_segment
 
 
 read_instrument_packs()
