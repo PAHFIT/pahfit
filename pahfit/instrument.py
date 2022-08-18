@@ -228,9 +228,13 @@ def fwhm_recommendation(segment, wave_micron):
     """Returns recommended parameters for the fwhm.
 
     This function checks the shape of the output of fhwm(), and returns consistent values.
-    - Value as a starting point
-    - Min and max where there is segment overlap, masked where there is no overlap
-    - 'fixed' flag, False where there is overlap
+    - value as a starting point
+    - upper and lower, or masked where there is no overlap
+    - 'fixed' flag
+
+    When a wavelength is covered by only one segment, the recommendation
+    is to fix the fwhm. In case of multiple, it should be variable,
+    between the given upper and lower bounds.
 
     Parameters
     ----------
@@ -251,10 +255,10 @@ def fwhm_recommendation(segment, wave_micron):
     if len(fwhm_output.shape) == 1:
         return fwhm_output, [True] * N, [0.] * N, [0.] * N
     else:
-        # when a wavelength is covered by only one segment, the
-        # recommendation is to fix the fwhm. In case of multiple, it
-        # should be variable, between the given upper and lower bounds
-        fixed = list(fwhm_output[: , 1].mask)
+        # We need to be careful here, because for astropy a numpy.bool
+        # does not work for the 'fixed' parameter. It needs to be a
+        # regular bool. Tolist() solves this.
+        fixed = fwhm_output[: , 1].mask.tolist()
         return fwhm_output[:, 0], fixed, fwhm_output[:, 1], fwhm_output[:, 2]
 
 
