@@ -29,12 +29,13 @@ def read_instrument_packs():
             with open(pack) as fd:
                 p = yaml.load(fd)
         except IOError as e:
-            raise PAHFITPackError("Error reading instrument pack file\n"
-                                  f"\t{pack}\n\t{repr(e)}")
+            raise PAHFITPackError(
+                "Error reading instrument pack file\n" f"\t{pack}\n\t{repr(e)}"
+            )
         else:
-            telescope = os.path.basename(pack).rstrip('.yaml')
+            telescope = os.path.basename(pack).rstrip(".yaml")
             packs[telescope] = p
-    packs = dict(_ins_items('', packs))  # Flatten list
+    packs = dict(_ins_items("", packs))  # Flatten list
 
 
 def pack_element(segments):
@@ -72,9 +73,9 @@ def pack_element(segments):
         if not sm:
             raise PAHFITPackError(f"Could not locate instrument segment {segment}")
         for s in sm:
-            if packs[s].get('polynomial') is None:
+            if packs[s].get("polynomial") is None:
                 try:
-                    packs[s]['polynomial'] = Polynomial(packs[s]['coefficients'])
+                    packs[s]["polynomial"] = Polynomial(packs[s]["coefficients"])
                 except KeyError:
                     raise PAHFITPackError(f"Invalid instrument pack {s}")
             ret.append(packs[s])
@@ -128,14 +129,14 @@ def resolution(segment, wave_micron):
     _packs = pack_element(segment)
     npk = len(_packs)
     if npk == 1:
-        return _packs[0]['polynomial'](wave_micron)
+        return _packs[0]["polynomial"](wave_micron)
 
     wave_micron = np.atleast_1d(wave_micron)
 
     res = np.ma.empty((npk,) + wave_micron.shape)
     for i, p in enumerate(_packs):
-        inside = (wave_micron >= p['range'][0]) & (wave_micron <= p['range'][1])
-        res[i, inside] = p['polynomial'](wave_micron[inside])
+        inside = (wave_micron >= p["range"][0]) & (wave_micron <= p["range"][1])
+        res[i, inside] = p["polynomial"](wave_micron[inside])
         res[i, ~inside] = np.ma.masked
 
     out = np.ma.empty_like(wave_micron, shape=wave_micron.shape + (3,))
@@ -185,7 +186,7 @@ def wave_range(segment):
     matching), the return value is a list of two element lists [min,
     max].
     """
-    ret = [x['range'] for x in pack_element(segment)]
+    ret = [x["range"] for x in pack_element(segment)]
     if len(ret) == 1:
         return ret[0]
     else:
