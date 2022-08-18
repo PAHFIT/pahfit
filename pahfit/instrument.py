@@ -215,7 +215,7 @@ def fwhm_recommendation(segment, wave_micron):
     Returns
     -------
     Tuple of lists / arrays. Each one of size len(wave_micron)
-        (float, bool, float, float)
+        (array float, list bool, array float, array float)
         (fwhm, bool fixed, low bound, high bound)
 
     """
@@ -227,7 +227,7 @@ def fwhm_recommendation(segment, wave_micron):
         # when a wavelength is covered by only one segment, the
         # recommendation is to fix the fwhm. In case of multiple, it
         # should be variable, between the given upper and lower bounds
-        fixed = fwhm_output[: , 1].mask
+        fixed = list(fwhm_output[: , 1].mask)
         return fwhm_output[:, 0], fixed, fwhm_output[:, 1], fwhm_output[:, 2]
 
 
