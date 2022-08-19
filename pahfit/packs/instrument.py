@@ -37,6 +37,16 @@ def read_instrument_packs():
     packs = dict(_ins_items('', packs))  # Flatten list
 
 
+def _ins_items(path, tree):
+    """Generator for traversing packs."""
+    if isinstance(tree, dict) and not tree.get("range"):
+        _dot = "." if len(path) > 0 else ""
+        for key, sub in tree.items():
+            yield from _ins_items(f"{path}{_dot}{key}", sub)
+    else:
+        yield path, tree
+
+
 def pack_element(segments):
     """Return the pack element(s) for the given segment name(s).
 
@@ -80,16 +90,6 @@ def pack_element(segments):
             ret.append(packs[s])
 
     return ret
-
-
-def _ins_items(path, tree):
-    """Generator for traversing packs."""
-    if isinstance(tree, dict) and not tree.get("range"):
-        _dot = "." if len(path) > 0 else ""
-        for key, sub in tree.items():
-            yield from _ins_items(f"{path}{_dot}{key}", sub)
-    else:
-        yield path, tree
 
 
 def instruments(match=None):
@@ -143,7 +143,7 @@ def resolution(segment, wave_micron):
     out[..., 0] = np.mean(res, 0)
 
     multi = np.count_nonzero(res, 0) > 1  # waves matching more than one segment
-    if np.count_nonzero(multi) > 0:
+    if np.count_nonzero(multi) > 0:  # add lower/upper bounds
         out[multi, 1] = np.min(res[:, multi], 0)
         out[multi, 2] = np.max(res[:, multi], 0)
 
@@ -155,10 +155,12 @@ def fwhm(segment, wave_micron):
 
     Arguments:
     ----------
-      segment: The fully qualified segment name, as a string.
+
+      segment: The segment name or list of names, potentially
+        including glob chars.  See pack_element.
 
       wave_micron: The observed-frame (instrument-relative) wavelength
-        in microns, as a scalar or numpy array.
+        in microns, as a scalar or numpy array of any shape.
 
     Returns:
     --------
