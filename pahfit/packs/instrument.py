@@ -84,7 +84,9 @@ def pack_element(segments):
         for s in sm:
             if packs[s].get('polynomial') is None:
                 try:
-                    packs[s]['polynomial'] = Polynomial(packs[s]['coefficients'])
+                    p = Polynomial(packs[s]['coefficients'])
+                    packs[s]['polynomial'] = p
+                    packs[s]['range_fwhm'] = [x / p(x) for x in packs[s]['range']]
                 except KeyError:
                     raise PAHFITPackError(f"Invalid instrument pack {s}")
             ret.append(packs[s])
@@ -192,6 +194,42 @@ def wave_range(segment):
         return ret[0]
     else:
         return ret
+
+
+def within_segment(wave_micron, segments, fwhm_near=None):
+    """Return a mask indicating which wavelengths are in (or near) the
+    wavelength range of the given segment(s).
+
+    Arguments:
+    ----------
+      segment: The segment name or list of names, potentially
+        including glob chars.  See `pack_element'.
+
+      wave_micron: The observed-frame (instrument-relative) wavelength
+        in microns, as a scalar or numpy array of any shape.
+
+      fwhm_near (optional, default: None): If not None, mark a
+        wavelength in a segment (or set of segments) if it falls
+        within `fwhm_near'*FWHM of any segment's end.  Note that, to
+        avoid extrapolation, the FWHM of interest is calculated at the
+        segment endpoint.
+
+    Returns:
+    --------
+
+    A boolean mask of identical shape as `wave_micron', indicating
+    which wavelength are within (or near to) some segment.
+
+    """
+    res = []
+    for s in pack_element(segments):
+        rng = s['range']
+        if fwhm_near:
+            rng = rng.copy()
+            rng[0] -= s['range_fwhm'][0] * fwhm_near
+            rng[1] += s['range_fwhm'][1] * fwhm_near
+        res.append((wave_micron >= rng[0]) & (wave_micron <= rng[1]))
+    return np.any(res, 0)
 
 
 read_instrument_packs()
