@@ -126,10 +126,42 @@ def instruments(match=None):
         return list(ins)
 
 
-def resolution(segment, wave_micron):
+def resolution(segment, wave_micron, as_bounded=False):
+    """Return the resolution for `segment' at one more more
+    wavelengths.
+
+    Arguments:
+    ----------
+
+      segment: The segment name or list of names, potentially
+        including glob chars.  See pack_element.
+
+      wave_micron: The observed-frame (instrument-relative) wavelength
+        in microns, as a scalar or numpy array of any shape.
+
+      as_bounded (optional, default: False): always return bounded
+        variables (i.e. with shape (..., 3)), even when only one segment
+        is used.
+
+    Returns:
+    --------
+
+    The resolution (wavelength divided by full-width at half maxima)
+    of unresolved line spread functions at the relevant wavelength(s),
+    either as a scalar or array (if only one segment applied and
+    `as_bounded' is not True) or as a masked array of 3 element tuples
+    specifying:
+
+      (value, low bound, high bound)
+
+    otherwise
+
+    """
+
     _packs = pack_element(segment)
     npk = len(_packs)
-    if npk == 1:
+
+    if npk == 1 and not as_bounded:
         return _packs[0]['polynomial'](wave_micron)
 
     wave_micron = np.atleast_1d(wave_micron)
@@ -152,7 +184,7 @@ def resolution(segment, wave_micron):
     return out
 
 
-def fwhm(segment, wave_micron):
+def fwhm(segment, wave_micron, **kwargs):
     """Return the FWHM for SEGMENT at one more more wavelengths.
 
     Arguments:
@@ -164,18 +196,17 @@ def fwhm(segment, wave_micron):
       wave_micron: The observed-frame (instrument-relative) wavelength
         in microns, as a scalar or numpy array of any shape.
 
+      kwargs: other keyword args specified by `resolution'
+
     Returns:
     --------
 
-    The full-width at half maxima of unresolved line spread functions
-    at the relevant wavelength(s), either as a scalar (if only one
-    segment applied) or as a 3 element tuple of:
-
-      (value, low bound, high bound)
+    The fwhm in microns for `wave_micron', in the format specified by
+    `resolution'.
 
     """
 
-    r = resolution(segment, wave_micron)
+    r = resolution(segment, wave_micron, **kwargs)
     if np.ma.isMaskedArray(r):
         ret = np.expand_dims(wave_micron, -1) / r
         return ret[..., (0, 2, 1)]  # swap lower with upper (inverse!)
