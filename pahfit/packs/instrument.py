@@ -126,7 +126,7 @@ def instruments(match=None):
         return list(ins)
 
 
-def resolution(segment, wave_micron, as_bounded=False):
+def resolution(segment, wave_micron, fwhm_near=0.0, as_bounded=False):
     """Return the resolution for `segment' at one more more
     wavelengths.
 
@@ -138,6 +138,11 @@ def resolution(segment, wave_micron, as_bounded=False):
 
       wave_micron: The observed-frame (instrument-relative) wavelength
         in microns, as a scalar or numpy array of any shape.
+
+      fwhm_near (optional, default: 0.0): Compute resolution for any
+        wavelength within this many FWHMs of the segment end.  Note
+        that, to avoid extrapolation, the FWHM of interest is
+        calculated at the segment's endpoints.
 
       as_bounded (optional, default: False): always return bounded
         variables (i.e. with shape (..., 3)), even when only one segment
@@ -154,7 +159,10 @@ def resolution(segment, wave_micron, as_bounded=False):
 
       (value, low bound, high bound)
 
-    otherwise
+    otherwise.  Note that, when more than one segment matches (and/or
+    `as_bounded` is True), only wavelengths inside (or near, if
+    `fwhm_near` is non-zero) segments have resolution values returned.
+    They are masked otherwise.
 
     """
 
@@ -168,7 +176,8 @@ def resolution(segment, wave_micron, as_bounded=False):
 
     res = np.ma.empty((npk,) + wave_micron.shape)
     for i, p in enumerate(_packs):
-        inside = (wave_micron >= p['range'][0]) & (wave_micron <= p['range'][1])
+        inside = ((wave_micron >= p['range'][0] - p['range_fwhm'][0] * fwhm_near)
+                  & (wave_micron <= p['range'][1] + p['range_fwhm'][1] * fwhm_near))
         res[i, inside] = p['polynomial'](wave_micron[inside])
         res[i, ~inside] = np.ma.masked
 
@@ -185,7 +194,7 @@ def resolution(segment, wave_micron, as_bounded=False):
 
 
 def fwhm(segment, wave_micron, **kwargs):
-    """Return the FWHM for SEGMENT at one more more wavelengths.
+    """Return the FWHM for `segment' at one more more wavelengths.
 
     Arguments:
     ----------
@@ -196,7 +205,7 @@ def fwhm(segment, wave_micron, **kwargs):
       wave_micron: The observed-frame (instrument-relative) wavelength
         in microns, as a scalar or numpy array of any shape.
 
-      kwargs: other keyword args specified by `resolution'
+      kwargs: other keyword args as accepted by `resolution'.
 
     Returns:
     --------
