@@ -9,7 +9,7 @@ from astropy.table import Table
 from astropy.modeling.fitting import LevMarLSQFitter
 
 from pahfit.base import PAHFITBase
-from pahfit.instrument import wave_range
+from pahfit.instrument import test_wave_minmax
 from pahfit.features import Features
 
 from pahfit.component_models import BlackBody1D, S07_attenuation
@@ -124,18 +124,16 @@ def initialize_model(packfile, instrumentname, obsdata, estimate_start=False):
     """
 
     packfile_found = find_packfile(packfile)
-    wave_min = min(obsdata["x"].value)
-    wave_max = max(obsdata["x"].value)
 
-    wave_instrument = wave_range(instrumentname)
-    if wave_min < wave_instrument[0] or wave_max > wave_instrument[1]:
+    if not test_wave_minmax(obsdata["x"].value, instrumentname):
         raise ValueError(
-            'Wavelength range of the input spectrum and the instrument do not match'
+            "Wavelength range of the input spectrum and the instrument do not match"
         )
 
     pmodel = PAHFITBase(
         obsdata["x"].value,
         obsdata["y"].value,
+        instrumentname,
         estimate_start=estimate_start,
         filename=packfile_found,
     )

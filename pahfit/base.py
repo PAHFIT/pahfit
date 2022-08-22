@@ -15,7 +15,7 @@ import numpy as np
 
 import matplotlib as mpl
 
-from pahfit.instrument import wave_range, fwhm
+from pahfit.instrument import test_waves_in_any_segment, fwhm_recommendation
 from pahfit.feature_strengths import (
     pah_feature_strength,
     line_strength,
@@ -813,33 +813,40 @@ class PAHFITBase:
         updated feature_dict
         """
 
-        wave_instrument = wave_range(instrumentname)
-        ind = np.where((feature_dict['x_0'] > wave_instrument[0])
-                       & (feature_dict['x_0'] < wave_instrument[1]))
+        ind = np.nonzero(
+            test_waves_in_any_segment(feature_dict["x_0"], instrumentname)
+        )[0]
 
-        feature_dict.update({'x_0': feature_dict['x_0'][ind]})
-        feature_dict.update({'amps': feature_dict['amps'][ind]})
-        feature_dict.update({'fwhms': feature_dict['fwhms'][ind]})
-        feature_dict.update({'names': feature_dict['names'][ind]})
-        feature_dict.update(
-            {'amps_fixed': np.array(feature_dict['amps_fixed'])[ind].tolist()})
-        feature_dict.update({
-            'fwhms_fixed':
-            np.array(feature_dict['fwhms_fixed'])[ind].tolist()
-        })
-        feature_dict.update(
-            {'x_0_fixed': np.array(feature_dict['x_0_fixed'])[ind].tolist()})
-        feature_dict.update(
-            {'x_0_limits': np.array(feature_dict['x_0_limits'])[ind]})
-        feature_dict.update(
-            {'amps_limits': np.array(feature_dict['amps_limits'])[ind]})
-        feature_dict.update(
-            {'fwhms_limits': np.array(feature_dict['fwhms_limits'])[ind]})
+        # select the valid entries in these arrays
+        array_keys = ("x_0", "amps", "fwhms", "names")
+        new_values_1 = {key: feature_dict[key][ind] for key in array_keys}
+
+        # these are lists instead
+        list_keys = (
+            "amps_fixed",
+            "fwhms_fixed",
+            "x_0_fixed",
+            "x_0_limits",
+            "amps_limits",
+            "fwhms_limits",
+        )
+        new_values_2 = {
+            key: [feature_dict[key][i] for i in ind] for key in list_keys
+        }
+
+        feature_dict.update(new_values_1)
+        feature_dict.update(new_values_2)
 
         if update_fwhms:
-            x_0_val = feature_dict['x_0']
-            fwhm_val = fwhm(instrumentname, x_0_val)
-            feature_dict.update({'fwhms': fwhm_val})
+            waves = feature_dict["x_0"]
+            values, fixed, mins, maxes = fwhm_recommendation(instrumentname, waves)
+            feature_dict.update(
+                {
+                    "fwhms": values,
+                    "fwhms_fixed": fixed,
+                    "fwhms_limits": list(zip(mins, maxes)),
+                }
+            )
 
         return feature_dict
 
