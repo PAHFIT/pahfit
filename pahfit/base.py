@@ -15,7 +15,7 @@ import numpy as np
 
 import matplotlib as mpl
 
-from pahfit.instrument import test_waves_in_any_segment, fwhm_recommendation
+from pahfit.instrument import within_segment, fwhm_recommendation
 from pahfit.feature_strengths import (
     pah_feature_strength,
     line_strength,
@@ -813,9 +813,7 @@ class PAHFITBase:
         updated feature_dict
         """
 
-        ind = np.nonzero(
-            test_waves_in_any_segment(feature_dict["x_0"], instrumentname)
-        )[0]
+        ind = np.nonzero(within_segment(feature_dict["x_0"], instrumentname))[0]
 
         # select the valid entries in these arrays
         array_keys = ("x_0", "amps", "fwhms", "names")
