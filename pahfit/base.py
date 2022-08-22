@@ -15,7 +15,7 @@ import numpy as np
 
 import matplotlib as mpl
 
-from pahfit.instrument import within_segment, fwhm_recommendation
+from pahfit.instrument import within_segment, fwhm
 from pahfit.feature_strengths import (
     pah_feature_strength,
     line_strength,
@@ -837,12 +837,17 @@ class PAHFITBase:
 
         if update_fwhms:
             waves = feature_dict["x_0"]
-            values, fixed, mins, maxes = fwhm_recommendation(instrumentname, waves)
+            fwhm_min_max = fwhm(instrumentname, waves, as_bounded=True)
+            # We need to be careful here, because for astropy a
+            # numpy.bool does not work for the 'fixed' parameter. It
+            # needs to be a regular bool. Doing tolist() instead of
+            # using the array mask directly solves this.
             feature_dict.update(
                 {
-                    "fwhms": values,
-                    "fwhms_fixed": fixed,
-                    "fwhms_limits": list(zip(mins, maxes)),
+                    "fwhms": fwhm_min_max[:, 0],
+                    # masked means there is no min/max, i.e. they need to be fixed
+                    "fwhms_fixed": fwhm_min_max[:, 1].mask.tolist(),
+                    "fwhms_limits": fwhm_min_max[:, 1:].tolist(),
                 }
             )
 
