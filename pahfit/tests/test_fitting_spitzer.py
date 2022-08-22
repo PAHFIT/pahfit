@@ -13,7 +13,7 @@ def test_fitting_m101():
     # packfile = "scipack_ExGal_SpitzerIRSSLLL.ipac"
     packfile = "classic.yaml"
     # use a spitzer instrument model that covers the required range. SL1, SL2, LL1, LL2 should do
-    instrumentname = [f"spitzer.irs.{mode}" for mode in ('sl.2', 'sl.2', 'll.2', 'll.1')]
+    instrumentname = [f"spitzer.irs.{mode}" for mode in ('sl.1', 'sl.2', 'll.2', 'll.1')]
     pmodel = initialize_model(packfile, instrumentname, obsdata, estimate_start=True)
 
     # fit the spectrum
