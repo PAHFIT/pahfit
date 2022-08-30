@@ -4,3 +4,7 @@ class PAHFITFeatureError(Exception):
 
 class PAHFITPackError(Exception):
     pass
+
+
+class PAHFITWarning(Warning):
+    pass
