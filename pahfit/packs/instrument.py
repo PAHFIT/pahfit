@@ -16,7 +16,8 @@ import numpy as np
 from numpy.polynomial import Polynomial
 from astropy.io.misc import yaml
 from pkg_resources import resource_filename
-from pahfit.errors import PAHFITPackError
+from pahfit.errors import PAHFITPackError, PAHFITWarning
+from warnings import warn
 
 packs = {}
 
@@ -236,7 +237,67 @@ def wave_range(segment):
         return ret
 
 
-def within_segment(wave_micron, segments, fwhm_near=None):
+_frac = np.array([0.03, 0.01, 0.])  # Fractional bounds for error and warnings
+
+
+def check_range(wave_bounds, segments):
+    """Check that the wave_bounds of the passed spectra are consistent
+    with the given instrument segment(s).
+
+    Arguments:
+    ----------
+      wave_bounds: The min and max observed
+        wavelength bounds in microns in the observed spectrum or
+        spectral segment of interest.
+
+      segments: The segment name or list of names, potentially
+        including glob chars.  See `pack_element'.
+
+    Returns:
+    --------
+
+    True, if the wave_bounds are inside or near the wavelength range
+    given the specified segment(s).  Note that only the ends of the
+    segment ranges are checked.  If wave_bounds exceed the specified
+    instrument pack segment, a warning is issued.  If they exceed at
+    either end by more than 3% of the segment width, an error is
+    thrown.
+
+    Raises:
+    -------
+
+    PAHFITPackError: If the wave bounds exceed the ends of the
+      specified instrument segment(s) by more than 3%.
+
+    """
+
+    els = pack_element(segments)
+    low = [s['range'][0] for s in els]
+    high = [s['range'][1] for s in els]
+
+    mmpos = (np.argmin(low), np.argmax(high))
+    mn, mx = np.min(low), np.max(high)
+
+    full_range = [els[x]['range'][1] - els[x]['range'][0] for x in mmpos]
+    bins = [np.searchsorted(mn - _frac * full_range[0], wave_bounds[0], side='right'),
+            np.searchsorted(mx + _frac[::-1] * full_range[1], wave_bounds[1])]
+
+    if bins[0] == 3 and bins[1] == 0:  # inside range
+        return True
+
+    st = (f":\n\tSegment(s) cover: {mn:.2f}-{mx:.2f}, "
+          + f"wave_bounds: {wave_bounds[0]:.2f}-{wave_bounds[1]:.2f}")
+    if bins[0] == 0 or bins[1] == 3:
+        raise PAHFITPackError(
+            f"\nInput wavelength bounds exceed instrument segment(s) by more than 3%{st}")
+    else:
+        w = ' by more than 1%' if bins[0] == 1 or bins[1] == 2 else ''
+        warn(f"\nInput wavelength bounds exceed instrument segment(s){w}{st}",
+             PAHFITWarning)
+        return True
+
+
+def within_segment(wave_micron, segments, fwhm_near=None, wave_bounds=None):
     """Return a mask indicating which wavelengths are in (or near) the
     wavelength range of the given segment(s).
 
@@ -254,18 +315,37 @@ def within_segment(wave_micron, segments, fwhm_near=None):
         avoid extrapolation, the FWHM of interest is calculated at the
         segment endpoint.
 
+      wave_bounds (optional, default: None): The min and max observed
+        wavelength bounds in microns in the observed spectrum or
+        spectral component corresponding to segment.  It is assumed
+        that the bounds have been checked against the instrument
+        segments using check_range.
+
     Returns:
     --------
 
     A boolean mask of identical shape as `wave_micron', indicating
     which wavelength are within (or near to) some segment.
 
+    See Also:
+    ---------
+    check_range
+
     """
     res = []
-    for s in pack_element(segments):
-        rng = s['range']
-        if fwhm_near:
-            rng = rng.copy()
+
+    els = pack_element(segments)
+    low = [s['range'][0] for s in els]
+    high = [s['range'][1] for s in els]
+    mnpos, mxpos = np.argmin(low), np.argmax(high)
+    for i, s in enumerate(els):
+        rng = s['range'].copy()
+        if wave_bounds:  # replace extreme segment bounds with actual limits
+            if i == mnpos:
+                rng[0] = wave_bounds[0]
+            elif i == mxpos:
+                rng[1] = wave_bounds[1]
+        if fwhm_near:  # Account for wing overlap
             rng[0] -= s['range_fwhm'][0] * fwhm_near
             rng[1] += s['range_fwhm'][1] * fwhm_near
         res.append((wave_micron >= rng[0]) & (wave_micron <= rng[1]))
