@@ -16,7 +16,8 @@ import numpy as np
 from numpy.polynomial import Polynomial
 from astropy.io.misc import yaml
 from pkg_resources import resource_filename
-from pahfit.errors import PAHFITPackError
+from pahfit.errors import PAHFITPackError, PAHFITWarning
+from warnings import warn
 
 packs = {}
 
@@ -29,13 +30,22 @@ def read_instrument_packs():
             with open(pack) as fd:
                 p = yaml.load(fd)
         except IOError as e:
-            raise PAHFITPackError(
-                "Error reading instrument pack file\n" f"\t{pack}\n\t{repr(e)}"
-            )
+            raise PAHFITPackError("Error reading instrument pack file\n"
+                                  f"\t{pack}\n\t{repr(e)}")
         else:
-            telescope = os.path.basename(pack).rstrip(".yaml")
+            telescope = os.path.basename(pack).rstrip('.yaml')
             packs[telescope] = p
-    packs = dict(_ins_items("", packs))  # Flatten list
+    packs = dict(_ins_items('', packs))  # Flatten list
+
+
+def _ins_items(path, tree):
+    """Generator for traversing packs."""
+    if isinstance(tree, dict) and not tree.get("range"):
+        _dot = "." if len(path) > 0 else ""
+        for key, sub in tree.items():
+            yield from _ins_items(f"{path}{_dot}{key}", sub)
+    else:
+        yield path, tree
 
 
 def pack_element(segments):
@@ -73,24 +83,16 @@ def pack_element(segments):
         if not sm:
             raise PAHFITPackError(f"Could not locate instrument segment {segment}")
         for s in sm:
-            if packs[s].get("polynomial") is None:
+            if packs[s].get('polynomial') is None:
                 try:
-                    packs[s]["polynomial"] = Polynomial(packs[s]["coefficients"])
+                    p = Polynomial(packs[s]['coefficients'])
+                    packs[s]['polynomial'] = p
+                    packs[s]['range_fwhm'] = [x / p(x) for x in packs[s]['range']]
                 except KeyError:
                     raise PAHFITPackError(f"Invalid instrument pack {s}")
             ret.append(packs[s])
 
     return ret
-
-
-def _ins_items(path, tree):
-    """Generator for traversing packs."""
-    if isinstance(tree, dict) and not tree.get("range"):
-        _dot = "." if len(path) > 0 else ""
-        for key, sub in tree.items():
-            yield from _ins_items(f"{path}{_dot}{key}", sub)
-    else:
-        yield path, tree
 
 
 def instruments(match=None):
@@ -125,35 +127,59 @@ def instruments(match=None):
         return list(ins)
 
 
-def resolution(segment, wave_micron):
-    """
-    Parameters
+def resolution(segment, wave_micron, fwhm_near=0.0, as_bounded=False):
+    """Return the resolution for `segment' at one more more
+    wavelengths.
+
+    Arguments:
     ----------
-    segment: The fully qualified segment name, as a string.
 
-    wave_micron: The observed-frame (instrument-relative) wavelength
-        in microns, as a scalar or numpy array of size N.
+      segment: The segment name or list of names, potentially
+        including glob chars.  See pack_element.
 
-    Returns
-    -------
-    r: 1D array shape (N,) or 2D masked_array shape (N, 3)
-        The spectral resolution at the given wavelengths. In case of
-        multiple segments: r[:, 0] is mean resolution, r[:, 1] is min
-        resolution or masked., r[:, 2] is max resolution or masked. The
-        values of the latter two arrays are masked if only one segment
-        covers this wavelength.
+      wave_micron: The observed-frame (instrument-relative) wavelength
+        in microns, as a scalar or numpy array of any shape.
+
+      fwhm_near (optional, default: 0.0): Compute resolution for any
+        wavelength within this many FWHMs of the segment end.  Note
+        that, to avoid extrapolation, the FWHM of interest is
+        calculated at the segment's endpoints.
+
+      as_bounded (optional, default: False): always return bounded
+        variables (i.e. with shape (..., 3)), even when only one segment
+        is used.
+
+    Returns:
+    --------
+
+    The resolution (wavelength divided by full-width at half maxima)
+    of unresolved line spread functions at the relevant wavelength(s),
+    either as a scalar or array (if only one segment applied and
+    `as_bounded' is not True) or as a masked array of 3 element tuples
+    specifying:
+
+      (value, low bound, high bound)
+
+    otherwise.  Note that, when more than one segment matches (and/or
+    `as_bounded` is True), only wavelengths inside (or near, if
+    `fwhm_near` is non-zero) segments have resolution values returned.
+    They are masked otherwise.
+
     """
+
     _packs = pack_element(segment)
     npk = len(_packs)
-    if npk == 1:
-        return _packs[0]["polynomial"](wave_micron)
+
+    if npk == 1 and not as_bounded:
+        return _packs[0]['polynomial'](wave_micron)
 
     wave_micron = np.atleast_1d(wave_micron)
 
     res = np.ma.empty((npk,) + wave_micron.shape)
     for i, p in enumerate(_packs):
-        inside = (wave_micron >= p["range"][0]) & (wave_micron <= p["range"][1])
-        res[i, inside] = p["polynomial"](wave_micron[inside])
+        inside = ((wave_micron >= p['range'][0] - p['range_fwhm'][0] * fwhm_near)
+                  & (wave_micron <= p['range'][1] + p['range_fwhm'][1] * fwhm_near))
+        res[i, inside] = p['polynomial'](wave_micron[inside])
         res[i, ~inside] = np.ma.masked
 
     out = np.ma.empty_like(wave_micron, shape=wave_micron.shape + (3,))
@@ -161,78 +187,41 @@ def resolution(segment, wave_micron):
     out[..., 0] = np.mean(res, 0)
 
     multi = np.count_nonzero(res, 0) > 1  # waves matching more than one segment
-    if np.count_nonzero(multi) > 0:
+    if np.count_nonzero(multi) > 0:  # add lower/upper bounds
         out[multi, 1] = np.min(res[:, multi], 0)
         out[multi, 2] = np.max(res[:, multi], 0)
 
     return out
 
 
-def fwhm(segment, wave_micron):
-    """Return the FWHM for SEGMENT at one more more wavelengths.
+def fwhm(segment, wave_micron, **kwargs):
+    """Return the FWHM for `segment' at one more more wavelengths.
 
     Arguments:
     ----------
-      segment: The fully qualified segment name, as a string.
+
+      segment: The segment name or list of names, potentially
+        including glob chars.  See pack_element.
 
       wave_micron: The observed-frame (instrument-relative) wavelength
-        in microns, as a scalar or numpy array of size N.
+        in microns, as a scalar or numpy array of any shape.
+
+      kwargs: other keyword args as accepted by `resolution'.
 
     Returns:
     --------
 
-    The full-width at half maxima of unresolved line spread functions
-    at the relevant wavelength(s), either as a scalar (if only one
-    segment applied) or as a (N, 3) shape array of:
-
-      [[value, low bound, high bound], ...] for every wavelength
+    The fwhm in microns for `wave_micron', in the format specified by
+    `resolution'.
 
     """
 
-    r = resolution(segment, wave_micron)
+    r = resolution(segment, wave_micron, **kwargs)
     if np.ma.isMaskedArray(r):
         ret = np.expand_dims(wave_micron, -1) / r
         return ret[..., (0, 2, 1)]  # swap lower with upper (inverse!)
     else:
         return wave_micron / r
-
-
-def fwhm_recommendation(segment, wave_micron):
-    """Returns recommended parameters for the fwhm.
-
-    This function checks the shape of the output of fhwm(), and returns consistent values.
-    - value as a starting point
-    - upper and lower, or masked where there is no overlap
-    - 'fixed' flag
-
-    When a wavelength is covered by only one segment, the recommendation
-    is to fix the fwhm. In case of multiple, it should be variable,
-    between the given upper and lower bounds.
-
-    Parameters
-    ----------
-    segment: The fully qualified segment name, as a string.
-
-    wave_micron: The observed-frame (instrument-relative) wavelength
-        in microns, as a scalar or numpy array of size N.
-
-    Returns
-    -------
-    Tuple of lists / arrays. Each one of size len(wave_micron)
-        (array float, list bool, array float, array float)
-        (fwhm, bool fixed, low bound, high bound)
-
-    """
-    N = len(wave_micron)
-    fwhm_output = fwhm(segment, wave_micron)
-    if len(fwhm_output.shape) == 1:
-        return fwhm_output, [True] * N, [0.] * N, [0.] * N
-    else:
-        # We need to be careful here, because for astropy a numpy.bool
-        # does not work for the 'fixed' parameter. It needs to be a
-        # regular bool. Tolist() solves this.
-        fixed = fwhm_output[: , 1].mask.tolist()
-        return fwhm_output[:, 0], fixed, fwhm_output[:, 1], fwhm_output[:, 2]
 
 
 def wave_range(segment):
@@ -241,57 +230,126 @@ def wave_range(segment):
     matching), the return value is a list of two element lists [min,
     max].
     """
-    ret = [x["range"] for x in pack_element(segment)]
+    ret = [x['range'] for x in pack_element(segment)]
     if len(ret) == 1:
         return ret[0]
     else:
         return ret
 
 
-def test_wave_minmax(wave_micron, segments):
-    """Return True if the instrument range encompasses the given wavelengths
+_frac = np.array([0.03, 0.01, 0.])  # Fractional bounds for error and warnings
 
-    For now, it is just based on the mininum and maximum, but it could
-    check all the wavelengths in the future, to make sure that all
-    observational data is covered by a valid instrument model.
 
-    Parameters
+def check_range(wave_bounds, segments):
+    """Check that the wave_bounds of the passed spectra are consistent
+    with the given instrument segment(s).
+
+    Arguments:
     ----------
-    wave_micron: 1D array-like (not quantity)
-        list of wavelengths in micron
+      wave_bounds: The min and max observed
+        wavelength bounds in microns in the observed spectrum or
+        spectral segment of interest.
 
-    segments: list of str
-        list of instrument segment names, as defined by the pack_element function
+      segments: The segment name or list of names, potentially
+        including glob chars.  See `pack_element'.
+
+    Returns:
+    --------
+
+    True, if the wave_bounds are inside or near the wavelength range
+    given the specified segment(s).  Note that only the ends of the
+    segment ranges are checked.  If wave_bounds exceed the specified
+    instrument pack segment, a warning is issued.  If they exceed at
+    either end by more than 3% of the segment width, an error is
+    thrown.
+
+    Raises:
+    -------
+
+    PAHFITPackError: If the wave bounds exceed the ends of the
+      specified instrument segment(s) by more than 3%.
 
     """
-    ranges = [x["range"] for x in pack_element(segments)]
-    wmin = min(wave_micron)
-    wmax = max(wave_micron)
-    rmin = min(r[0] for r in ranges)
-    rmax = max(r[1] for r in ranges)
-    return rmin <= wmin and wmax <= rmax
+
+    els = pack_element(segments)
+    low = [s['range'][0] for s in els]
+    high = [s['range'][1] for s in els]
+
+    mmpos = (np.argmin(low), np.argmax(high))
+    mn, mx = np.min(low), np.max(high)
+
+    full_range = [els[x]['range'][1] - els[x]['range'][0] for x in mmpos]
+    bins = [np.searchsorted(mn - _frac * full_range[0], wave_bounds[0], side='right'),
+            np.searchsorted(mx + _frac[::-1] * full_range[1], wave_bounds[1])]
+
+    if bins[0] == 3 and bins[1] == 0:  # inside range
+        return True
+
+    st = (f":\n\tSegment(s) cover: {mn:.2f}-{mx:.2f}, "
+          + f"wave_bounds: {wave_bounds[0]:.2f}-{wave_bounds[1]:.2f}")
+    if bins[0] == 0 or bins[1] == 3:
+        raise PAHFITPackError(
+            f"\nInput wavelength bounds exceed instrument segment(s) by more than 3%{st}")
+    else:
+        w = ' by more than 1%' if bins[0] == 1 or bins[1] == 2 else ''
+        warn(f"\nInput wavelength bounds exceed instrument segment(s){w}{st}",
+             PAHFITWarning)
+        return True
 
 
-def test_waves_in_any_segment(wave_micron, segments):
-    """Test if each given wavelength is covered by at least one instrument
+def within_segment(wave_micron, segments, fwhm_near=None, wave_bounds=None):
+    """Return a mask indicating which wavelengths are in (or near) the
+    wavelength range of the given segment(s).
 
-    Parameters
+    Arguments:
     ----------
-    wave_micron: dimensionless numpy array of wavelengths in micron
+      segment: The segment name or list of names, potentially
+        including glob chars.  See `pack_element'.
 
-    segments: list of segments
+      wave_micron: The observed-frame (instrument-relative) wavelength
+        in microns, as a scalar or numpy array of any shape.
 
-    Returns
-    -------
-    np.array of bool, True where wave_micron[i] is is the range of any of the segments."""
+      fwhm_near (optional, default: None): If not None, mark a
+        wavelength in a segment (or set of segments) if it falls
+        within `fwhm_near'*FWHM of any segment's end.  Note that, to
+        avoid extrapolation, the FWHM of interest is calculated at the
+        segment endpoint.
 
-    # for each instrument range, test all the wavelengths (not necessarily sorted)
-    ranges = [x["range"] for x in pack_element(segments)]
-    in_range_per_segment = [
-        (rmin <= wave_micron) & (wave_micron <= rmax) for (rmin, rmax) in ranges
-    ]
-    in_range_any_segment = np.any(np.array(in_range_per_segment), axis=0)
-    return in_range_any_segment
+      wave_bounds (optional, default: None): The min and max observed
+        wavelength bounds in microns in the observed spectrum or
+        spectral component corresponding to segment.  It is assumed
+        that the bounds have been checked against the instrument
+        segments using check_range.
+
+    Returns:
+    --------
+
+    A boolean mask of identical shape as `wave_micron', indicating
+    which wavelength are within (or near to) some segment.
+
+    See Also:
+    ---------
+    check_range
+
+    """
+    res = []
+
+    els = pack_element(segments)
+    low = [s['range'][0] for s in els]
+    high = [s['range'][1] for s in els]
+    mnpos, mxpos = np.argmin(low), np.argmax(high)
+    for i, s in enumerate(els):
+        rng = s['range'].copy()
+        if wave_bounds:  # replace extreme segment bounds with actual limits
+            if i == mnpos:
+                rng[0] = wave_bounds[0]
+            elif i == mxpos:
+                rng[1] = wave_bounds[1]
+        if fwhm_near:  # Account for wing overlap
+            rng[0] -= s['range_fwhm'][0] * fwhm_near
+            rng[1] += s['range_fwhm'][1] * fwhm_near
+        res.append((wave_micron >= rng[0]) & (wave_micron <= rng[1]))
+    return np.any(res, 0)
 
 
 read_instrument_packs()
