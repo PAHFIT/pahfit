@@ -15,6 +15,7 @@ import numpy as np
 
 import matplotlib as mpl
 
+from pahfit.instrument import test_waves_in_any_segment, fwhm_recommendation
 from pahfit.feature_strengths import (
     pah_feature_strength,
     line_strength,
@@ -22,12 +23,14 @@ from pahfit.feature_strengths import (
     eqws,
 )
 
+from pahfit.features import Features
+
 __all__ = ["PAHFITBase"]
 
 
 def _ingest_limits(min_vals, max_vals):
     """
-    Ingest the limits read from a file and generate the appropriate
+    Ingest the limits read from yaml file and generate the appropriate
     internal format (list of tuples).  Needed to handle the case
     where a limit is not desired as numpy arrays cannot have elements
     of None, instead a value of nan is used.
@@ -39,7 +42,7 @@ def _ingest_limits(min_vals, max_vals):
     Parameters
     ----------
     min_vals,
-    max_vals : numpy.array
+    max_vals : numpy.array (masked arrays)
         min/max values of the limits for a parameter
         nan designates no limit
 
@@ -49,10 +52,25 @@ def _ingest_limits(min_vals, max_vals):
         tuples give the min/max limits for a parameter
     """
     plimits = []
+    mask_min = min_vals.mask
+    data_min = min_vals.data
+    mask_max = max_vals.mask
+    data_max = max_vals.data
+
+    mask_min_ind = np.where(mask_min == False)[0]
+    mask_max_ind = np.where(mask_max == False)[0]
+
+    min_vals = np.zeros(len(mask_min))
+    min_vals[mask_min_ind] = data_min[mask_min_ind]
+
+    max_vals = np.zeros(len(mask_max))
+    max_vals[mask_max_ind] = data_max[mask_max_ind]
+
+    plimits = []
     for cmin, cmax in zip(min_vals, max_vals):
-        if np.isnan(cmin):
+        if np.isinf(cmin):
             cmin = None
-        if np.isnan(cmax):
+        if np.isinf(cmax):
             cmax = None
         plimits.append((cmin, cmax))
 
@@ -62,19 +80,28 @@ def _ingest_limits(min_vals, max_vals):
 def _ingest_fixed(fixed_vals):
     """
     Ingest the fixed value read from a file and generate the appropriate
-    internal format (list of booleans).  Needed as booleans but
-    represented in files as True/False strings.
+    internal format (list of booleans). Since this information is indirectly
+    hidden in the parameter of a feature, this function is needed to 
+    extract that. 
 
     Parameters
     ----------
-    min_vals : numpy.array (string)
+    min_vals : numpy.array (masked array)
         fixed designations
 
     Returns
     -------
-    pfixed : numpy.array (boolean)
+    pfixed : list (boolean)
         True/False designation for parameters
     """
+
+    check_mask = fixed_vals.mask
+    mask_false_ind = np.where(check_mask == False)[0]
+    fixed_vals = ["True"] * len(check_mask)
+    for i in range(0, len(mask_false_ind)):
+        ind = mask_false_ind[i]
+        fixed_vals[ind] = "False"
+
     pfixed = []
     for cfixed in fixed_vals:
         if cfixed == "True":
@@ -105,6 +132,10 @@ class PAHFITBase:
     obs_x and obs_y: np.array
         the input spectrum
 
+    instrumentname: string
+        the instrument which which the input spectrum
+        was observed.    
+
     filename: string
         filename giving the pack that contains all the
         info described for param_info
@@ -122,11 +153,11 @@ class PAHFITBase:
         dict with {name amps, amps_limits, amps_fixed,
         x_0, x_0_limits, x_0_fixed, fwhms, fwhms_limits, fwhm_fixed}.
     """
-
     def __init__(
         self,
         obs_x,
         obs_y,
+        instrumentname,
         estimate_start=False,
         param_info=None,
         filename=None,
@@ -138,14 +169,12 @@ class PAHFITBase:
         """
         # check that param_info or filename is set
         if filename is None and param_info is None:
-            raise ValueError(
-                "Either param_info or filename need to be set \
-                             when initializing a PAHFITBase object"
-            )
+            raise ValueError("Either param_info or filename need to be set \
+                             when initializing a PAHFITBase object")
 
         # read in the parameter info from a file
         if filename is not None:
-            param_info = self.read(filename, tformat=tformat)
+            param_info = self.read(filename, instrumentname, tformat=tformat)
 
         if estimate_start:
             # guess values and update starting point (if not set fixed) based on the input spectrum
@@ -168,7 +197,8 @@ class PAHFITBase:
         if bb_info is not None:
             bbs = []
             for k in range(len(bb_info["names"])):
-                BBClass = ModifiedBlackBody1D if bb_info["modified"][k] else BlackBody1D
+                BBClass = ModifiedBlackBody1D if bb_info["modified"][
+                    k] else BlackBody1D
                 bbs.append(
                     BBClass(
                         name=bb_info["names"][k],
@@ -182,8 +212,7 @@ class PAHFITBase:
                             "temperature": bb_info["temps_fixed"][k],
                             "amplitude": bb_info["amps_fixed"][k],
                         },
-                    )
-                )
+                    ))
             self.model = sum(bbs[1:], bbs[0])
 
         self.dust_features = dust_features
@@ -206,8 +235,7 @@ class PAHFITBase:
                             "x_0": dust_features["x_0_fixed"][k],
                             "fwhm": dust_features["fwhms_fixed"][k],
                         },
-                    )
-                )
+                    ))
 
             df = sum(df[1:], df[0])
             if self.model:
@@ -226,8 +254,10 @@ class PAHFITBase:
                         mean=h2_features["x_0"][k],
                         stddev=h2_features["fwhms"][k] / 2.355,
                         bounds={
-                            "amplitude": h2_features["amps_limits"][k],
-                            "mean": h2_features["x_0_limits"][k],
+                            "amplitude":
+                            h2_features["amps_limits"][k],
+                            "mean":
+                            h2_features["x_0_limits"][k],
                             "stddev": (
                                 h2_features["fwhms"][k] * 0.9 / 2.355,
                                 h2_features["fwhms"][k] * 1.1 / 2.355,
@@ -238,8 +268,7 @@ class PAHFITBase:
                             "mean": h2_features["x_0_fixed"][k],
                             "stddev": h2_features["fwhms_fixed"][k],
                         },
-                    )
-                )
+                    ))
             h2 = sum(h2[1:], h2[0])
             if self.model:
                 self.model += h2
@@ -257,8 +286,10 @@ class PAHFITBase:
                         mean=ion_features["x_0"][k],
                         stddev=ion_features["fwhms"][k] / 2.355,
                         bounds={
-                            "amplitude": ion_features["amps_limits"][k],
-                            "mean": ion_features["x_0_limits"][k],
+                            "amplitude":
+                            ion_features["amps_limits"][k],
+                            "mean":
+                            ion_features["x_0_limits"][k],
                             "stddev": (
                                 ion_features["fwhms"][k] * 0.9 / 2.355,
                                 ion_features["fwhms"][k] * 1.1 / 2.355,
@@ -269,8 +300,7 @@ class PAHFITBase:
                             "mean": ion_features["x_0_fixed"][k],
                             "stddev": ion_features["fwhms_fixed"][k],
                         },
-                    )
-                )
+                    ))
             ions = sum(ions[1:], ions[0])
             if self.model:
                 self.model += ions
@@ -285,7 +315,7 @@ class PAHFITBase:
         if att_info is not None:
             for k in range(len(att_info["names"])):
                 if (
-                    att_info["names"][k] == "S07_att"
+                        att_info["names"][k] == "S07_att"
                 ):  # Only loop through att components that can be parameterized
                     self.model *= S07_attenuation(
                         name=att_info["names"][k],
@@ -344,12 +374,18 @@ class PAHFITBase:
         ax.set_yscale("linear")
         ax.set_xscale("log")
         ax.minorticks_on()
-        ax.tick_params(
-            axis="both", which="major", top="on", right="on", direction="in", length=10
-        )
-        ax.tick_params(
-            axis="both", which="minor", top="on", right="on", direction="in", length=5
-        )
+        ax.tick_params(axis="both",
+                       which="major",
+                       top="on",
+                       right="on",
+                       direction="in",
+                       length=10)
+        ax.tick_params(axis="both",
+                       which="minor",
+                       top="on",
+                       right="on",
+                       direction="in",
+                       length=5)
 
         ax_att = ax.twinx()  # axis for plotting the extinction curve
         ax_att.tick_params(which="minor", direction="in", length=5)
@@ -391,7 +427,10 @@ class PAHFITBase:
             if isinstance(cmodel, BlackBody1D):
                 cont_components.append(cmodel)
                 # plot as we go
-                ax.plot(x_mod, cmodel(x_mod) * ext_model / x_mod, "#FFB000", alpha=0.5)
+                ax.plot(x_mod,
+                        cmodel(x_mod) * ext_model / x_mod,
+                        "#FFB000",
+                        alpha=0.5)
         cont_model = cont_components[0]
         for cmodel in cont_components[1:]:
             cont_model += cmodel
@@ -457,18 +496,23 @@ class PAHFITBase:
 
         ax.set_yscale("linear")
         ax.set_xscale("log")
-        ax.tick_params(
-            axis="both", which="major", top="on", right="on", direction="in", length=10
-        )
-        ax.tick_params(
-            axis="both", which="minor", top="on", right="on", direction="in", length=5
-        )
+        ax.tick_params(axis="both",
+                       which="major",
+                       top="on",
+                       right="on",
+                       direction="in",
+                       length=10)
+        ax.tick_params(axis="both",
+                       which="minor",
+                       top="on",
+                       right="on",
+                       direction="in",
+                       length=5)
         ax.minorticks_on()
 
         # Custom X axis ticks
         ax.xaxis.set_ticks(
-            [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 14, 16, 20, 25, 30, 40]
-        )
+            [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 14, 16, 20, 25, 30, 40])
 
         ax.axhline(0, linestyle="--", color="gray", zorder=0)
         ax.plot(x, res, "ko-", fillstyle="none", zorder=1)
@@ -608,26 +652,24 @@ class PAHFITBase:
             comp_type = component.__class__.__name__
 
             if isinstance(component, BlackBody1D):
-                bb_table.add_row(
-                    [
-                        component.name,
-                        comp_type,
-                        component.temperature.value,
-                        component.temperature.bounds[0],
-                        component.temperature.bounds[1],
-                        component.temperature.fixed,
-                        component.amplitude.value,
-                        component.amplitude.bounds[0],
-                        component.amplitude.bounds[1],
-                        component.amplitude.fixed,
-                    ]
-                )
+                bb_table.add_row([
+                    component.name,
+                    comp_type,
+                    component.temperature.value,
+                    component.temperature.bounds[0],
+                    component.temperature.bounds[1],
+                    component.temperature.fixed,
+                    component.amplitude.value,
+                    component.amplitude.bounds[0],
+                    component.amplitude.bounds[1],
+                    component.amplitude.fixed,
+                ])
             elif isinstance(component, Drude1D):
 
                 # Calculate feature strength.
-                strength = pah_feature_strength(
-                    component.amplitude.value, component.fwhm.value, component.x_0.value
-                )
+                strength = pah_feature_strength(component.amplitude.value,
+                                                component.fwhm.value,
+                                                component.x_0.value)
 
                 strength_unc = None
 
@@ -643,27 +685,25 @@ class PAHFITBase:
                 else:
                     eqw = 0.0
 
-                line_table.add_row(
-                    [
-                        component.name,
-                        comp_type,
-                        component.x_0.value,
-                        component.x_0.bounds[0],
-                        component.x_0.bounds[1],
-                        component.x_0.fixed,
-                        component.amplitude.value,
-                        component.amplitude.bounds[0],
-                        component.amplitude.bounds[1],
-                        component.amplitude.fixed,
-                        component.fwhm.value,
-                        component.fwhm.bounds[0],
-                        component.fwhm.bounds[1],
-                        component.fwhm.fixed,
-                        strength,
-                        strength_unc,
-                        eqw,
-                    ]
-                )
+                line_table.add_row([
+                    component.name,
+                    comp_type,
+                    component.x_0.value,
+                    component.x_0.bounds[0],
+                    component.x_0.bounds[1],
+                    component.x_0.fixed,
+                    component.amplitude.value,
+                    component.amplitude.bounds[0],
+                    component.amplitude.bounds[1],
+                    component.amplitude.fixed,
+                    component.fwhm.value,
+                    component.fwhm.bounds[0],
+                    component.fwhm.bounds[1],
+                    component.fwhm.fixed,
+                    strength,
+                    strength_unc,
+                    eqw,
+                ])
             elif isinstance(component, Gaussian1D):
 
                 # Calculate feature strength.
@@ -687,69 +727,128 @@ class PAHFITBase:
                 else:
                     eqw = 0.0
 
-                line_table.add_row(
-                    [
-                        component.name,
-                        comp_type,
-                        component.mean.value,
-                        component.mean.bounds[0],
-                        component.mean.bounds[1],
-                        component.mean.fixed,
-                        component.amplitude.value,
-                        component.amplitude.bounds[0],
-                        component.amplitude.bounds[1],
-                        component.amplitude.fixed,
-                        2.355 * component.stddev.value,
-                        2.355 * component.stddev.bounds[0],
-                        2.355 * component.stddev.bounds[1],
-                        component.stddev.fixed,
-                        strength,
-                        strength_unc,
-                        eqw,
-                    ]
-                )
+                line_table.add_row([
+                    component.name,
+                    comp_type,
+                    component.mean.value,
+                    component.mean.bounds[0],
+                    component.mean.bounds[1],
+                    component.mean.fixed,
+                    component.amplitude.value,
+                    component.amplitude.bounds[0],
+                    component.amplitude.bounds[1],
+                    component.amplitude.fixed,
+                    2.355 * component.stddev.value,
+                    2.355 * component.stddev.bounds[0],
+                    2.355 * component.stddev.bounds[1],
+                    component.stddev.fixed,
+                    strength,
+                    strength_unc,
+                    eqw,
+                ])
             elif isinstance(component, S07_attenuation):
-                att_table.add_row(
-                    [
-                        component.name,
-                        comp_type,
-                        component.tau_sil.value,
-                        component.tau_sil.bounds[0],
-                        component.tau_sil.bounds[1],
-                        component.tau_sil.fixed,
-                    ]
-                )
+                att_table.add_row([
+                    component.name,
+                    comp_type,
+                    component.tau_sil.value,
+                    component.tau_sil.bounds[0],
+                    component.tau_sil.bounds[1],
+                    component.tau_sil.fixed,
+                ])
 
             elif isinstance(component, att_Drude1D):
-                att_funct_table.add_row(
-                    [
-                        component.name,
-                        comp_type,
-                        component.x_0.value,
-                        component.x_0.bounds[0],
-                        component.x_0.bounds[1],
-                        component.x_0.fixed,
-                        component.tau.value,
-                        component.tau.bounds[0],
-                        component.tau.bounds[1],
-                        component.tau.fixed,
-                        component.fwhm.value,
-                        component.fwhm.bounds[0],
-                        component.fwhm.bounds[1],
-                        component.fwhm.fixed,
-                    ]
-                )
+                att_funct_table.add_row([
+                    component.name,
+                    comp_type,
+                    component.x_0.value,
+                    component.x_0.bounds[0],
+                    component.x_0.bounds[1],
+                    component.x_0.fixed,
+                    component.tau.value,
+                    component.tau.bounds[0],
+                    component.tau.bounds[1],
+                    component.tau.fixed,
+                    component.fwhm.value,
+                    component.fwhm.bounds[0],
+                    component.fwhm.bounds[1],
+                    component.fwhm.fixed,
+                ])
 
         # Call featcombine to calculate combined dust feature strengths.
         cftable = featcombine(line_table)
 
         # stack the tables (handles missing columns between tables)
-        out_table = vstack([bb_table, line_table, att_table, att_funct_table, cftable])
+        out_table = vstack(
+            [bb_table, line_table, att_table, att_funct_table, cftable])
 
         # Writing output table
-        out_table.write(
-            "{}_output.{}".format(filename, outform), format=outform, overwrite=True
+        out_table.write("{}_output.{}".format(filename, outform),
+                        format=outform,
+                        overwrite=True)
+
+    @staticmethod
+    def update_dictionary(feature_dict, instrumentname, update_fwhms=False):
+        """
+        Update parameter dictionary based on the instrument name.
+        Based on the instrument name, this function removes the 
+        features outside of the wavelength range and
+        updates the FWHMs of the lines. 
+
+
+        Parameters
+        ----------
+        feature_dict : dictionary
+            Dictionary created by reading in a science pack.
+            
+        instrumentname : string
+            Name of the instrument with which the input spectrum
+            is observed.
+            
+        update_fwhms = Boolean
+            True for h2_info and ion_info
+            False for df_info
+
+        Returns
+        -------
+        updated feature_dict
+        """
+
+        ind = np.nonzero(
+            test_waves_in_any_segment(feature_dict["x_0"], instrumentname)
+        )[0]
+
+        # select the valid entries in these arrays
+        array_keys = ("x_0", "amps", "fwhms", "names")
+        new_values_1 = {key: feature_dict[key][ind] for key in array_keys}
+
+        # these are lists instead
+        list_keys = (
+            "amps_fixed",
+            "fwhms_fixed",
+            "x_0_fixed",
+            "x_0_limits",
+            "amps_limits",
+            "fwhms_limits",
         )
+        new_values_2 = {
+            key: [feature_dict[key][i] for i in ind] for key in list_keys
+        }
+
+        feature_dict.update(new_values_1)
+        feature_dict.update(new_values_2)
+
+        if update_fwhms:
+            waves = feature_dict["x_0"]
+            values, fixed, mins, maxes = fwhm_recommendation(instrumentname, waves)
+            feature_dict.update(
+                {
+                    "fwhms": values,
+                    "fwhms_fixed": fixed,
+                    "fwhms_limits": list(zip(mins, maxes)),
+                }
+            )
+
+        return feature_dict
 
     @staticmethod
     def parse_table(pack_table):
@@ -758,7 +857,7 @@ class PAHFITBase:
 
         Parameters
         ----------
-        pack_table : astropy Table
+        pack_table : Table
             Table created by reading in a science pack.
 
         Returns
@@ -770,19 +869,15 @@ class PAHFITBase:
             components of that type were specified.
         """
         # Getting indices for the different components
-        bb_ind = np.where(
-            (pack_table["Form"] == "BlackBody1D")
-            | (pack_table["Form"] == "ModifiedBlackBody1D")
-        )[0]
-        df_ind = np.where(pack_table["Form"] == "Drude1D")[0]
-        ga_ind = np.where(pack_table["Form"] == "Gaussian1D")[0]
-        at_ind = np.where(
-            (pack_table["Form"] == "S07_attenuation")
-            | (pack_table["Form"] == "att_Drude1D")
-        )[0]
+        bb_ind = np.where((pack_table["kind"] == "starlight")
+                          | (pack_table["kind"] == "dust_continuum"))[0]
+        df_ind = np.where(pack_table["kind"] == "dust_feature")[0]
+        ga_ind = np.where(pack_table["kind"] == "line")[0]
+        at_ind = np.where((pack_table["kind"] == "attenuation")
+                          | (pack_table["kind"] == "absorption"))[0]
 
         # now split the gas emission lines between H2 and ions
-        names = [str(i) for i in pack_table["Name"][ga_ind]]
+        names = [str(i) for i in pack_table["name"][ga_ind]]
         if len(names) > 0:
             # this has trouble with empty list
             h2_temp = np.char.find(names, "H2") >= 0
@@ -798,128 +893,178 @@ class PAHFITBase:
         bb_info = None
         if len(bb_ind) > 0:
             bb_info = {
-                "names": np.array(pack_table["Name"][bb_ind].data),
-                "temps": np.array(pack_table["temp"][bb_ind].data),
-                "temps_limits": _ingest_limits(
-                    pack_table["temp_min"][bb_ind].data,
-                    pack_table["temp_max"][bb_ind].data,
+                "names":
+                np.array(pack_table["name"][bb_ind].data),
+                "temps":
+                np.array(pack_table["temperature"][:, 0][bb_ind].data),
+                "temps_limits":
+                _ingest_limits(
+                    pack_table["temperature"][:, 1][bb_ind],
+                    pack_table["temperature"][:, 2][bb_ind],
                 ),
-                "temps_fixed": _ingest_fixed(pack_table["temp_fixed"][bb_ind].data),
-                "amps": np.array(pack_table["amp"][bb_ind].data),
-                "amps_limits": _ingest_limits(
-                    pack_table["amp_min"][bb_ind].data,
-                    pack_table["amp_max"][bb_ind].data,
+                "temps_fixed":
+                _ingest_fixed(pack_table["temperature"][:, 1][bb_ind]),
+                "amps":
+                np.array(pack_table["tau"][:, 0][bb_ind].data),
+                "amps_limits":
+                _ingest_limits(
+                    pack_table["tau"][:, 1][bb_ind],
+                    pack_table["tau"][:, 2][bb_ind],
                 ),
-                "amps_fixed": _ingest_fixed(pack_table["amp_fixed"][bb_ind].data),
-                "modified": np.array(
-                    pack_table["Form"][bb_ind] == "ModifiedBlackBody1D"
-                ),
+                "amps_fixed":
+                _ingest_fixed(pack_table["tau"][:, 1][bb_ind]),
+                "modified":
+                np.array(pack_table["kind"][bb_ind] == "dust_continuum"),
             }
 
         # Creating the dust_features dict
         df_info = None
         if len(df_ind) > 0:
             df_info = {
-                "names": np.array(pack_table["Name"][df_ind].data),
-                "x_0": np.array(pack_table["x_0"][df_ind].data),
-                "x_0_limits": _ingest_limits(
-                    pack_table["x_0_min"][df_ind].data,
-                    pack_table["x_0_max"][df_ind].data,
+                "names":
+                np.array(pack_table["name"][df_ind].data),
+                "x_0":
+                np.array(pack_table["wavelength"][:, 0][df_ind].data),
+                "x_0_limits":
+                _ingest_limits(
+                    pack_table["wavelength"][:, 1][df_ind],
+                    pack_table["wavelength"][:, 2][df_ind],
                 ),
-                "x_0_fixed": _ingest_fixed(pack_table["x_0_fixed"][df_ind].data),
-                "amps": np.array(pack_table["amp"][df_ind].data),
-                "amps_limits": _ingest_limits(
-                    pack_table["amp_min"][df_ind].data,
-                    pack_table["amp_max"][df_ind].data,
+                "x_0_fixed":
+                _ingest_fixed(pack_table["wavelength"][:, 1][df_ind]),
+                "amps":
+                np.array(pack_table["power"][:, 0][df_ind].data),
+                "amps_limits":
+                _ingest_limits(
+                    pack_table["power"][:, 1][df_ind],
+                    pack_table["power"][:, 2][df_ind],
                 ),
-                "amps_fixed": _ingest_fixed(pack_table["amp_fixed"][df_ind].data),
-                "fwhms": np.array(pack_table["fwhm"][df_ind].data),
-                "fwhms_limits": _ingest_limits(
-                    pack_table["fwhm_min"][df_ind].data,
-                    pack_table["fwhm_max"][df_ind].data,
+                "amps_fixed":
+                _ingest_fixed(pack_table["power"][:, 1][df_ind]),
+                "fwhms":
+                np.array(pack_table["fwhm"][:, 0][df_ind].data),
+                "fwhms_limits":
+                _ingest_limits(
+                    pack_table["fwhm"][:, 1][df_ind],
+                    pack_table["fwhm"][:, 2][df_ind],
                 ),
-                "fwhms_fixed": _ingest_fixed(pack_table["fwhm_fixed"][df_ind].data),
+                "fwhms_fixed":
+                _ingest_fixed(pack_table["fwhm"][:, 1][df_ind]),
             }
 
         # Creating the H2 dict
         h2_info = None
         if len(h2_ind) > 0:
             h2_info = {
-                "names": np.array(pack_table["Name"][h2_ind].data),
-                "x_0": np.array(pack_table["x_0"][h2_ind].data),
-                "x_0_limits": _ingest_limits(
-                    pack_table["x_0_min"][h2_ind].data,
-                    pack_table["x_0_max"][h2_ind].data,
+                "names":
+                np.array(pack_table["name"][h2_ind].data),
+                "x_0":
+                np.array(pack_table["wavelength"][:, 0][h2_ind].data),
+                "x_0_limits":
+                _ingest_limits(
+                    pack_table["wavelength"][:, 1][h2_ind],
+                    pack_table["wavelength"][:, 2][h2_ind],
                 ),
-                "x_0_fixed": _ingest_fixed(pack_table["x_0_fixed"][h2_ind].data),
-                "amps": np.array(pack_table["amp"][h2_ind].data),
-                "amps_limits": _ingest_limits(
-                    pack_table["amp_min"][h2_ind].data,
-                    pack_table["amp_max"][h2_ind].data,
+                "x_0_fixed":
+                _ingest_fixed(pack_table["wavelength"][:, 1][h2_ind]),
+                "amps":
+                np.array(pack_table["power"][:, 0][h2_ind].data),
+                "amps_limits":
+                _ingest_limits(
+                    pack_table["power"][:, 1][h2_ind],
+                    pack_table["power"][:, 2][h2_ind],
                 ),
-                "amps_fixed": _ingest_fixed(pack_table["amp_fixed"][h2_ind].data),
-                "fwhms": np.array(pack_table["fwhm"][h2_ind].data),
-                "fwhms_limits": _ingest_limits(
-                    pack_table["fwhm_min"][h2_ind].data,
-                    pack_table["fwhm_max"][h2_ind].data,
+                "amps_fixed":
+                _ingest_fixed(pack_table["power"][:, 1][h2_ind]),
+                "fwhms":
+                np.array(pack_table["fwhm"][:, 0][h2_ind].data),
+                "fwhms_limits":
+                _ingest_limits(
+                    pack_table["fwhm"][:, 1][h2_ind],
+                    pack_table["fwhm"][:, 2][h2_ind],
                 ),
-                "fwhms_fixed": _ingest_fixed(pack_table["fwhm_fixed"][h2_ind].data),
+                "fwhms_fixed":
+                _ingest_fixed(pack_table["fwhm"][:, 1][h2_ind]),
             }
 
         # Creating the ion dict
         ion_info = None
         if len(ion_ind) > 0:
             ion_info = {
-                "names": np.array(pack_table["Name"][ion_ind].data),
-                "x_0": np.array(pack_table["x_0"][ion_ind].data),
-                "x_0_limits": _ingest_limits(
-                    pack_table["x_0_min"][ion_ind].data,
-                    pack_table["x_0_max"][ion_ind].data,
+                "names":
+                np.array(pack_table["name"][ion_ind].data),
+                "x_0":
+                np.array(pack_table["wavelength"][:, 0][ion_ind].data),
+                "x_0_limits":
+                _ingest_limits(
+                    pack_table["wavelength"][:, 1][ion_ind],
+                    pack_table["wavelength"][:, 2][ion_ind],
                 ),
-                "x_0_fixed": _ingest_fixed(pack_table["x_0_fixed"][ion_ind].data),
-                "amps": np.array(pack_table["amp"][ion_ind].data),
-                "amps_limits": _ingest_limits(
-                    pack_table["amp_min"][ion_ind].data,
-                    pack_table["amp_max"][ion_ind].data,
+                "x_0_fixed":
+                _ingest_fixed(pack_table["wavelength"][:, 1][ion_ind]),
+                "amps":
+                np.array(pack_table["power"][:, 0][ion_ind].data),
+                "amps_limits":
+                _ingest_limits(
+                    pack_table["power"][:, 1][ion_ind],
+                    pack_table["power"][:, 2][ion_ind],
                 ),
-                "amps_fixed": _ingest_fixed(pack_table["amp_fixed"][ion_ind].data),
-                "fwhms": np.array(pack_table["fwhm"][ion_ind].data),
-                "fwhms_limits": _ingest_limits(
-                    pack_table["fwhm_min"][ion_ind].data,
-                    pack_table["fwhm_max"][ion_ind].data,
+                "amps_fixed":
+                _ingest_fixed(pack_table["power"][:, 1][ion_ind]),
+                "fwhms":
+                np.array(pack_table["fwhm"][:, 0][ion_ind].data),
+                "fwhms_limits":
+                _ingest_limits(
+                    pack_table["fwhm"][:, 1][ion_ind].data,
+                    pack_table["fwhm"][:, 2][ion_ind].data,
                 ),
-                "fwhms_fixed": _ingest_fixed(pack_table["fwhm_fixed"][ion_ind].data),
+                "fwhms_fixed":
+                _ingest_fixed(pack_table["fwhm"][:, 1][ion_ind].data),
             }
 
         # Create the attenuation dict
         att_info = None
         if len(at_ind) > 0:
             att_info = {
-                "names": np.array(pack_table["Name"][at_ind].data),
-                "x_0": np.array(pack_table["x_0"][at_ind].data),
-                "x_0_limits": _ingest_limits(
-                    pack_table["x_0_min"][at_ind].data,
-                    pack_table["x_0_max"][at_ind].data,
+                "names":
+                np.array(pack_table["name"][at_ind].data),
+                "x_0":
+                np.array(pack_table["wavelength"][:, 0][at_ind].data),
+                "x_0_limits":
+                _ingest_limits(
+                    pack_table["wavelength"][:, 1][at_ind],
+                    pack_table["wavelength"][:, 2][at_ind],
                 ),
-                "x_0_fixed": _ingest_fixed(pack_table["x_0_fixed"][at_ind].data),
-                "amps": np.array(pack_table["amp"][at_ind].data),
-                "amps_limits": _ingest_limits(
-                    pack_table["amp_min"][at_ind].data,
-                    pack_table["amp_max"][at_ind].data,
+                "x_0_fixed":
+                _ingest_fixed(pack_table["wavelength"][:, 1][at_ind]),
+                "amps":
+                np.array(pack_table["tau"][:, 0][at_ind].data),
+                "amps_limits":
+                _ingest_limits(
+                    pack_table["tau"][:, 0][at_ind],
+                    pack_table["tau"][:, 1][at_ind],
                 ),
-                "amps_fixed": _ingest_fixed(pack_table["amp_fixed"][at_ind].data),
-                "fwhms": np.array(pack_table["fwhm"][at_ind].data),
-                "fwhms_limits": _ingest_limits(
-                    pack_table["fwhm_min"][at_ind].data,
-                    pack_table["fwhm_max"][at_ind].data,
+                "amps_fixed":
+                _ingest_fixed(pack_table["tau"][:, 1][at_ind]),
+                "fwhms":
+                np.array(pack_table["fwhm"][:, 0][at_ind].data),
+                "fwhms_limits":
+                _ingest_limits(
+                    pack_table["fwhm"][:, 1][at_ind],
+                    pack_table["fwhm"][:, 2][at_ind],
                 ),
-                "fwhms_fixed": _ingest_fixed(pack_table["fwhm_fixed"][at_ind].data),
+                "fwhms_fixed":
+                _ingest_fixed(pack_table["fwhm"][:, 1][at_ind]),
             }
+
+        if att_info["names"] == 'silicate':
+            name_array = np.array(['S07_att'])
+            att_info.update({'names': name_array})
 
         return (bb_info, df_info, h2_info, ion_info, att_info)
 
     @staticmethod
-    def read(filename, tformat=None):
+    def read(filename, instrumentname, tformat=None):
         """
         Create model by reading the parameters from a file.
 
@@ -942,8 +1087,18 @@ class PAHFITBase:
             tformat = filename.split(".")[-1]
 
         # Reading the input file as table
-        t = Table.read(filename, format=tformat)
-        return PAHFITBase.parse_table(t)
+        t = Features.read(filename)
+        bb_info, df_info, h2_info, ion_info, att_info = PAHFITBase.parse_table(
+            t)
+        df_info = PAHFITBase.update_dictionary(df_info, instrumentname)
+        h2_info = PAHFITBase.update_dictionary(h2_info,
+                                               instrumentname,
+                                               update_fwhms=True)
+        ion_info = PAHFITBase.update_dictionary(ion_info,
+                                                instrumentname,
+                                                update_fwhms=True)
+
+        return (bb_info, df_info, h2_info, ion_info, att_info)
 
     @staticmethod
     def estimate_init(obs_x, obs_y, param_info):
@@ -964,11 +1119,10 @@ class PAHFITBase:
 
         # guess starting point of bb
         for i, (fix, temp) in enumerate(
-            zip(param_info[0]["amps_fixed"], param_info[0]["temps"])
-        ):
+                zip(param_info[0]["amps_fixed"], param_info[0]["temps"])):
 
             if (fix is False) & (
-                temp >= 2500
+                    temp >= 2500
             ):  # stellar comoponent is defined by BB that has T>=2500 K
                 bb = BlackBody1D(1, temp)
                 if min(obs_x) < 5:

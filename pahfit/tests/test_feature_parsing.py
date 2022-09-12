@@ -1,10 +1,10 @@
-from astropy.table import Table
 import numpy as np
 from pahfit.base import PAHFITBase
 from pahfit.helpers import find_packfile
+from pahfit.features import Features
+from pahfit.instrument import wave_range
 
-
-def test_model_trimming():
+def test_feature_parsing():
     """
     Goal
     ----
@@ -22,38 +22,45 @@ def test_model_trimming():
     features, ...) can deal with those feature not being there.
 
     """
-    # fake obsdata from 0 to 30 micron (will not actually do fitting in
-    # this test)
+    # fake obsdata (will not actually do fitting in this test)
+    instrumentname = 'spitzer.irs.sl.2'
     N = 100
+    wmin, wmax = wave_range(instrumentname)
     obsdata = {
-        "x": np.linspace(1, 30, N),
+        "x": np.linspace(wmin, wmax, N),
         "y": np.linspace(1, 2, N),
         "unc": np.full(N, 0.1),
     }
 
+
     # choose any science pack
-    packfile = find_packfile("scipack_ExGal_SpitzerIRSSLLL.ipac")
+    packfile = find_packfile("classic.yaml")
 
-    # load the pack table using astropy
-    packtable = Table.read(packfile, format=packfile.split(".")[-1])
+    # convert the yaml prescription to a features table
+    features = Features.read(packfile)
 
-    # parse table into the param_info dict, and init PAHFITBase object from it
-    def parse_and_init(astropy_table):
-        param_info = PAHFITBase.parse_table(astropy_table)
+    # parse features table into the param_info dict, and init PAHFITBase
+    # object from it
+    def parse_and_init(features_instance):
+        param_info = PAHFITBase.parse_table(features_instance)
         pmodel = PAHFITBase(
-            obsdata["x"], obsdata["y"], estimate_start=True, param_info=param_info
+            obsdata["x"],
+            obsdata["y"],
+            instrumentname,
+            estimate_start=True,
+            param_info=param_info,
         )
         return pmodel
 
     # Case 0: the whole table
     # whole_pmodel
-    _ = parse_and_init(packtable)
+    _ = parse_and_init(features)
 
     # Case 1, 2, and 3 (no BB, Gauss, Drude)
     remove_forms = ["BlackBody1D", "Gaussian1D", "Drude1D", "att_Drude1D"]
-    for form in remove_forms:
-        _ = parse_and_init(packtable[packtable["Form"] != form])
+    for kind in remove_forms:
+        _ = parse_and_init(features[features["kind"] != kind])
 
 
 if __name__ == "__main__":
-    test_model_trimming()
+    test_feature_parsing()
