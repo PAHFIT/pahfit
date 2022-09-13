@@ -1,5 +1,7 @@
 from specutils import Spectrum1D
 from features import Features
+from base import PAHFITBase
+from astropy import units as u
 import copy
 
 
@@ -111,7 +113,13 @@ class Model:
         Nothing, but internal feature table is updated.
 
         """
-        pass
+        obs_x = spec.spectral_axis.to(u.micron).value
+        obs_y = spec.flux.value # TODO figure out right unit
+
+        # remake param_info to make sure we have any feature updates from the user
+        param_info = PAHFITBase.parse_table(self.features)
+        param_info = PAHFITBase.estimate_init(obs_x, obs_y, param_info)
+        self._backport_param_info(param_info)
 
     def plot(self, spec=None):
         """Plot model, and optionally compare to observational data.
