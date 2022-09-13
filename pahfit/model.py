@@ -140,7 +140,7 @@ class Model:
         """Convert the features table into a fittable model."""
         pass
 
-    def _parse_astropy_result(self):
+    def _parse_astropy_result(self, astropy_model):
         """Store the result of the astropy fit into the features table
 
         Every relevant value inside the astropy model, is written to the
@@ -195,3 +195,18 @@ class Model:
 
         """
         self.features.write(fn)
+
+    def _backport_param_info(self, param_info):
+        """Convert param_info to values in features table.
+
+        Temporary hack to make the new system compatible with the old system.
+
+        """
+        raise NotImplementedError
+        # unfortunately, there is no implementation for this, even in
+        # the original code. That one goes straight from astropy model
+        # to table...
+        # But we can do something wacky here, like converting to model
+        # first, and then back to table.
+        astropy_model = PAHFITBase.model_from_param_info(param_info)
+        self._parse_astropy_result(model)
