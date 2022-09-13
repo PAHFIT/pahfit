@@ -81,8 +81,8 @@ def _ingest_fixed(fixed_vals):
     """
     Ingest the fixed value read from a file and generate the appropriate
     internal format (list of booleans). Since this information is indirectly
-    hidden in the parameter of a feature, this function is needed to 
-    extract that. 
+    hidden in the parameter of a feature, this function is needed to
+    extract that.
 
     Parameters
     ----------
@@ -134,7 +134,7 @@ class PAHFITBase:
 
     instrumentname: string
         the instrument which which the input spectrum
-        was observed.    
+        was observed.
 
     filename: string
         filename giving the pack that contains all the
@@ -153,6 +153,7 @@ class PAHFITBase:
         dict with {name amps, amps_limits, amps_fixed,
         x_0, x_0_limits, x_0_fixed, fwhms, fwhms_limits, fwhm_fixed}.
     """
+
     def __init__(
         self,
         obs_x,
@@ -184,21 +185,27 @@ class PAHFITBase:
             raise ValueError("No parameter information set.")
 
         self.param_info = param_info
+        self.bb_info = param_info[0]
+        self.dust_features = param_info[1]
+        self.h2_features = param_info[2]
+        self.ion_features = param_info[3]
+        self.att_info = param_info[4]
+        self.model = PAHFITBase.model_from_param_info(self.param_info)
 
+    @staticmethod
+    def model_from_param_info(param_info):
+        # setup the model
         bb_info = param_info[0]
         dust_features = param_info[1]
         h2_features = param_info[2]
         ion_features = param_info[3]
         att_info = param_info[4]
 
-        # setup the model
-        self.model = None
-        self.bb_info = bb_info
+        model = None
         if bb_info is not None:
             bbs = []
             for k in range(len(bb_info["names"])):
-                BBClass = ModifiedBlackBody1D if bb_info["modified"][
-                    k] else BlackBody1D
+                BBClass = ModifiedBlackBody1D if bb_info["modified"][k] else BlackBody1D
                 bbs.append(
                     BBClass(
                         name=bb_info["names"][k],
@@ -212,10 +219,10 @@ class PAHFITBase:
                             "temperature": bb_info["temps_fixed"][k],
                             "amplitude": bb_info["amps_fixed"][k],
                         },
-                    ))
-            self.model = sum(bbs[1:], bbs[0])
+                    )
+                )
+            model = sum(bbs[1:], bbs[0])
 
-        self.dust_features = dust_features
         if dust_features is not None:
             df = []
             for k in range(len(dust_features["names"])):
@@ -235,15 +242,15 @@ class PAHFITBase:
                             "x_0": dust_features["x_0_fixed"][k],
                             "fwhm": dust_features["fwhms_fixed"][k],
                         },
-                    ))
+                    )
+                )
 
             df = sum(df[1:], df[0])
-            if self.model:
-                self.model += df
+            if model:
+                model += df
             else:
-                self.model = df
+                model = df
 
-        self.h2_features = h2_features
         if h2_features is not None:
             h2 = []
             for k in range(len(h2_features["names"])):
@@ -254,10 +261,8 @@ class PAHFITBase:
                         mean=h2_features["x_0"][k],
                         stddev=h2_features["fwhms"][k] / 2.355,
                         bounds={
-                            "amplitude":
-                            h2_features["amps_limits"][k],
-                            "mean":
-                            h2_features["x_0_limits"][k],
+                            "amplitude": h2_features["amps_limits"][k],
+                            "mean": h2_features["x_0_limits"][k],
                             "stddev": (
                                 h2_features["fwhms"][k] * 0.9 / 2.355,
                                 h2_features["fwhms"][k] * 1.1 / 2.355,
@@ -268,14 +273,14 @@ class PAHFITBase:
                             "mean": h2_features["x_0_fixed"][k],
                             "stddev": h2_features["fwhms_fixed"][k],
                         },
-                    ))
+                    )
+                )
             h2 = sum(h2[1:], h2[0])
-            if self.model:
-                self.model += h2
+            if model:
+                model += h2
             else:
-                self.model = h2
+                model = h2
 
-        self.ion_features = ion_features
         if ion_features is not None:
             ions = []
             for k in range(len(ion_features["names"])):
@@ -286,10 +291,8 @@ class PAHFITBase:
                         mean=ion_features["x_0"][k],
                         stddev=ion_features["fwhms"][k] / 2.355,
                         bounds={
-                            "amplitude":
-                            ion_features["amps_limits"][k],
-                            "mean":
-                            ion_features["x_0_limits"][k],
+                            "amplitude": ion_features["amps_limits"][k],
+                            "mean": ion_features["x_0_limits"][k],
                             "stddev": (
                                 ion_features["fwhms"][k] * 0.9 / 2.355,
                                 ion_features["fwhms"][k] * 1.1 / 2.355,
@@ -300,31 +303,31 @@ class PAHFITBase:
                             "mean": ion_features["x_0_fixed"][k],
                             "stddev": ion_features["fwhms_fixed"][k],
                         },
-                    ))
+                    )
+                )
             ions = sum(ions[1:], ions[0])
-            if self.model:
-                self.model += ions
+            if model:
+                model += ions
             else:
-                self.model = ions
+                model = ions
 
         # add additional att components to the model if necessary
-        if not self.model:
+        if not model:
             raise ValueError("No model components found")
 
-        self.att_info = att_info
         if att_info is not None:
             for k in range(len(att_info["names"])):
                 if (
-                        att_info["names"][k] == "S07_att"
+                    att_info["names"][k] == "S07_att"
                 ):  # Only loop through att components that can be parameterized
-                    self.model *= S07_attenuation(
+                    model *= S07_attenuation(
                         name=att_info["names"][k],
                         tau_sil=att_info["amps"][k],
                         bounds={"tau_sil": att_info["amps_limits"][k]},
                         fixed={"tau_sil": att_info["amps_fixed"][k]},
                     )
                 else:
-                    self.model *= att_Drude1D(
+                    model *= att_Drude1D(
                         name=att_info["names"][k],
                         tau=att_info["amps"][k],
                         x_0=att_info["x_0"][k],
@@ -335,6 +338,8 @@ class PAHFITBase:
                         },
                         fixed={"x_0": att_info["x_0_fixed"][k]},
                     )
+
+        return model
 
     @staticmethod
     def plot(axs, x, y, yerr, model, model_samples=1000, scalefac_resid=2):
