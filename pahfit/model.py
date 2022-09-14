@@ -310,7 +310,7 @@ class Model:
                 feature_name = component.name
 
             # find the matching row
-            row = self.features.iloc[feature_name]
+            row = self.features.loc[feature_name]
             for param_name in component.param_names:
                 # determine column name and element value
                 param_value = getattr(component, param_name).value
