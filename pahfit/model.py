@@ -246,12 +246,12 @@ class Model:
 
         Temporary hack to make the new system compatible with the old system.
 
+        TODO: if we remove the param_info stuff entirely, we won't need this
+
         """
-        raise NotImplementedError
         # unfortunately, there is no implementation for this, even in
         # the original code. That one goes straight from astropy model
-        # to table...
-        # But we can do something wacky here, like converting to model
+        # to table... But we can do a kludge here: convert to model
         # first, and then back to table.
         astropy_model = PAHFITBase.model_from_param_info(param_info)
         self._parse_astropy_result(astropy_model)
