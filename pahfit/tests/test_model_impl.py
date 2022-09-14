@@ -1,6 +1,6 @@
 from pahfit.helpers import read_spectrum
 from specutils import Spectrum1D
-
+from pahfit.model import Model
 
 def test_feature_table_model_conversion():
     # do a fit
