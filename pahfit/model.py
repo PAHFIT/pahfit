@@ -1,10 +1,11 @@
 from specutils import Spectrum1D
-from features import Features
-from base import PAHFITBase
 from astropy import units as u
 import copy
 from astropy.modeling.fitting import LevMarLSQFitter
 from matplotlib import pyplot as plt
+
+from pahfit.features import Features
+from pahfit.base import PAHFITBase
 
 
 class Model:
