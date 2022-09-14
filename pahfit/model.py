@@ -263,7 +263,7 @@ class Model:
         return PAHFITBase.model_from_param_info(param_info)
 
     def _parse_astropy_result(self, astropy_model):
-        """Store the result of the astropy fit into the features table
+        """Store the result of the astropy fit into the features table.
 
         Every relevant value inside the astropy model, is written to the
         right position in the features table. This way, the astropy
@@ -274,8 +274,53 @@ class Model:
         model (just store the features table)
 
         """
-        # implementation inspired by pahfitbase. I think I better
-        # rewrite this thing from the start. Plenty of ways to test if
-        # it's correct.
-        raise NotImplementedError
-        pass
+        # Some translation rules between astropy model components and
+        # feature table names and values.
+
+        # these have the same value but potentially different names
+        param_name_equivalent = {
+            "amplitude": "power",
+            "temperature": "temperature",
+            "fwhm": "fwhm",
+            "x_0": "wavelength",
+            "mean": "wavelength",
+            "tau_sil": "tau",
+        }
+
+        # these have different values and potentially different names
+        param_name_needs_conversion = ["stddev"]
+
+        def param_conversion(param_name, param_value):
+            if param_name == "stddev":
+                new_name = "fwhm"
+                # convert stddev to fwhm
+                new_value = param_value * 2.355
+            else:
+                raise NotImplementedError("no conversion rule for this model parameter")
+            return new_name, new_value
+
+        # now apply these rules to fill in the parameters in the right
+        # spots of the table
+        for component in astropy_model:
+            if component.name == "S07_att":
+                # Just need to watch out for S07_att. It is named silicate
+                # in the features table.
+                feature_name = "silicate"
+            else:
+                feature_name = component.name
+
+            # find the matching row
+            row = self.features.iloc[feature_name]
+            for param_name in component.param_names:
+                # determine column name and element value
+                param_value = getattr(component, param_name).value
+                if param_name in param_name_equivalent:
+                    col_name = param_name_equivalent[param_name]
+                    col_value = param_value
+                elif param_name in param_name_needs_conversion:
+                    col_name, col_value = param_conversion(param_name, param_value)
+
+                # write it to the element (masked array [value lowerbound upperbound])
+                row[col_name][0] = col_value
+
+        # TODO: write FWHM to the table for broad (dust) features, but NOT for lines.
