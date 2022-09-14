@@ -291,9 +291,6 @@ class Model:
         # need to be careful with 'amplitude'. For the blackbody
         # components, it should be translated to tau.
 
-        # these have different values and potentially different names
-        param_name_exception = ["stddev", "amplitude"]
-
         def param_conversion(features_group, param_name, param_value):
             # default conversion
             if param_name in param_name_equivalent:
