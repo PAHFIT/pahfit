@@ -182,11 +182,11 @@ class Model:
             sharex=True,
         )
 
-        x = spec.spectral_axis.to(u.micon).value
+        x = spec.spectral_axis.to(u.micron).value
         y = spec.flux.value
-        u = spec.uncertainty.value
+        unc = spec.uncertainty.value
         astropy_model = self._construct_astropy_model()
-        PAHFITBase.plot(axs, x, y, u, astropy_model)
+        PAHFITBase.plot(axs, x, y, unc, astropy_model)
 
         fig.subplots_adjust(hspace=0)
 
