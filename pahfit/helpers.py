@@ -8,6 +8,10 @@ from astropy.table import Table
 
 from astropy.modeling.fitting import LevMarLSQFitter
 
+from specutils import Spectrum1D
+from astropy.nddata import StdDevUncertainty
+
+
 from pahfit.base import PAHFITBase
 from pahfit.features import Features
 
@@ -15,9 +19,7 @@ from pahfit.component_models import BlackBody1D, S07_attenuation
 from astropy.modeling.physical_models import Drude1D
 from astropy.modeling.functional_models import Gaussian1D
 
-__all__ = [
-    "read_spectrum", "initialize_model", "fit_spectrum", "calculate_compounds"
-]
+__all__ = ["read_spectrum", "initialize_model", "fit_spectrum", "calculate_compounds"]
 
 
 def find_packfile(packfile):
@@ -52,7 +54,7 @@ def find_packfile(packfile):
     return packfile_found
 
 
-def read_spectrum(specfile, colnames=["wavelength", "flux", "sigma"]):
+def read_spectrum(specfile, colnames=["wavelength", "flux", "sigma"], spec1d=False):
     """
     Read in a spectrum and convert intput units to the expected internal PAHFIT units.
 
@@ -79,23 +81,21 @@ def read_spectrum(specfile, colnames=["wavelength", "flux", "sigma"]):
         if os.path.isfile(test_specfile):
             specfile = test_specfile
         else:
-            raise ValueError(
-                "Input spectrumfile {} not found".format(specfile))
+            raise ValueError("Input spectrumfile {} not found".format(specfile))
 
     # get the table format (from extension of filename)
     tformat = specfile.split(".")[-1]
     if tformat == "ecsv":
         tformat = "ascii.ecsv"
     obs_spectrum = Table.read(specfile, format=tformat)
-    obsdata = {}
-    obsdata["x"] = obs_spectrum[colnames[0]].to(u.micron,
-                                                equivalencies=u.spectral())
-    obsdata["y"] = obs_spectrum[colnames[1]].to(
-        u.Jy, equivalencies=u.spectral_density(obsdata["x"]))
-    obsdata["unc"] = obs_spectrum[colnames[2]].to(
-        u.Jy, equivalencies=u.spectral_density(obsdata["x"]))
+    x = obs_spectrum[colnames[0]].to(u.micron, equivalencies=u.spectral())
+    y = obs_spectrum[colnames[1]].to(u.Jy, equivalencies=u.spectral_density(x))
+    unc = obs_spectrum[colnames[2]].to(u.Jy, equivalencies=u.spectral_density(x))
 
-    return obsdata
+    if spec1d:
+        return Spectrum1D(spectral_axis=x, flux=y, uncertainty=StdDevUncertainty(unc))
+    else:
+        return {"x": x, "y": y, "unc": unc}
 
 
 def initialize_model(packfile, instrumentname, obsdata, estimate_start=False):
@@ -108,7 +108,7 @@ def initialize_model(packfile, instrumentname, obsdata, estimate_start=False):
         file with the PAHFIT pack information
 
     instrumentname: string
-         name of the instrument with which the input spectrum is observed       
+         name of the instrument with which the input spectrum is observed
 
     obsdata : dict
         observed data where x = wavelength, y = SED, and unc = uncertainties
