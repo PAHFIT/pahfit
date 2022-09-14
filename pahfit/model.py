@@ -277,50 +277,58 @@ class Model:
         # Some translation rules between astropy model components and
         # feature table names and values.
 
-        # these have the same value but potentially different names
+        # these have the same value but different (fixed) names
         param_name_equivalent = {
-            "amplitude": "power",
             "temperature": "temperature",
             "fwhm": "fwhm",
             "x_0": "wavelength",
             "mean": "wavelength",
             "tau_sil": "tau",
         }
+        # need to be careful with 'amplitude'. For the blackbody
+        # components, it should be translated to tau.
 
         # these have different values and potentially different names
-        param_name_needs_conversion = ["stddev"]
+        param_name_exception = ["stddev", "amplitude"]
 
-        def param_conversion(param_name, param_value):
-            if param_name == "stddev":
+        def param_conversion(features_group, param_name, param_value):
+            # default conversion
+            if param_name in param_name_equivalent:
+                new_name = param_name_equivalent[param_name]
+                new_value = param_value
+            # certain types of features use tau instead of amplitude
+            elif param_name == "amplitude":
+                if features_group in ["starlight", "dust_continuum", "absorption"]:
+                    new_name = "tau"
+                else:
+                    new_name = "power"
+                new_value = param_value
+            # convert stddev to fwhm
+            elif param_name == "stddev":
                 new_name = "fwhm"
-                # convert stddev to fwhm
                 new_value = param_value * 2.355
             else:
-                raise NotImplementedError("no conversion rule for this model parameter")
+                raise NotImplementedError(f"no conversion rule for model parameter {param_name}")
             return new_name, new_value
 
         # now apply these rules to fill in the parameters in the right
         # spots of the table
         for component in astropy_model:
+            # find the matching row
             if component.name == "S07_att":
                 # Just need to watch out for S07_att. It is named silicate
                 # in the features table.
                 feature_name = "silicate"
             else:
                 feature_name = component.name
-
-            # find the matching row
             row = self.features.loc[feature_name]
-            for param_name in component.param_names:
-                # determine column name and element value
-                param_value = getattr(component, param_name).value
-                if param_name in param_name_equivalent:
-                    col_name = param_name_equivalent[param_name]
-                    col_value = param_value
-                elif param_name in param_name_needs_conversion:
-                    col_name, col_value = param_conversion(param_name, param_value)
 
-                # write it to the element (masked array [value lowerbound upperbound])
+            # write the new values (every element is masked array [value
+            # lowerbound upperbound])
+            for param_name in component.param_names:
+                col_name, col_value = param_conversion(
+                    row["group"], param_name, getattr(component, param_name).value
+                )
                 row[col_name][0] = col_value
 
         # TODO: write FWHM to the table for broad (dust) features, but NOT for lines.
