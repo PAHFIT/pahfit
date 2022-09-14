@@ -147,7 +147,7 @@ class Model:
         fit = LevMarLSQFitter()
 
         # fit
-        x = spec.spectral_axis.to(u.micon).value
+        x = spec.spectral_axis.to(u.micron).value
         y = spec.flux.value
         w = 1.0 / spec.uncertainty.value
         self.astropy_result = fit(
