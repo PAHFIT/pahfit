@@ -291,14 +291,14 @@ class Model:
         # need to be careful with 'amplitude'. For the blackbody
         # components, it should be translated to tau.
 
-        def param_conversion(features_group, param_name, param_value):
+        def param_conversion(features_kind, param_name, param_value):
             # default conversion
             if param_name in param_name_equivalent:
                 new_name = param_name_equivalent[param_name]
                 new_value = param_value
             # certain types of features use tau instead of amplitude
             elif param_name == "amplitude":
-                if features_group in ["starlight", "dust_continuum", "absorption"]:
+                if features_kind in ["starlight", "dust_continuum", "absorption"]:
                     new_name = "tau"
                 else:
                     new_name = "power"
@@ -327,7 +327,7 @@ class Model:
             # lowerbound upperbound])
             for param_name in component.param_names:
                 col_name, col_value = param_conversion(
-                    row["group"], param_name, getattr(component, param_name).value
+                    row["kind"], param_name, getattr(component, param_name).value
                 )
                 row[col_name][0] = col_value
 
