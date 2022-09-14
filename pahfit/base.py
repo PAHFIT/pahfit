@@ -1069,7 +1069,7 @@ class PAHFITBase:
             name_array = np.array(['S07_att'])
             att_info.update({'names': name_array})
 
-        return (bb_info, df_info, h2_info, ion_info, att_info)
+        return [bb_info, df_info, h2_info, ion_info, att_info]
 
     @staticmethod
     def read(filename, instrumentname, tformat=None):
