@@ -149,7 +149,7 @@ class Model:
         # fit
         x = spec.spectral_axis.to(u.micron).value
         y = spec.flux.value
-        w = 1.0 / spec.uncertainty.value
+        w = 1.0 / spec.uncertainty.array
         self.astropy_result = fit(
             astropy_model,
             x,
@@ -188,7 +188,7 @@ class Model:
 
         x = spec.spectral_axis.to(u.micron).value
         y = spec.flux.value
-        unc = spec.uncertainty.value
+        unc = spec.uncertainty.array
         astropy_model = self._construct_astropy_model()
         PAHFITBase.plot(axs, x, y, unc, astropy_model)
 
