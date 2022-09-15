@@ -189,7 +189,8 @@ class PAHFITBase:
         self.dust_features = param_info[1]
         self.h2_features = param_info[2]
         self.ion_features = param_info[3]
-        self.att_info = param_info[4]
+        self.abs_info = param_info[4]
+        self.att_info = param_info[5]
         self.model = PAHFITBase.model_from_param_info(self.param_info)
 
     @staticmethod
@@ -199,7 +200,8 @@ class PAHFITBase:
         dust_features = param_info[1]
         h2_features = param_info[2]
         ion_features = param_info[3]
-        att_info = param_info[4]
+        abs_info = param_info[4]
+        att_info = param_info[5]
 
         model = None
         if bb_info is not None:
@@ -315,28 +317,26 @@ class PAHFITBase:
         if not model:
             raise ValueError("No model components found")
 
+        if abs_info is not None:
+            for k in range(len(abs_info["names"])):
+                model *= att_Drude1D(
+                    name=abs_info["names"][k],
+                    tau=abs_info["amps"][k],
+                    x_0=abs_info["x_0"][k],
+                    fwhm=abs_info["fwhms"][k],
+                    bounds={
+                        "tau": abs_info["amps_limits"][k],
+                        "fwhm": abs_info["fwhms_limits"][k],
+                    },
+                    fixed={"x_0": abs_info["x_0_fixed"][k]},
+                )
+
         if att_info is not None:
-            for k in range(len(att_info["names"])):
-                if (
-                    att_info["names"][k] == "S07_att"
-                ):  # Only loop through att components that can be parameterized
-                    model *= S07_attenuation(
-                        name=att_info["names"][k],
-                        tau_sil=att_info["amps"][k],
-                        bounds={"tau_sil": att_info["amps_limits"][k]},
-                        fixed={"tau_sil": att_info["amps_fixed"][k]},
-                    )
-                else:
-                    model *= att_Drude1D(
-                        name=att_info["names"][k],
-                        tau=att_info["amps"][k],
-                        x_0=att_info["x_0"][k],
-                        fwhm=att_info["fwhms"][k],
-                        bounds={
-                            "tau": att_info["amps_limits"][k],
-                            "fwhm": att_info["fwhms_limits"][k],
-                        },
-                        fixed={"x_0": att_info["x_0_fixed"][k]},
+            model *= S07_attenuation(
+                        name=att_info["name"],
+                        tau_sil=att_info["tau_sil"],
+                        bounds={"tau_sil": att_info["tau_sil_limits"]},
+                        fixed={"tau_sil": att_info["tau_sil_fixed"]},
                     )
 
         return model
@@ -795,20 +795,20 @@ class PAHFITBase:
     def update_dictionary(feature_dict, instrumentname, update_fwhms=False):
         """
         Update parameter dictionary based on the instrument name.
-        Based on the instrument name, this function removes the 
+        Based on the instrument name, this function removes the
         features outside of the wavelength range and
-        updates the FWHMs of the lines. 
+        updates the FWHMs of the lines.
 
 
         Parameters
         ----------
         feature_dict : dictionary
             Dictionary created by reading in a science pack.
-            
+
         instrumentname : string
             Name of the instrument with which the input spectrum
             is observed.
-            
+
         update_fwhms = Boolean
             True for h2_info and ion_info
             False for df_info
@@ -817,6 +817,8 @@ class PAHFITBase:
         -------
         updated feature_dict
         """
+        if feature_dict is None:
+            return None
 
         ind = np.nonzero(within_segment(feature_dict["x_0"], instrumentname))[0]
 
@@ -881,8 +883,8 @@ class PAHFITBase:
                           | (pack_table["kind"] == "dust_continuum"))[0]
         df_ind = np.where(pack_table["kind"] == "dust_feature")[0]
         ga_ind = np.where(pack_table["kind"] == "line")[0]
-        at_ind = np.where((pack_table["kind"] == "attenuation")
-                          | (pack_table["kind"] == "absorption"))[0]
+        at_ind = np.where(pack_table["kind"] == "attenuation")[0]
+        ab_ind = np.where(pack_table["kind"] == "absorption")[0]
 
         # now split the gas emission lines between H2 and ions
         names = [str(i) for i in pack_table["name"][ga_ind]]
@@ -1030,10 +1032,11 @@ class PAHFITBase:
                 _ingest_fixed(pack_table["fwhm"][:, 1][ion_ind].data),
             }
 
-        # Create the attenuation dict
-        att_info = None
-        if len(at_ind) > 0:
-            att_info = {
+        # Create the attenuation dict (could be absorption drudes
+        # and S07 model)
+        abs_info = None
+        if len(ab_ind) > 0:
+            abs_info = {
                 "names":
                 np.array(pack_table["name"][at_ind].data),
                 "x_0":
@@ -1065,11 +1068,17 @@ class PAHFITBase:
                 _ingest_fixed(pack_table["fwhm"][:, 1][at_ind]),
             }
 
-        if att_info["names"] == 'silicate':
-            name_array = np.array(['S07_att'])
-            att_info.update({'names': name_array})
+        att_info = None
+        if len(at_ind) > 1:
+            raise NotImplementedError("More than one attenuation component not supported")
+        elif len(at_ind) == 1:
+            i = at_ind[0]
+            att_info = {"name": pack_table["name"][i],
+                        "tau_sil": pack_table["tau"][i][0],
+                        "tau_sil_limits": pack_table["tau"][i][1:],
+                        "tau_sil_fixed": True if pack_table["tau"][i].mask[1] else False}
 
-        return [bb_info, df_info, h2_info, ion_info, att_info]
+        return [bb_info, df_info, h2_info, ion_info, abs_info, att_info]
 
     @staticmethod
     def read(filename, instrumentname, tformat=None):
@@ -1096,7 +1105,7 @@ class PAHFITBase:
 
         # Reading the input file as table
         t = Features.read(filename)
-        bb_info, df_info, h2_info, ion_info, att_info = PAHFITBase.parse_table(
+        bb_info, df_info, h2_info, ion_info, abs_info, att_info = PAHFITBase.parse_table(
             t)
         df_info = PAHFITBase.update_dictionary(df_info, instrumentname)
         h2_info = PAHFITBase.update_dictionary(h2_info,
@@ -1105,8 +1114,10 @@ class PAHFITBase:
         ion_info = PAHFITBase.update_dictionary(ion_info,
                                                 instrumentname,
                                                 update_fwhms=True)
+        abs_info = PAHFITBase.update_dictionary(abs_info,
+                                                instrumentname)
 
-        return (bb_info, df_info, h2_info, ion_info, att_info)
+        return (bb_info, df_info, h2_info, ion_info, abs_info, att_info)
 
     @staticmethod
     def estimate_init(obs_x, obs_y, param_info):

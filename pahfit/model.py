@@ -243,6 +243,8 @@ class Model:
         param_info[3] = PAHFITBase.update_dictionary(
             param_info[3], self.instrumentname, update_fwhms=True
         )
+        param_info[4] = PAHFITBase.update_dictionary(param_info[4], self.instrumentname)
+
         return param_info
 
     def _backport_param_info(self, param_info):
