@@ -5,7 +5,11 @@ import argparse
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 
-from pahfit.helpers import read_spectrum, initialize_model
+from pahfit.model import Model
+from pahfit.base import PAHFITBase
+from pahfit.helpers import read_spectrum
+
+from astropy import units as u
 
 
 def initialize_parser():
@@ -59,10 +63,10 @@ def main():
     args = parser.parse_args()
 
     # read in the spectrum
-    obsdata = read_spectrum(args.spectrumfile)
+    spec = read_spectrum(args.spectrumfile, spec1d=True)
 
-    # setup the model
-    pmodel = initialize_model(args.fitfilename, obsdata, estimate_start=False)
+    # setup the model from saved one
+    model = Model.from_saved(args.fitfilename)
 
     # plot result
     fontsize = 18
@@ -75,11 +79,22 @@ def main():
     mpl.rc("xtick.minor", size=3, width=1)
     mpl.rc("ytick.minor", size=3, width=1)
 
-    fig, axs = plt.subplots(ncols=1, nrows=2, figsize=(15, 10),
-                            gridspec_kw={'height_ratios': [3, 1]},
-                            sharex=True)
+    fig, axs = plt.subplots(
+        ncols=1,
+        nrows=2,
+        figsize=(15, 10),
+        gridspec_kw={"height_ratios": [3, 1]},
+        sharex=True,
+    )
 
-    pmodel.plot(axs, obsdata["x"], obsdata["y"], obsdata["unc"], pmodel.model, scalefac_resid=args.scalefac_resid)
+    PAHFITBase.plot(
+        axs,
+        spec.wavelength.to(u.micron).value,
+        spec.flux,
+        spec.uncertainty.array,
+        model._construct_astropy_model(),
+        scalefac_resid=args.scalefac_resid,
+    )
 
     # use the whitespace better
     fig.subplots_adjust(hspace=0)
