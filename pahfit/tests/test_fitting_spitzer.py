@@ -1,23 +1,25 @@
 import numpy as np
 
-from pahfit.helpers import read_spectrum, initialize_model, fit_spectrum
+from pahfit.helpers import read_spectrum
+from pahfit.model import Model
 
 
 def test_fitting_m101():
 
     # read in the spectrum (goes from 5.257 to 38.299)
     spectrumfile = "M101_Nucleus_irs.ipac"
-    obsdata = read_spectrum(spectrumfile)
+    spec = read_spectrum(spectrumfile, spec1d=True)
 
     # Setup the model. Keep the old pack as a comment for later reference.
     # packfile = "scipack_ExGal_SpitzerIRSSLLL.ipac"
     packfile = "classic.yaml"
     # use a spitzer instrument model that covers the required range. SL1, SL2, LL1, LL2 should do
-    instrumentname = [f"spitzer.irs.{mode}" for mode in ('sl.1', 'sl.2', 'll.2', 'll.1')]
-    pmodel = initialize_model(packfile, instrumentname, obsdata, estimate_start=True)
+    instrumentname = "spitzer.irs.*.[12]"
+    model = Model.from_yaml(packfile, instrumentname, 0)
 
-    # fit the spectrum
-    obsfit = fit_spectrum(obsdata, pmodel, maxiter=1000)
+    # fit
+    model.guess(spec)
+    model.fit(spec)
 
     # fmt: off
     expvals = np.array([
@@ -60,4 +62,4 @@ def test_fitting_m101():
         2.55063734e+02, 3.48652000e+01, 1.29936306e-01, 0.00000000e+00])
     # fmt: on
 
-    np.testing.assert_allclose(obsfit.parameters, expvals, rtol=1e-6, atol=1e-6)
+    np.testing.assert_allclose(model.astropy_result.parameters, expvals, rtol=1e-6, atol=1e-6)
