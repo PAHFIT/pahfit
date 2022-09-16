@@ -1,18 +1,23 @@
 from pahfit.helpers import read_spectrum
 from specutils import Spectrum1D
 from pahfit.model import Model
+import tempfile
 
-def test_feature_table_model_conversion():
-    # do a fit
+
+def default_spec_and_model_fit():
     spectrumfile = "M101_Nucleus_irs.ipac"
     spec = read_spectrum(spectrumfile, spec1d=True)
     packfile = "classic.yaml"
     # use a spitzer instrument model that covers the required range. SL1, SL2, LL1, LL2 should do
     instrumentname = f"spitzer.irs.*.[12]"
-
     model = Model.from_yaml(packfile, instrumentname, 0)
     model.guess(spec)
     model.fit(spec)
+    return spec, model
+
+
+def test_feature_table_model_conversion():
+    _, model = default_spec_and_model_fit()
 
     # two versions of the fit result: one is fresh from the fit. The fit
     # results were then written to model.features. If everything went
@@ -35,3 +40,11 @@ def test_feature_table_manual_edit():
     # construct astropy model 2
     # change should be reflected in astropy model 2, but not astropy model 1
     pass
+
+
+def test_save_load():
+    _, model = default_spec_and_model_fit()
+    temp_file = tempfile.NamedTemporaryFile(suffix=".ecsv")
+    model.save(temp_file.name, overwrite=True)
+    model_loaded = Model.from_saved(temp_file.name)
+    assert model == model_loaded
