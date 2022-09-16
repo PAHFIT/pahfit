@@ -99,19 +99,14 @@ class Model:
         """
         # features.read automatically switches to astropy table reader.
         # Maybe needs to be more advanced here in the future.
-        features = Features.read(saved_model_file)
+        features = Features.read(saved_model_file, format="ascii.ecsv")
         return cls(features, features.meta["instrumentname"], features.meta["redshift"])
 
-    def save(self, fn):
+    def save(self, fn, **write_kwargs):
         """Save the model to disk.
 
-        This will save the features table using its builtin write
-        function from astropy.table. Format TDB. Currently depends on
-        file extension given, same as astropy.
-
-        Models saved this way can be read back in.
-
-        TODO: test the read-in functionality
+        Only ECSV supported for now. Models saved this way can be read
+        back in, with metadata.
 
         TODO: store details about the fit results somehow. Uncertainties
         (covariance matrix) should be retrievable. Use Table metadata?
@@ -120,11 +115,16 @@ class Model:
         ----------
         fn : file name
 
+        **write_kwargs : kwargs passed to astropy.table.Table.write
+
         """
+        if fn.split(".")[-1] != "ecsv":
+            raise NotImplementedError("Only ecsv is supported for now")
+
         self.features.meta.update(
             {"redshift": self.redshift, "instrumentname": self.instrumentname}
         )
-        self.features.write(fn)
+        self.features.write(fn, format="ascii.ecsv", **write_kwargs)
 
     def guess(self, spec: Spectrum1D):
         """Make an initial guess of the physics, based on the given
