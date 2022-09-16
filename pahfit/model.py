@@ -98,13 +98,33 @@ class Model:
         Model instance
         """
         # features.read automatically switches to astropy table reader.
-        # Maybe needs to be more advanced here in the future. TODO: make
-        # sure we get the metadata too! Redshift, uncertinties (fit
-        # result parameters are already stored in the main table, so
-        # that should be fine)
+        # Maybe needs to be more advanced here in the future.
         features = Features.read(saved_model_file)
-        metadata_mock = {"redshift": 0.0, "instrumentname": "bla"}
-        return cls(features, metadata_mock["instrumentname"], metadata_mock["redshift"])
+        return cls(features, features.meta["instrumentname"], features.meta["redshift"])
+
+    def save(self, fn):
+        """Save the model to disk.
+
+        This will save the features table using its builtin write
+        function from astropy.table. Format TDB. Currently depends on
+        file extension given, same as astropy.
+
+        Models saved this way can be read back in.
+
+        TODO: test the read-in functionality
+
+        TODO: store details about the fit results somehow. Uncertainties
+        (covariance matrix) should be retrievable. Use Table metadata?
+
+        Parameters
+        ----------
+        fn : file name
+
+        """
+        self.features.meta.update(
+            {"redshift": self.redshift, "instrumentname": self.instrumentname}
+        )
+        self.features.write(fn)
 
     def guess(self, spec: Spectrum1D):
         """Make an initial guess of the physics, based on the given
@@ -234,27 +254,6 @@ class Model:
 
         # But maybe try this first
         return copy.deepcopy(self)
-
-    def save(self, fn):
-        """Save the model to disk.
-
-        This will save the features table using its builtin write
-        function from astropy.table. Format TDB. Currently depends on
-        file extension given, same as astropy.
-
-        Models saved this way can be read back in.
-
-        TODO: test the read-in functionality
-
-        TODO: store details about the fit results somehow. Uncertainties
-        (covariance matrix) should be retrievable. Use Table metadata?
-
-        Parameters
-        ----------
-        fn : file name
-
-        """
-        self.features.write(fn)
 
     def _kludge_param_info(self):
         param_info = PAHFITBase.parse_table(self.features)
