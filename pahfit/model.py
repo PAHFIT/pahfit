@@ -128,11 +128,26 @@ class Model:
         self._backport_param_info(param_info)
 
     def fit(self, spec: Spectrum1D, maxiter=1000, verbose=True):
-        """Create a model, fit it, and store the results in the features table
+        """Fit the observed data.
+
+        The model setup is based on the features table and instrument specification.
+
+        The last fit results can accessed through the variable
+        model.astropy_result. The results are also stored back to the
+        model.features table.
+
+        CAVEAT: any features that do not overlap with the data range
+        will not be included in the model, for performance and numerical
+        stability. Their values in the features table will be left
+        untouched.
 
         Parameters
         ----------
         spec : Spectrum1D
+            Observed spectrum containing wavelengths, flux, and
+            uncertainties. Needs to be compatible with the instrument
+            specification of this Model object.
+            TODO: clarify units, do instrument-based wavelength check.
 
         maxiter : int
             maximum number of fitting iterations
@@ -220,12 +235,15 @@ class Model:
         """Save the model to disk.
 
         This will save the features table using its builtin write
-        function from astropy.table.
+        function from astropy.table. Format TDB. Currently depends on
+        file extension given, same as astropy.
 
-        Format TDB. Currently depends on file extension given, same as
-        astropy.
+        Models saved this way can be read back in.
 
-        Models saved this way can be read in.
+        TODO: test the read-in functionality
+
+        TODO: store details about the fit results somehow. Uncertainties
+        (covariance matrix) should be retrievable. Use Table metadata?
 
         Parameters
         ----------
@@ -263,7 +281,10 @@ class Model:
         self._parse_astropy_result(astropy_model)
 
     def _construct_astropy_model(self):
-        """Convert the features table into a fittable model."""
+        """Convert the features table into a fittable model.
+
+           TODO: Make sure the features outside of the fit range are
+           removed."""
         param_info = self._kludge_param_info()
         return PAHFITBase.model_from_param_info(param_info)
 
@@ -333,4 +354,6 @@ class Model:
                 )
                 row[col_name][0] = col_value
 
-        # TODO: write FWHM to the table for broad (dust) features, but NOT for lines.
+        # TODO: write FWHM to the table for broad (dust) features, but
+        # NOT for lines. Line broadening is primarily and instrumental
+        # effect under our assumptions.
