@@ -1,25 +1,17 @@
 import os
 import pkg_resources
 
-import numpy as np
-
 import astropy.units as u
 from astropy.table import Table
 
-from astropy.modeling.fitting import LevMarLSQFitter
-
 from specutils import Spectrum1D
 from astropy.nddata import StdDevUncertainty
-
-
-from pahfit.base import PAHFITBase
-from pahfit.features import Features
 
 from pahfit.component_models import BlackBody1D, S07_attenuation
 from astropy.modeling.physical_models import Drude1D
 from astropy.modeling.functional_models import Gaussian1D
 
-__all__ = ["read_spectrum", "initialize_model", "fit_spectrum", "calculate_compounds"]
+__all__ = ["read_spectrum", "calculate_compounds"]
 
 
 def find_packfile(packfile):
