@@ -1,7 +1,16 @@
 from pahfit.helpers import read_spectrum
-from specutils import Spectrum1D
 from pahfit.model import Model
 import tempfile
+import numpy as np
+
+
+def assert_features_table_equality(features1, features2):
+    for string_col in ["name", "group", "kind", "model", "geometry"]:
+        assert (features1[string_col] == features2[string_col]).all()
+    for param_col in ["temperature", "tau", "wavelength", "power", "fwhm"]:
+        np.testing.assert_allclose(
+            features1[param_col], features2[param_col], rtol=1e-6, atol=1e-6
+        )
 
 
 def default_spec_and_model_fit():
@@ -9,7 +18,7 @@ def default_spec_and_model_fit():
     spec = read_spectrum(spectrumfile, spec1d=True)
     packfile = "classic.yaml"
     # use a spitzer instrument model that covers the required range. SL1, SL2, LL1, LL2 should do
-    instrumentname = f"spitzer.irs.*.[12]"
+    instrumentname = "spitzer.irs.*.[12]"
     model = Model.from_yaml(packfile, instrumentname, 0)
     model.guess(spec)
     model.fit(spec)
@@ -47,4 +56,8 @@ def test_save_load():
     temp_file = tempfile.NamedTemporaryFile(suffix=".ecsv")
     model.save(temp_file.name, overwrite=True)
     model_loaded = Model.from_saved(temp_file.name)
-    assert model == model_loaded
+
+    # all the things we want to recover
+    assert model.redshift == model_loaded.redshift
+    assert model.instrumentname == model_loaded.instrumentname
+    assert_features_table_equality(model.features, model_loaded.features)
