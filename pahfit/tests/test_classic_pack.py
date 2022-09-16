@@ -1,8 +1,7 @@
 import numpy as np
 
 from pahfit.PAHFIT_Spitzer_Exgal import InstPackSpitzerIRSSLLL, SciPackExGal
-from pahfit.helpers import read_spectrum, initialize_model
-from pahfit.instrument import wave_range
+from pahfit.model import Model
 
 
 def test_classic_pack():
@@ -23,29 +22,14 @@ def test_classic_pack():
 
     # now read in the equivalent info from a file
 
-    # read in the spectrum
-    spectrumfile = "M101_Nucleus_irs.ipac"
-    obsdata = read_spectrum(spectrumfile)
-
     # setup the model
     packfile = "classic.yaml"
-    # changed this to the yaml file + instrument model paradigm. Not
-    # entirely correct for that reason. Since the new code modifies line
-    # widths, this will probably still fail.
+    # NOTE: Since the new instrument model modifies line widths, this
+    # test will fail.
     instrumentname = "spitzer.irs.sl.2"
-    # For now, we can hack the obsdata to the right wavelength range
-    # like this (eventually we want an approximate instrument model over
-    # the entire range, or something that splits up the input spectrum)
-    wave_instrument = wave_range(instrumentname)
-    keep_wavs = (wave_instrument[0] < obsdata["x"].value) & (
-        obsdata["x"].value < wave_instrument[1]
-    )
-    obsdata["x"] = obsdata["x"][keep_wavs]
-    obsdata["y"] = obsdata["y"][keep_wavs]
-    obsdata["unc"] = obsdata["unc"][keep_wavs]
-    pmodel = initialize_model(packfile, instrumentname, obsdata)
 
-    nparam_info = pmodel.param_info
+    model = Model.from_yaml(packfile, instrumentname, 0)
+    nparam_info = model._kludge_param_info()
 
     # check the different dictonaries are equivalent
     for k in range(len(oparam_info)):
