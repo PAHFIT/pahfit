@@ -13,15 +13,16 @@ def assert_features_table_equality(features1, features2):
         )
 
 
-def default_spec_and_model_fit():
+def default_spec_and_model_fit(fit=True):
     spectrumfile = "M101_Nucleus_irs.ipac"
     spec = read_spectrum(spectrumfile, spec1d=True)
     packfile = "classic.yaml"
     # use a spitzer instrument model that covers the required range. SL1, SL2, LL1, LL2 should do
     instrumentname = "spitzer.irs.*.[12]"
     model = Model.from_yaml(packfile, instrumentname, 0)
-    model.guess(spec)
-    model.fit(spec)
+    if fit:
+        model.guess(spec)
+        model.fit(spec)
     return spec, model
 
 
@@ -40,15 +41,29 @@ def test_feature_table_model_conversion():
         assert p1 == p2
 
 
-def test_feature_table_manual_edit():
-    # test outline:
-    # make model
+def test_model_edit():
+    # make model from default feature list and a copy
+    _, model = default_spec_and_model_fit(fit=False)
+    model_to_edit = model.copy()
+
+    # remember this random parameter
+    feature = "dust_cont00"
+    col = "temperature"
+    originalT = model.features.loc[feature][col][0]
+
+    # edit the same parameter in the copy
+    newT = 123
+    model_to_edit.features.loc[feature][col][0] = newT
+
+    # make sure the original value is still the same
+    assert model.features.loc[feature][col][0] == originalT
+
     # construct astropy model
-    # copy model
-    # edit features table
-    # construct astropy model 2
-    # change should be reflected in astropy model 2, but not astropy model 1
-    pass
+    astropy_model_edit = model_to_edit._construct_astropy_model()
+
+    # Make sure the change is reflected in this model. Very handy that
+    # we can access the right component by the feature name!
+    assert astropy_model_edit[feature].temperature == newT
 
 
 def test_save_load():
