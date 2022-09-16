@@ -52,11 +52,15 @@ class Model:
 
         instrumentname : str or list of str
             Qualified instrument name, see instrument.py. This will
-            determine what the line widths are, when going from the features
-            table to a fittable/plottable model.
+            determine what the line widths are, when going from the
+            features table to a fittable/plottable model.
 
         redshift : float
-            Redshift used to shift from the physical model, to the observed model.
+            Redshift used to shift from the physical model, to the
+            observed model.
+
+            TODO: use redshift during model setup or when observational
+            data is passed.
         """
         self.redshift = redshift
         self.instrumentname = instrumentname
