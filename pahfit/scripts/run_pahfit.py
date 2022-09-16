@@ -43,8 +43,8 @@ def initialize_parser():
                         help="name of file with observed spectrum")
     parser.add_argument("packfile", help="name of PAHFIT pack file")
     parser.add_argument("instrumentname",
-                        choices=instrumenttypes,
-                        help="Name of the instrument")
+                        # choices=instrumenttypes,
+                        help="Name of the instrument. Available:" + str(instrumenttypes))
     parser.add_argument(
         "--savefig",
         action="store",
@@ -109,6 +109,7 @@ def main():
     basename = args.spectrumfile.split(".")[0]
     extension = args.saveoutput
     outputname = f"{basename}_output.{extension}"
+    print("Writing result to ", outputname)
     model.save(outputname)
 
     fig = default_layout_plot(spec, model, args.scalefac_resid)
