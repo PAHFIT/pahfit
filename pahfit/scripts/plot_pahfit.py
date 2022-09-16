@@ -57,7 +57,6 @@ def initialize_parser():
 
 
 def main():
-
     # commandline parser
     parser = initialize_parser()
     args = parser.parse_args()
@@ -67,6 +66,24 @@ def main():
 
     # setup the model from saved one
     model = Model.from_saved(args.fitfilename)
+
+    fig = default_layout_plot(spec, model, args.scalefac_resid)
+
+    # show or save
+    outputname = args.spectrumfile.split(".")[0]
+    if args.savefig:
+        fig.savefig("{}.{}".format(outputname, args.savefig))
+    else:
+        plt.show()
+
+
+def default_layout_plot(spec, model, scalefac_resid):
+    """
+    Returns
+    -------
+    fig : Figure object
+
+    """
 
     # plot result
     fontsize = 18
@@ -86,25 +103,18 @@ def main():
         gridspec_kw={"height_ratios": [3, 1]},
         sharex=True,
     )
-
     PAHFITBase.plot(
         axs,
         spec.wavelength.to(u.micron).value,
         spec.flux,
         spec.uncertainty.array,
         model._construct_astropy_model(),
-        scalefac_resid=args.scalefac_resid,
+        scalefac_resid=scalefac_resid,
     )
 
     # use the whitespace better
     fig.subplots_adjust(hspace=0)
-
-    # show or save
-    outputname = args.spectrumfile.split(".")[0]
-    if args.savefig:
-        fig.savefig("{}.{}".format(outputname, args.savefig))
-    else:
-        plt.show()
+    return fig
 
 
 if __name__ == "__main__":

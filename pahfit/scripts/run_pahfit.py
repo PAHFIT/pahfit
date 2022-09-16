@@ -3,10 +3,10 @@
 import argparse
 
 import matplotlib.pyplot as plt
-import matplotlib as mpl
 
-from pahfit.helpers import read_spectrum, initialize_model, fit_spectrum
-
+from pahfit.helpers import read_spectrum
+from pahfit.model import Model
+from pahfit.scripts.plot_pahfit import default_layout_plot
 
 def initialize_parser():
     """
@@ -93,50 +93,26 @@ def main():
     args = parser.parse_args()
 
     # read in the spectrum
-    obsdata = read_spectrum(args.spectrumfile)
+    spec = read_spectrum(args.spectrumfile, spec1d=True)
 
     # setup the model
-    pmodel = initialize_model(args.packfile, args.instrumentname, obsdata,
-                              not args.no_starting_estimate)
+    model = Model.from_yaml(args.packfile, args.instrumentname, 0)
+
+    # initial guess if not explicitly disabled
+    if not args.no_starting_estimate:
+        model.guess(spec)
 
     # fit the spectrum
-    obsfit = fit_spectrum(obsdata, pmodel, maxiter=args.fit_maxiter)
+    model.fit(spec, maxiter=args.fit_maxiter)
 
     # save fit results to file
-    outputname = args.spectrumfile.split(".")[0]
-    pmodel.save(obsfit, outputname, args.saveoutput)
+    basename = args.spectrumfile.split(".")[0]
+    extension = args.saveoutput
+    outputname = f"{basename}_output.{extension}"
+    model.save(outputname)
 
-    # plot result
-    fontsize = 18
-    font = {"size": fontsize}
-    mpl.rc("font", **font)
-    mpl.rc("lines", linewidth=2)
-    mpl.rc("axes", linewidth=2)
-    mpl.rc("xtick.major", size=5, width=1)
-    mpl.rc("ytick.major", size=5, width=1)
-    mpl.rc("xtick.minor", size=3, width=1)
-    mpl.rc("ytick.minor", size=3, width=1)
-
-    fig, axs = plt.subplots(
-        ncols=1,
-        nrows=2,
-        figsize=(15, 10),
-        gridspec_kw={"height_ratios": [3, 1]},
-        sharex=True,
-    )
-
-    pmodel.plot(
-        axs,
-        obsdata["x"],
-        obsdata["y"],
-        obsdata["unc"],
-        obsfit,
-        scalefac_resid=args.scalefac_resid,
-    )
-
-    # use the whitespace better
-    fig.subplots_adjust(hspace=0)
-
+    fig = default_layout_plot(spec, model, args.scalefac_resid)
+    
     # show
     if args.showplot:
         plt.show()
