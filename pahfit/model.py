@@ -286,8 +286,8 @@ class Model:
     def _construct_astropy_model(self):
         """Convert the features table into a fittable model.
 
-           TODO: Make sure the features outside of the fit range are
-           removed."""
+        TODO: Make sure the features outside of the fit range are
+        removed."""
         param_info = self._kludge_param_info()
         return PAHFITBase.model_from_param_info(param_info)
 
@@ -334,7 +334,9 @@ class Model:
                 new_name = "fwhm"
                 new_value = param_value * 2.355
             else:
-                raise NotImplementedError(f"no conversion rule for model parameter {param_name}")
+                raise NotImplementedError(
+                    f"no conversion rule for model parameter {param_name}"
+                )
             return new_name, new_value
 
         # now apply these rules to fill in the parameters in the right
