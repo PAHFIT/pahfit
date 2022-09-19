@@ -7,6 +7,7 @@ from matplotlib import pyplot as plt
 from pahfit.helpers import find_packfile
 from pahfit.features import Features
 from pahfit.base import PAHFITBase
+from pahfit import instrument
 
 
 class Model:
@@ -171,7 +172,7 @@ class Model:
             Observed spectrum containing wavelengths, flux, and
             uncertainties. Needs to be compatible with the instrument
             specification of this Model object.
-            TODO: clarify units, do instrument-based wavelength check.
+            TODO: convert flux to preferred units
 
         maxiter : int
             maximum number of fitting iterations
@@ -180,15 +181,20 @@ class Model:
             set to provide screen output
 
         """
+        x = spec.spectral_axis.to(u.micron).value
+        y = spec.flux.value
+        w = 1.0 / spec.uncertainty.array
+
+        # check if spectrum is compatible with instrument model
+        check_range([min(x), max(x)], self.instrumentname)
+
+        # construct model
         astropy_model = self._construct_astropy_model()
 
         # pick the fitter
         fit = LevMarLSQFitter()
 
         # fit
-        x = spec.spectral_axis.to(u.micron).value
-        y = spec.flux.value
-        w = 1.0 / spec.uncertainty.array
         self.astropy_result = fit(
             astropy_model,
             x,
@@ -286,8 +292,10 @@ class Model:
     def _construct_astropy_model(self):
         """Convert the features table into a fittable model.
 
-        TODO: Make sure the features outside of the fit range are
-        removed."""
+        TODO: Make sure the features outside of the data range are
+        removed. The instrument-based feature check is done in
+        _kludge_param_info(), but the observational data might only
+        cover a part of the instrument range."""
         param_info = self._kludge_param_info()
         return PAHFITBase.model_from_param_info(param_info)
 
@@ -314,8 +322,6 @@ class Model:
             "mean": "wavelength",
             "tau_sil": "tau",
         }
-        # need to be careful with 'amplitude'. For the blackbody
-        # components, it should be translated to tau.
 
         def param_conversion(features_kind, param_name, param_value):
             # default conversion
@@ -354,11 +360,17 @@ class Model:
             # write the new values (every element is masked array [value
             # lowerbound upperbound])
             for param_name in component.param_names:
+                param_value = getattr(component, param_name).value
                 col_name, col_value = param_conversion(
-                    row["kind"], param_name, getattr(component, param_name).value
+                    row["kind"], param_name, param_value
                 )
-                row[col_name][0] = col_value
-
-        # TODO: write FWHM to the table for broad (dust) features, but
-        # NOT for lines. Line broadening is primarily and instrumental
-        # effect under our assumptions.
+                # even though values specified as fixed in the table
+                # shouldn't change, there is one exception to this:
+                # lines in overlapping segments will be forced to have
+                # variable widths. Therefore, do an explicit check here
+                # to make sure that we're not writing to fixed values
+                # TODO: how do we store the variable line widths then?
+                table_element = row[col_name]
+                fixed = table_element.mask[1]
+                if not fixed:
+                    table_element = col_value
