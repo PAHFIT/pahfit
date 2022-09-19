@@ -381,7 +381,6 @@ class Model:
                 # variable widths. Therefore, do an explicit check here
                 # to make sure that we're not writing to fixed values
                 # TODO: how do we store the variable line widths then?
-                table_element = row[col_name]
-                fixed = table_element.mask[1]
+                fixed = row[col_name].mask[1]
                 if not fixed:
-                    table_element = col_value
+                    row[col_name][0] = col_value
