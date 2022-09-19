@@ -62,7 +62,7 @@ def main():
     args = parser.parse_args()
 
     # read in the spectrum
-    spec = read_spectrum(args.spectrumfile, spec1d=True)
+    spec = read_spectrum(args.spectrumfile)
 
     # setup the model from saved one
     model = Model.from_saved(args.fitfilename)

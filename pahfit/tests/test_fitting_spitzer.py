@@ -8,7 +8,7 @@ def test_fitting_m101():
 
     # read in the spectrum (goes from 5.257 to 38.299)
     spectrumfile = "M101_Nucleus_irs.ipac"
-    spec = read_spectrum(spectrumfile, spec1d=True)
+    spec = read_spectrum(spectrumfile)
 
     # Setup the model. Keep the old pack as a comment for later reference.
     # packfile = "scipack_ExGal_SpitzerIRSSLLL.ipac"

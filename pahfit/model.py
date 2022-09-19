@@ -186,7 +186,7 @@ class Model:
         w = 1.0 / spec.uncertainty.array
 
         # check if spectrum is compatible with instrument model
-        check_range([min(x), max(x)], self.instrumentname)
+        instrument.check_range([min(x), max(x)], self.instrumentname)
 
         # construct model
         astropy_model = self._construct_astropy_model()

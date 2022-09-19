@@ -15,7 +15,7 @@ def assert_features_table_equality(features1, features2):
 
 def default_spec_and_model_fit(fit=True):
     spectrumfile = "M101_Nucleus_irs.ipac"
-    spec = read_spectrum(spectrumfile, spec1d=True)
+    spec = read_spectrum(spectrumfile)
     packfile = "classic.yaml"
     # use a spitzer instrument model that covers the required range. SL1, SL2, LL1, LL2 should do
     instrumentname = "spitzer.irs.*.[12]"

@@ -93,7 +93,7 @@ def main():
     args = parser.parse_args()
 
     # read in the spectrum
-    spec = read_spectrum(args.spectrumfile, spec1d=True)
+    spec = read_spectrum(args.spectrumfile)
 
     # setup the model
     model = Model.from_yaml(args.packfile, args.instrumentname, 0)

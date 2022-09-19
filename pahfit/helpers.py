@@ -46,7 +46,7 @@ def find_packfile(packfile):
     return packfile_found
 
 
-def read_spectrum(specfile, colnames=["wavelength", "flux", "sigma"], spec1d=False):
+def read_spectrum(specfile, colnames=["wavelength", "flux", "sigma"]):
     """
     Read in a spectrum and convert intput units to the expected internal PAHFIT units.
 
@@ -61,9 +61,8 @@ def read_spectrum(specfile, colnames=["wavelength", "flux", "sigma"], spec1d=Fal
 
     Returns
     -------
-    obsdata : dict
-        x is wavelength in microns and y/unc are the spectrum/unc in units
-        of Jy
+    spec1d : Spectrum1D
+        spectral_axis in microns, flux and uncertainties in units of Jy
     """
     # read in the observed spectrum
     # assumed to be astropy table compatibile and include units
@@ -84,10 +83,7 @@ def read_spectrum(specfile, colnames=["wavelength", "flux", "sigma"], spec1d=Fal
     y = obs_spectrum[colnames[1]].to(u.Jy, equivalencies=u.spectral_density(x))
     unc = obs_spectrum[colnames[2]].to(u.Jy, equivalencies=u.spectral_density(x))
 
-    if spec1d:
-        return Spectrum1D(spectral_axis=x, flux=y, uncertainty=StdDevUncertainty(unc))
-    else:
-        return {"x": x, "y": y, "unc": unc}
+    return Spectrum1D(spectral_axis=x, flux=y, uncertainty=StdDevUncertainty(unc))
 
 
 def calculate_compounds(obsdata, pmodel):
