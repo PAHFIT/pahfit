@@ -792,7 +792,7 @@ class PAHFITBase:
                         overwrite=True)
 
     @staticmethod
-    def update_dictionary(feature_dict, instrumentname, update_fwhms=False):
+    def update_dictionary(feature_dict, instrumentname, update_fwhms=False, redshift=0):
         """
         Update parameter dictionary based on the instrument name.
         Based on the instrument name, this function removes the
@@ -820,7 +820,10 @@ class PAHFITBase:
         if feature_dict is None:
             return None
 
-        ind = np.nonzero(within_segment(feature_dict["x_0"], instrumentname))[0]
+        def redshifted_waves():
+            return feature_dict["x_0"] * (1 + redshift)
+
+        ind = np.nonzero(within_segment(redshifted_waves(), instrumentname))[0]
 
         # select the valid entries in these arrays
         array_keys = ("x_0", "amps", "fwhms", "names")
@@ -843,8 +846,7 @@ class PAHFITBase:
         feature_dict.update(new_values_2)
 
         if update_fwhms:
-            waves = feature_dict["x_0"]
-            fwhm_min_max = fwhm(instrumentname, waves, as_bounded=True)
+            fwhm_min_max = fwhm(instrumentname, redshifted_waves(), as_bounded=True)
             # We need to be careful here, because for astropy a
             # numpy.bool does not work for the 'fixed' parameter. It
             # needs to be a regular bool. Doing tolist() instead of

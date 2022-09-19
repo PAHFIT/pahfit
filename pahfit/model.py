@@ -60,8 +60,6 @@ class Model:
             Redshift used to shift from the physical model, to the
             observed model.
 
-            TODO: use redshift during model setup or when observational
-            data is passed.
         """
         self.redshift = redshift
         self.instrumentname = instrumentname
@@ -144,12 +142,13 @@ class Model:
         Nothing, but internal feature table is updated.
 
         """
-        obs_x = spec.spectral_axis.to(u.micron).value
-        obs_y = spec.flux.value  # TODO figure out right unit
+        x = spec.spectral_axis.to(u.micron).value
+        y = spec.flux.value  # TODO figure out right unit
+        xz = x / (1 + self.redshift)
 
         # remake param_info to make sure we have any feature updates from the user
         param_info = self._kludge_param_info()
-        param_info = PAHFITBase.estimate_init(obs_x, obs_y, param_info)
+        param_info = PAHFITBase.estimate_init(xz, y, param_info)
         self._backport_param_info(param_info)
 
     def fit(self, spec: Spectrum1D, maxiter=1000, verbose=True):
@@ -188,6 +187,9 @@ class Model:
         # check if spectrum is compatible with instrument model
         instrument.check_range([min(x), max(x)], self.instrumentname)
 
+        # transform observed wavelength to "physical" wavelength
+        xz = x / (1 + self.redshift)
+
         # construct model
         astropy_model = self._construct_astropy_model()
 
@@ -197,7 +199,7 @@ class Model:
         # fit
         self.astropy_result = fit(
             astropy_model,
-            x,
+            xz,
             y,
             weights=w,
             maxiter=maxiter,
@@ -232,10 +234,11 @@ class Model:
         )
 
         x = spec.spectral_axis.to(u.micron).value
+        xz = x / (1 + self.redshift)
         y = spec.flux.value
         unc = spec.uncertainty.array
         astropy_model = self._construct_astropy_model()
-        PAHFITBase.plot(axs, x, y, unc, astropy_model)
+        PAHFITBase.plot(axs, xz, y, unc, astropy_model)
 
         fig.subplots_adjust(hspace=0)
 
@@ -265,12 +268,20 @@ class Model:
         param_info = PAHFITBase.parse_table(self.features)
         # edit line widths and drop lines out of range
         param_info[2] = PAHFITBase.update_dictionary(
-            param_info[2], self.instrumentname, update_fwhms=True
+            param_info[2],
+            self.instrumentname,
+            update_fwhms=True,
+            redshift=self.redshift,
         )
         param_info[3] = PAHFITBase.update_dictionary(
-            param_info[3], self.instrumentname, update_fwhms=True
+            param_info[3],
+            self.instrumentname,
+            update_fwhms=True,
+            redshift=self.redshift,
         )
-        param_info[4] = PAHFITBase.update_dictionary(param_info[4], self.instrumentname)
+        param_info[4] = PAHFITBase.update_dictionary(
+            param_info[4], self.instrumentname, redshift=self.redshift
+        )
 
         return param_info
 

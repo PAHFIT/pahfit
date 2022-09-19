@@ -352,26 +352,4 @@ def within_segment(wave_micron, segments, fwhm_near=None, wave_bounds=None):
     return np.any(res, 0)
 
 
-def test_waves_in_any_segment(wave_micron, segments):
-    """Test if each given wavelength is covered by at least one instrument
-
-    Parameters
-    ----------
-    wave_micron: dimensionless numpy array of wavelengths in micron
-
-    segments: list of segments
-
-    Returns
-    -------
-    np.array of bool, True where wave_micron[i] is is the range of any of the segments."""
-
-    # for each instrument range, test all the wavelengths (not necessarily sorted)
-    ranges = [x["range"] for x in pack_element(segments)]
-    in_range_per_segment = [
-        (rmin <= wave_micron) & (wave_micron <= rmax) for (rmin, rmax) in ranges
-    ]
-    in_range_any_segment = np.any(np.array(in_range_per_segment), axis=0)
-    return in_range_any_segment
-
-
 read_instrument_packs()
