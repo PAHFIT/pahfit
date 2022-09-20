@@ -1,6 +1,7 @@
 from pahfit.model import Model
 from pahfit.helpers import find_packfile
 from pahfit.features import Features
+from pahfit.errors import PAHFITModelError
 import numpy as np
 
 def test_feature_parsing():
@@ -51,15 +52,21 @@ def test_feature_parsing():
         "attenuation",
     ]
     for kind in kinds:
-        is_kind = features["kind"] == kind
-        # anything but this kind
-        test_parsing(features[np.logical_not(is_kind)])
-        # only this kind
-        test_parsing(features[is_kind])
-        # only one feature of this kind?
-        discard = is_kind # discard everything of this kind
-        discard[discard][0] = False # except the first one
-        test_parsing(features[np.logical_not(discard)])
+        try:
+            is_kind = features["kind"] == kind
+            # anything but this kind
+            test_parsing(features[np.logical_not(is_kind)])
+            # only this kind
+            test_parsing(features[is_kind])
+            # only one feature of this kind?
+            discard = is_kind # discard everything of this kind
+            discard[discard][0] = False # except the first one
+            test_parsing(features[np.logical_not(discard)])
+        except PAHFITModelError:
+            pass
+            # if one of these is thrown, then the model sufficiently
+            # warns about this edge case
+
 
 if __name__ == "__main__":
     test_feature_parsing()

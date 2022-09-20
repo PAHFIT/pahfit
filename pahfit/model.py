@@ -8,6 +8,7 @@ from pahfit.helpers import find_packfile
 from pahfit.features import Features
 from pahfit.base import PAHFITBase
 from pahfit import instrument
+from pahfit.errors import PAHFITModelError
 
 
 class Model:
@@ -61,6 +62,11 @@ class Model:
             observed model.
 
         """
+        if len(features) < 2:
+            raise PAHFITModelError(
+                "Fewer than 2 features! Single component models are no allowed!"
+            )
+
         self.redshift = redshift
         self.instrumentname = instrumentname
         self.features = features
@@ -356,8 +362,6 @@ class Model:
                 )
             return new_name, new_value
 
-        # now apply these rules to fill in the parameters in the right
-        # spots of the table
         for component in astropy_model:
             # find the matching row
             if component.name == "S07_att":
