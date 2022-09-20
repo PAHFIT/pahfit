@@ -1,16 +1,20 @@
 from pahfit.model import Model
 from pahfit.helpers import find_packfile
 from pahfit.features import Features
-
+import numpy as np
 
 def test_feature_parsing():
     """
     Goal
     ----
-    Test if the model is built correctly with certain features removed
+    Test if the model is built successfully with certain features removed
     from the science pack. For example, when this test was written,
-    generating the model without specifying any gaussians will cause the
+    generating the model without specifying any gaussians causes the
     code to crash. This test will try to provoke such crashes.
+
+    This test does not check the correctness of the parsing, only the
+    stability under certain edge cases. See the test_model_impl for
+    something quantitative.
 
     Desired behavior
     ----------------
@@ -38,18 +42,24 @@ def test_feature_parsing():
     # Case 0: the whole table
     test_parsing(features)
 
-    # Cases 1, 2, ... (can it run without any of the following?)
-    remove_kinds = [
+    # Cases 1, 2, ...
+    kinds = [
         "dust_continuum",
         "dust_feature",
         "line",
         "starlight",
         "attenuation",
     ]
-    for kind in remove_kinds:
-        features_edit = features[features["kind"] != kind]
-        test_parsing(features_edit)
-
+    for kind in kinds:
+        is_kind = features["kind"] == kind
+        # anything but this kind
+        test_parsing(features[np.logical_not(is_kind)])
+        # only this kind
+        test_parsing(features[is_kind])
+        # only one feature of this kind?
+        discard = is_kind # discard everything of this kind
+        discard[discard][0] = False # except the first one
+        test_parsing(features[np.logical_not(discard)])
 
 if __name__ == "__main__":
     test_feature_parsing()
