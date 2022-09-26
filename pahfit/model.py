@@ -124,7 +124,7 @@ class Model:
 
         """
         if fn.split(".")[-1] != "ecsv":
-            raise NotImplementedError("Only ecsv is supported for now")
+            raise NotImplementedError("Only ascii.ecsv is supported for now")
 
         self.features.meta.update(
             {"redshift": self.redshift, "instrumentname": self.instrumentname}

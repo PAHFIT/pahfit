@@ -58,7 +58,7 @@ def initialize_parser():
     parser.add_argument(
         "--saveoutput",
         action="store",
-        default="ipac",
+        default="ascii.ecsv",
         choices=savetypes,
         help="Save fit results to a file of specified type",
     )
