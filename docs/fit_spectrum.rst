@@ -129,8 +129,6 @@ are not changed during the fitting, but they are saved for reference. Bounds
 set to `null` indicate that the parameter was fixed during the fit. Any extra
 needed to reload the model from this file, is stored in the ECSV metadata.
 
-.. note::
-
 ::
 
    # %ECSV 1.0
