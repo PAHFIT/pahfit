@@ -261,13 +261,7 @@ class Model:
         -------
         model_copy : Model
         """
-        # We could do this
-        # make new instance
-        # model_copy = type(self)(self.pack_file, self.instrumentname, self.redshift)
-        # copy over all the variables that might have changed
-        # make sure to deep copy the table!
-
-        # But maybe try this first
+        # A standard deepcopy works fine!
         return copy.deepcopy(self)
 
     def _kludge_param_info(self):
