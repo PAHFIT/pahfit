@@ -379,12 +379,11 @@ class Model:
                 col_name, col_value = param_conversion(
                     row["kind"], param_name, param_value
                 )
-                # even though values specified as fixed in the table
-                # shouldn't change, there is one exception to this:
-                # lines in overlapping segments will be forced to have
-                # variable widths. Therefore, do an explicit check here
-                # to make sure that we're not writing to fixed values
-                # TODO: how do we store the variable line widths then?
-                fixed = row[col_name].mask[1]
-                if not fixed:
-                    row[col_name][0] = col_value
+                # store the fwhm, regardless whether it was calculated
+                # from instrument or fitted in case of overlap. Note
+                # that for lines, it will not be used when the next
+                # model is constructed. These values are simply
+                # overwritten by the instrument model. Storing the FWHM
+                # of lines here, is simply a way to report back the
+                # result.
+                row[col_name][0] = col_value
