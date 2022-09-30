@@ -188,13 +188,16 @@ class Model:
         """
         x = spec.spectral_axis.to(u.micron).value
         y = spec.flux.value
-        w = 1.0 / spec.uncertainty.array
+        unc = spec.uncertainty.array
 
-        # check if spectrum is compatible with instrument model
+        # check if observed spectrum is compatible with instrument model
         instrument.check_range([min(x), max(x)], self.instrumentname)
 
         # transform observed wavelength to "physical" wavelength
         xz = x / (1 + self.redshift)
+        yz = y * (1 + self.redshift)
+        uncz = unc * (1 + self.redshift)
+        w = 1.0 / uncz
 
         # construct model
         astropy_model = self._construct_astropy_model()
@@ -206,7 +209,7 @@ class Model:
         self.astropy_result = fit(
             astropy_model,
             xz,
-            y,
+            yz,
             weights=w,
             maxiter=maxiter,
             epsilon=1e-10,

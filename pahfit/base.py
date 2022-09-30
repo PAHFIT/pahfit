@@ -552,6 +552,7 @@ class PAHFITBase:
         if feature_dict is None:
             return None
 
+        # convert from physical feature, to observed wavelength
         def redshifted_waves():
             return feature_dict["x_0"] * (1 + redshift)
 
@@ -578,11 +579,15 @@ class PAHFITBase:
         feature_dict.update(new_values_2)
 
         if update_fwhms:
+            # observe the lines at the redshifted wavelength
             fwhm_min_max = fwhm(instrumentname, redshifted_waves(), as_bounded=True)
-            # We need to be careful here, because for astropy a
-            # numpy.bool does not work for the 'fixed' parameter. It
-            # needs to be a regular bool. Doing tolist() instead of
-            # using the array mask directly solves this.
+            # shift the observed fwhm back to the rest frame (where the
+            # observed data will be moved, and its features will become
+            # narrower)
+            fwhm_min_max /= (1 + redshift)
+            # For astropy a numpy.bool does not work for the 'fixed'
+            # parameter. It needs to be a regular bool. Doing tolist()
+            # instead of using the array mask directly solves this.
             feature_dict.update(
                 {
                     "fwhms": fwhm_min_max[:, 0],
