@@ -303,10 +303,19 @@ class Model:
     def _construct_astropy_model(self):
         """Convert the features table into a fittable model.
 
+        Some nuances in the behavior
+        - If a line has a fwhm set, it will be ignored, and replaced by
+          the calculated fwhm provided by the instrument model.
+        - If a line has been masked by _parse_astropy_result, and this
+          function is called again, those masks will be ignored, as the
+          data range might have changed.
+
         TODO: Make sure the features outside of the data range are
         removed. The instrument-based feature check is done in
         _kludge_param_info(), but the observational data might only
-        cover a part of the instrument range."""
+        cover a part of the instrument range.
+
+        """
         param_info = self._kludge_param_info()
         return PAHFITBase.model_from_param_info(param_info)
 
@@ -314,12 +323,21 @@ class Model:
         """Store the result of the astropy fit into the features table.
 
         Every relevant value inside the astropy model, is written to the
-        right position in the features table. This way, the astropy
-        model and the features table are kept in sync.
+        right position in the features table.
 
-        Doing things this way, makes it possible for the user to make
-        edits to the features table, and makes it easy to store the
-        model (just store the features table)
+        For the unresolved lines, the widths are calculated by the
+        instrument model, or fitted when these lines are in a spectral
+        overlap region. The calculated or fitted result is written to
+        the fwhm field of the table. When a new model is constructed
+        from the features table, this fwhm value will be ignored.
+
+        For features that do not correspond to the data range, all
+        parameter values will be masked. Their numerical values remain
+        accessible by '.data' on the masked entity. This way, We still
+        keep their parameter values around (as opposed to removing the
+        rows entirely). When data with a larger range are passed for
+        another fitting call, those features can be unmasked if
+        necessary.
 
         """
         # Some translation rules between astropy model components and
@@ -356,28 +374,21 @@ class Model:
                 )
             return new_name, new_value
 
-        for component in astropy_model:
-            # find the matching row
-            if component.name == "S07_att":
-                # Just need to watch out for S07_att. It is named silicate
-                # in the features table.
-                feature_name = "silicate"
-            else:
-                feature_name = component.name
-            row = self.features.loc[feature_name]
+        # Go over all features.
+        for row in self.features:
+            name = row["name"]
+            if name in astropy_model.submodel_names:
+                # undo any previous masking that might have occured
+                self.features.unmask_feature(name)
 
-            # write the new values (every element is masked array [value
-            # lowerbound upperbound])
-            for param_name in component.param_names:
-                param_value = getattr(component, param_name).value
-                col_name, col_value = param_conversion(
-                    row["kind"], param_name, param_value
-                )
-                # store the fwhm, regardless whether it was calculated
-                # from instrument or fitted in case of overlap. Note
-                # that for lines, it will not be used when the next
-                # model is constructed. These values are simply
-                # overwritten by the instrument model. Storing the FWHM
-                # of lines here, is simply a way to report back the
-                # result.
-                row[col_name][0] = col_value
+                # copy or translate, and store the parameters
+                component = astropy_model[name]
+                for param_name in component.param_names:
+                    param_value = getattr(component, param_name).value
+                    col_name, col_value = param_conversion(
+                        row["kind"], param_name, param_value
+                    )
+                    row[col_name][0] = col_value
+            else:
+                # signal that it was not fit by masking the feature
+                self.features.mask_feature(name)

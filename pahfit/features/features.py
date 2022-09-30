@@ -326,3 +326,32 @@ class Features(Table):
                 col.unit = cls._units[cn]
         tables.add_index('name')
         return tables
+
+    def mask_feature(self, name, mask_value=True):
+        """Mask all the parameters of a feature.
+
+        The masks of the bounds are left intact, so we don't lose the
+        fixed / not fixed distinction.
+
+        This is used to indicate that the parameter values of this
+        feature were not fit. This mask should not affect the model
+        constructor. It is purely a way to indicate to the user that the
+        parameter values are meaningless.
+
+        mask_value : bool
+            Set this to False to undo the mask
+
+        """
+        row = self.loc[name]
+        relevant_params = self._kind_params[row['kind']]
+        for col_name in relevant_params:
+            if col_name in self._no_bounds:
+                # these are all strings, so can't mask
+                pass
+            else:
+                # mask only the value, not the bounds
+                row[col_name].mask[0] = mask_value
+
+    def unmask_feature(self, name):
+        """Remove the mask for all parameters of a feature."""
+        self.mask_feature(name, mask_value=False)
