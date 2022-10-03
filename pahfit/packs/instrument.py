@@ -85,7 +85,7 @@ def pack_element(segments):
         for s in sm:
             if packs[s].get('polynomial') is None:
                 try:
-                    p = Polynomial(packs[s]['coefficients'])
+                    p = Polynomial(packs[s]['coefficients'], domain=packs[s].get('domain'))
                     packs[s]['polynomial'] = p
                     packs[s]['range_fwhm'] = [x / p(x) for x in packs[s]['range']]
                 except KeyError:
