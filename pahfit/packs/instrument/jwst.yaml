@@ -37,15 +37,12 @@
 # [1]https://jwst-docs.stsci.edu/jwst-near-infrared-spectrograph/nirspec-instrumentation/nirspec-dispersers-and-filters#NIRSpecDispersersandFilters-DispersioncurvesfortheNIRSpecdispersers
 #
 # v0.2 Jul 2022: Initial Version
-# v0.3 Oct 2022: Reproduced nirspec fits and added optional `domain'
-#                for rescaling input (see
-#                numpy.polynomial.Polynomial).
+# v0.3 Oct 2022: Reproduced nirspec fits without rescaled input
 
 nirspec:
     prism:
         range: [0.6, 5.3]
-        coefficients: [101.29436, 130.26685, 49.61431, 13.631656, 8.81475, -44.71681, 1.6644973, 48.64688, -11.599119, -20.742002, 8.795965]
-        domain: [1., 5.]
+        coefficients: [ 5.50834093e+02, -1.97741673e+03, 3.29712423e+03, -3.18578979e+03, 1.96437515e+03, -8.00997834e+02,  2.18620688e+02, -3.94893943e+01, 4.52739039e+00, -2.98206695e-01, 8.58982985e-03]
     g140:
         medium:
             range: [0.9, 1.89]
