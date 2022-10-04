@@ -15,7 +15,7 @@
 #
 #  NIRSPEC: Fits to the JDox NIRESPEC resolution/dispersion curves [1]
 #  MIRI: From Labiano+ 2021
-#  https://doi.org/10.1051/0004-6361/202140614, with wavelength offset
+#  https://doi.org/10.1051/0004-6361/202140614 (see Fig. 9), with wavelength offset
 #  and polynomial parameters:
 #
 #  resolution = a + b (lam - lam0) + c (lam - lam0)^2  (lam in microns)
@@ -36,35 +36,34 @@
 #   26.05 1440 -67  -12  
 # [1]https://jwst-docs.stsci.edu/jwst-near-infrared-spectrograph/nirspec-instrumentation/nirspec-dispersers-and-filters#NIRSpecDispersersandFilters-DispersioncurvesfortheNIRSpecdispersers
 #
-# v0.2 July 2022
+# v0.2 Jul 2022: Initial Version
+# v0.3 Oct 2022: Reproduced nirspec fits without rescaled input
 
 nirspec:
     prism:
         range: [0.6, 5.3]
-        coefficients: [118.673035, 201.54498, 87.37993, -35.558907, 82.88188, 110.60916, -171.3971, -108.33989, 136.90254]
+        coefficients: [ 5.50834093e+02, -1.97741673e+03, 3.29712423e+03, -3.18578979e+03, 1.96437515e+03, -8.00997834e+02,  2.18620688e+02, -3.94893943e+01, 4.52739039e+00, -2.98206695e-01, 8.58982985e-03]
     g140:
         medium:
             range: [0.9, 1.89]
-            coefficients: [891.6646, 539.4452, 4.216203]
+            coefficients: [ 3.0145311e-01, 7.1188794e+02, -2.3046725e+00, 2.6133738e+00]
         high:
             range: [0.95, 1.89]
-            coefficients: [2291.3574, 1404.4167, 88.98144, 36.30806]
-
+            coefficients: [88.85529, 1526.1525, 499.0807, -302.1065, 84.99186]
     g235:
         medium:
             range: [1.66, 3.17]
-            coefficients: [1064.852, 431.03555, 3.3509896]
+            coefficients: [-0.47948435, 425.44363, -1.2621415, 0.6150839]
         high:
             range: [1.66, 3.17]
-            coefficients: [2646.0334, 992.6818, 52.8571, 17.77239]
-
+            coefficients: [-180.21428, 1400.1393, -154.01723, 34.068283]
     g395:
         medium:
             range: [2.87, 5.27]
-            coefficients: [1.0767772e+03, 4.4848569e+02, 3.7253866e+00, 7.2353613e-01]
+            coefficients: [-7.9386622e-01, 2.5325325e+02, -5.0484931e-01, 1.3500406e-01]
         high:
             range: [2.87, 5.27]
-            coefficients: [2925.7283, 1327.8862, 106.61604, 20.827995, -10.031256]
+            coefficients: [-78.97942, 747.01685, -30.76483, 5.0268607]
 miri:
     mrs:
         ch1:
