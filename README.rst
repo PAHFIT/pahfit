@@ -54,9 +54,9 @@ Contributors
 * Alexandros Maragkoudakis
 * J.D. Smith
 * Karl Gordon
-* Henrik Spoon
 * Els Peeters
-* Karin Sandstrom
+* Ameek Sidhu
+* Dries Van De Putte
 
 License
 -------
