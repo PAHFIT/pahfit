@@ -70,6 +70,9 @@ class Model:
         self.redshift = redshift
         self.instrumentname = instrumentname
         self.features = features
+        # if set to False, use set fwhm for lines to value in features
+        # table at model construction
+        self.use_instrument_fwhm = True
 
     @classmethod
     def from_yaml(cls, pack_file, instrumentname, redshift):
@@ -200,7 +203,7 @@ class Model:
         w = 1.0 / uncz
 
         # construct model
-        astropy_model = self._construct_astropy_model()
+        astropy_model = self._construct_astropy_model(self.use_instrument_fwhm)
 
         # pick the fitter
         fit = LevMarLSQFitter()
@@ -246,7 +249,7 @@ class Model:
         xz = x / (1 + self.redshift)
         y = spec.flux.value
         unc = spec.uncertainty.array
-        astropy_model = self._construct_astropy_model()
+        astropy_model = self._construct_astropy_model(use_instrument_fwhm=True)
 
         enough_samples = max(1000, len(spec.wavelength))
         PAHFITBase.plot(axs, xz, y, unc, astropy_model, model_samples=enough_samples)
@@ -270,20 +273,26 @@ class Model:
         return copy.deepcopy(self)
 
     def _kludge_param_info(self):
+
+    def _kludge_param_info(self, use_instrument_fwhm=True):
         param_info = PAHFITBase.parse_table(self.features)
         # edit line widths and drop lines out of range
+
+        # h2_info
         param_info[2] = PAHFITBase.update_dictionary(
             param_info[2],
             self.instrumentname,
-            update_fwhms=True,
+            update_fwhms=use_instrument_fwhm,
             redshift=self.redshift,
         )
+        # ion_info
         param_info[3] = PAHFITBase.update_dictionary(
             param_info[3],
             self.instrumentname,
-            update_fwhms=True,
+            update_fwhms=use_instrument_fwhm,
             redshift=self.redshift,
         )
+        # abs_info
         param_info[4] = PAHFITBase.update_dictionary(
             param_info[4], self.instrumentname, redshift=self.redshift
         )
@@ -305,7 +314,7 @@ class Model:
         astropy_model = PAHFITBase.model_from_param_info(param_info)
         self._parse_astropy_result(astropy_model)
 
-    def _construct_astropy_model(self):
+    def _construct_astropy_model(self, use_instrument_fwhm=True):
         """Convert the features table into a fittable model.
 
         Some nuances in the behavior
@@ -320,8 +329,14 @@ class Model:
         _kludge_param_info(), but the observational data might only
         cover a part of the instrument range.
 
+        Parameters
+        ----------
+        use_instrument_fwhm : bool
+            override the default behavior and use the fwhm from the
+            features table (if set)
+
         """
-        param_info = self._kludge_param_info()
+        param_info = self._kludge_param_info(use_instrument_fwhm)
         return PAHFITBase.model_from_param_info(param_info)
 
     def _parse_astropy_result(self, astropy_model):
