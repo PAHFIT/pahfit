@@ -16,8 +16,6 @@ import matplotlib as mpl
 
 from pahfit.instrument import within_segment, fwhm
 
-from pahfit.features import Features
-
 __all__ = ["PAHFITBase"]
 
 
@@ -108,36 +106,13 @@ def _ingest_fixed(fixed_vals):
 
 class PAHFITBase:
     """
-    Base class for PAHFIT variants. Each variant nominally specifies the valid
-    wavelength range, instrument, and type of astronomical objects.
+    Old implementation. Some functions are still used by the new Model
+    class. The unused functionality has been removed.
 
-    For example, the original IDL version of PAHFIT was valid for
-    Spitzer/IRS SL/LL spectra (5-38 micron) and observations of parts or all
-    of external galaxies.
+    Construct that is still used for now
 
-    Mainly sets up the astropy.modeling compound model
-    that includes all the different components including
-    blackbodies for the continuum, drudes for the dust
-    emission features, and Gaussians for the gas emission features.
-
-    Parameters
-    ----------
-    obs_x and obs_y: np.array
-        the input spectrum
-
-    instrumentname: string
-        the instrument which which the input spectrum
-        was observed.
-
-    filename: string
-        filename giving the pack that contains all the
-        info described for param_info
-
-    tformat: string
-        table format of filename (compatible with astropy Table.read)
-
-    param_info: tuple of dics
-        The dictonaries contain info for each type of component.  Each
+    param_info: tuple of dicts called (bb_info, df_info, h2_info, ion_info, abs_info, att_info)
+        The dictionaries contain info for each type of component. Each
         component of the dictonaries is a vector.
         bb_info -
         dict with {name, temps, temps_limits, temps_fixed,
@@ -146,46 +121,6 @@ class PAHFITBase:
         dict with {name amps, amps_limits, amps_fixed,
         x_0, x_0_limits, x_0_fixed, fwhms, fwhms_limits, fwhm_fixed}.
     """
-
-    def __init__(
-        self,
-        obs_x,
-        obs_y,
-        instrumentname,
-        estimate_start=False,
-        param_info=None,
-        filename=None,
-        tformat=None,
-    ):
-        """
-        Setup a variant based on inputs.  Generates an astropy.modeling
-        compound model.
-        """
-        # check that param_info or filename is set
-        if filename is None and param_info is None:
-            raise ValueError("Either param_info or filename need to be set \
-                             when initializing a PAHFITBase object")
-
-        # read in the parameter info from a file
-        if filename is not None:
-            param_info = self.read(filename, instrumentname, tformat=tformat)
-
-        if estimate_start:
-            # guess values and update starting point (if not set fixed) based on the input spectrum
-            param_info = self.estimate_init(obs_x, obs_y, param_info)
-
-        if not param_info:
-            raise ValueError("No parameter information set.")
-
-        self.param_info = param_info
-        self.bb_info = param_info[0]
-        self.dust_features = param_info[1]
-        self.h2_features = param_info[2]
-        self.ion_features = param_info[3]
-        self.abs_info = param_info[4]
-        self.att_info = param_info[5]
-        self.model = PAHFITBase.model_from_param_info(self.param_info)
-
     @staticmethod
     def model_from_param_info(param_info):
         # setup the model
@@ -818,45 +753,6 @@ class PAHFITBase:
                         "tau_sil_fixed": True if pack_table["tau"][i].mask[1] else False}
 
         return [bb_info, df_info, h2_info, ion_info, abs_info, att_info]
-
-    @staticmethod
-    def read(filename, instrumentname, tformat=None):
-        """
-        Create model by reading the parameters from a file.
-
-        Parameters
-        ----------
-        filename : string
-            The name of the input file containing fit results.
-
-        tformat: string
-            table format of filename (compatible with astropy Table.read)
-
-        Returns
-        -------
-        readout : tuple
-            Tuple containing dictionaries of all components from
-            the input file.
-        """
-        # get the table format
-        if tformat is None:
-            tformat = filename.split(".")[-1]
-
-        # Reading the input file as table
-        t = Features.read(filename)
-        bb_info, df_info, h2_info, ion_info, abs_info, att_info = PAHFITBase.parse_table(
-            t)
-        df_info = PAHFITBase.update_dictionary(df_info, instrumentname)
-        h2_info = PAHFITBase.update_dictionary(h2_info,
-                                               instrumentname,
-                                               update_fwhms=True)
-        ion_info = PAHFITBase.update_dictionary(ion_info,
-                                                instrumentname,
-                                                update_fwhms=True)
-        abs_info = PAHFITBase.update_dictionary(abs_info,
-                                                instrumentname)
-
-        return (bb_info, df_info, h2_info, ion_info, abs_info, att_info)
 
     @staticmethod
     def estimate_init(obs_x, obs_y, param_info):
