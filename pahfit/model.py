@@ -247,7 +247,9 @@ class Model:
         y = spec.flux.value
         unc = spec.uncertainty.array
         astropy_model = self._construct_astropy_model()
-        PAHFITBase.plot(axs, xz, y, unc, astropy_model)
+
+        enough_samples = max(1000, len(spec.wavelength))
+        PAHFITBase.plot(axs, xz, y, unc, astropy_model, model_samples=enough_samples)
 
         fig.subplots_adjust(hspace=0)
 
