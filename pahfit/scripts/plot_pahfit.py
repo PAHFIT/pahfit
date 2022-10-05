@@ -103,12 +103,16 @@ def default_layout_plot(spec, model, scalefac_resid):
         gridspec_kw={"height_ratios": [3, 1]},
         sharex=True,
     )
+
+    enough_samples = max(1000, len(spec.wavelength))
+
     PAHFITBase.plot(
         axs,
         spec.wavelength.to(u.micron).value,
         spec.flux,
         spec.uncertainty.array,
         model._construct_astropy_model(),
+        model_samples=enough_samples,
         scalefac_resid=scalefac_resid,
     )
 
