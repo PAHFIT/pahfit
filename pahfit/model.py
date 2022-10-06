@@ -253,7 +253,7 @@ class Model:
         xz = x / (1 + self.redshift)
         y = spec.flux.value
         unc = spec.uncertainty.array
-        astropy_model = self._construct_astropy_model(use_instrument_fwhm=True)
+        astropy_model = self._construct_astropy_model(use_instrument_fwhm=False)
 
         enough_samples = max(1000, len(spec.wavelength))
         PAHFITBase.plot(axs, xz, y, unc, astropy_model, model_samples=enough_samples)
