@@ -74,6 +74,9 @@ class Model:
         # table at model construction
         self.use_instrument_fwhm = True
 
+        # store fit_info dict of last fit
+        self.fit_info = None
+
     @classmethod
     def from_yaml(cls, pack_file, instrumentname, redshift):
         """
@@ -206,7 +209,7 @@ class Model:
         astropy_model = self._construct_astropy_model(self.use_instrument_fwhm)
 
         # pick the fitter
-        fit = LevMarLSQFitter()
+        fit = LevMarLSQFitter(calc_uncertainties=True)
 
         # fit
         self.astropy_result = fit(
@@ -218,6 +221,7 @@ class Model:
             epsilon=1e-10,
             acc=1e-10,
         )
+        self.fit_info = fit.fit_info
         if verbose:
             print(fit.fit_info["message"])
 
