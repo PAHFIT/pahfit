@@ -276,7 +276,26 @@ class Model:
         # A standard deepcopy works fine!
         return copy.deepcopy(self)
 
-    def _kludge_param_info(self):
+    def sub_model(self, kind=None):
+        """Return a function that represents part of the fit result.
+
+        The arguments allow filtering components by name, group or kind.
+
+        The FWHM of the unresolved lines will be determined by the value
+        in the features table, instead of the instrument. This allows us
+        to visualize the fitted line widths in the spectral overlap
+        regions.
+
+        """
+        filtered_features = self.features.copy()
+        if kind is not None:
+            filtered_features = filtered_features[filtered_features["kind"] == kind]
+
+        sub_model = Model(filtered_features, self.instrumentname, self.redshift)
+        sub_astropy_model = sub_model._construct_astropy_model(
+            use_instrument_fwhm=False
+        )
+        return sub_astropy_model
 
     def _kludge_param_info(self, use_instrument_fwhm=True):
         param_info = PAHFITBase.parse_table(self.features)
