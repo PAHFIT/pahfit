@@ -413,6 +413,10 @@ class Model:
                         row["kind"], param_name, param_value
                     )
                     row[col_name][0] = col_value
+
+                # for the unresolved lines, indicate when the line fwhm was made non-fixed
+                if row["kind"] == 'line' and col_name == 'fwhm':
+                        row['fwhm']].mask[1:] = component.fixed[param_name]
             else:
                 # signal that it was not fit by masking the feature
                 self.features.mask_feature(name)
