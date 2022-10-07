@@ -135,7 +135,9 @@ class Features(Table):
         if file.endswith(".yaml") or file.endswith(".yml"):
             return cls._read_scipack(file)
         else:
-            return super().read(file, *args, **kwargs)
+            table = super().read(file, *args, **kwargs)
+            table.add_index('name')
+            return table
 
     @classmethod
     def _read_scipack(cls, file):
