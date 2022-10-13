@@ -1,18 +1,21 @@
 # ---
 # PAHFIT Instrument Pack, see https://github.com/PAHFIT/pahfit/wiki/File-Formats for more information
 
-# This is the Instrument Pack for ISO/SWS observations using AOT 1 or AOT 6 observations. 
-# For each of the four possible scanning speeds (speed 1,2,3 and 4 for AOT 1; speed 0 for AOT 6), 
-# and for each of the SWS bands, this file first provides the wavelength range covered (in microns).
-# The resolving power (lambda / delta_lambda, where delta_lamba is the FWHM of the resolution element) 
-# is represented by a polynomial of degree 3, and this file lists the coefficients CC of that polynomial, i.e.
-#
+# This is the Instrument Pack for ISO/SWS observations.
+# There are two main Astronomical Observing Templates (AOTs).
+# An AOT6 is a full grating scan, covering the entire wavelength range at full resolution. 
+# An AOT1 is a quick full grating scan at lower resolution, where the resolution depends on the scanning speed.
+# An AOT1 can have speeds 1/2/3/4; 1 and 2 correspond to the lowest resolution; 3 and 4 are higher resolution. 
+# For each full grating scan, the wavelength range is covered by 12 bands. 
+# For each band, this file first provides the wavelength range covered (in microns).
+# The resolving power (lambda / delta_lambda)
+# is represented by a polynomial of degree 3, and this file
+# lists the coefficients CC of that polynomial, i.e.
 # R = CC[0] + CC[1] * lambda + CC[2] * lambda^2 + CC[3] * lambda^3
-#
 # where lambda is expressed in microns as well. 
 
 sws:
-    speed0: 
+    aot6:
         1a:
             range: [2.38,2.60]
             coefficients: [-3.125000E-02,1.449293E+03,-9.765625E-03,9.765625E-04]
@@ -46,154 +49,155 @@ sws:
         3e:
             range: [27.50,29.00]
             coefficients: [-6.250000E-02,5.587500E+01,-8.544922E-04,3.814697E-06]
-        '4':
+        4:
             range: [29.00,45.20]
             coefficients: [-3.099442E-06,5.319149E+01,-6.053597E-09,6.002665E-11]
-    speed1:
-        1a:
-            range: [2.38,2.60]
-            coefficients: [4.882812E-04,3.046318E+02,4.882812E-04,-2.136230E-04]
-        1b:
-            range: [2.60,3.02]
-            coefficients: [2.136230E-04,2.024104E+02,4.577637E-05,-5.722046E-06]
-        1d:
-            range: [3.02,3.52]
-            coefficients: [-3.662109E-04,2.060755E+02,-9.918213E-05,9.059906E-06]
-        1e:
-            range: [3.52,4.08]
-            coefficients: [-4.882812E-04,1.193681E+02,-1.106262E-04,9.536743E-06]
-        2a:
-            range: [4.08,5.30]
-            coefficients: [9.536743E-06,1.166469E+02,1.430511E-06,-8.195639E-08]
-        2b:
-            range: [5.30,7.00]
-            coefficients: [-2.861023E-06,5.231883E+01,-1.490116E-07,9.313226E-09]
-        2c:
-            range: [7.00,12.00]
-            coefficients: [-4.290993E+01,5.628847E+01,-1.189686E+00,1.736142E-01]
-        3a:
-            range: [12.00,16.50]
-            coefficients: [-3.576279E-06,3.296078E+01,-5.587935E-08,1.338776E-09]
-        3c:
-            range: [16.50,19.50]
-            coefficients: [-1.220703E-04,3.587808E+01,-8.344650E-07,2.235174E-08]
-        3d:
-            range: [19.50,27.50]
-            coefficients: [-2.384186E-07,1.566331E+01,1.396984E-09,1.455192E-11]
-        3e:
-            range: [27.50,29.00]
-            coefficients: [-2.343750E-02,1.961914E+01,-1.831055E-04,4.768372E-07]
-        '4':
-            range: [29.00,45.20]
-            coefficients: [-1.013279E-06,1.975482E+01,-1.862645E-09,1.818989E-11]
-    speed2:
-        1a:
-            range: [2.38,2.60]
-            coefficients: [3.906250E-03,8.442227E+02,3.906250E-03,-9.765625E-04]
-        1b:
-            range: [2.60,3.02]
-            coefficients: [-1.831055E-04,5.590174E+02,-1.831055E-04,1.907349E-05]
-        1d:
-            range: [3.02,3.52]
-            coefficients: [-9.155273E-04,5.710976E+02,-3.204346E-04,2.861023E-05] 
-        1e:
-            range: [3.52,4.08]
-            coefficients: [1.831055E-04,3.285352E+02,0.000000E+00,-2.861023E-06]
-        2a:
-            range: [4.08,5.30]
-            coefficients: [-1.907349E-05,3.217116E+02,-3.099442E-06,2.086163E-07]
-        2b:
-            range: [5.30,7.00]
-            coefficients: [3.814697E-06,1.425097E+02,3.576279E-07,-2.607703E-08]
-        2c:
-            range: [7.00,12.00]
-            coefficients: [-1.172871E+02,1.538552E+02,-3.251809E+00,4.745455E-01]
-        3a:
-            range: [12.00,16.50]
-            coefficients: [-8.106232E-06,8.792151E+01,-1.490116E-07,3.492460E-09]
-        3c:
-            range: [16.50,19.50]
-            coefficients: [-3.662109E-04,9.470191E+01,-3.099442E-06,5.215406E-08]
-        3d:
-            range: [19.50,27.50]
-            coefficients: [1.907349E-06,3.974856E+01,1.303852E-08,-7.275958E-11]
-        3e:
-            range: [27.50,29.00]
-            coefficients: [1.875000E-01,4.360352E+01,5.493164E-04,-9.536743E-06]
-        '4':
-            range: [29.00,45.20]
-            coefficients: [-2.503395E-06,4.255319E+01,-6.053597E-09,4.729372E-11]
-    speed3:
-        1a:
-            range: [2.38,2.60]
-            coefficients: [2.734375E-02,1.411574E+03,9.765625E-03,-2.685547E-03]
-        1b:
-            range: [2.60,3.02]
-            coefficients: [3.662109E-04,9.281710E+02,1.220703E-04,-1.525879E-05]
-        1d:
-            range: [3.02,3.52]
-            coefficients: [-8.544922E-04,9.549102E+02,-2.136230E-04,3.051758E-05]
-        1e:
-            range: [3.52,4.08]
-            coefficients: [-8.544922E-04,5.417411E+02,-2.593994E-04,1.525879E-05]
-        2a:
-            range: [4.08,5.30]
-            coefficients: [3.814697E-06,5.326793E+02,0.000000E+00,8.940697E-08]
-        2b:
-            range: [5.30,7.00]
-            coefficients: [-1.907349E-06,2.303513E+02,4.768372E-07,-1.490116E-08]
-        2c:
-            range: [7.00,12.00]
-            coefficients: [-1.908237E+02,2.503190E+02,-5.290623E+00,7.720752E-01]
-        3a:
-            range: [12.00,16.50]
-            coefficients: [-8.583069E-06,1.369788E+02,-1.043081E-07,3.259629E-09]
-        3c:
-            range: [16.50,19.50]
-            coefficients: [-6.713867E-04,1.450564E+02,-7.152557E-06,9.685755E-08]
-        3d:
-            range: [19.50,27.50]
-            coefficients: [0.000000E+00,5.755602E+01,1.490116E-08,-8.731149E-11]
-        3e:
-            range: [27.50,29.00]
-            coefficients: [-1.875000E-01,5.539062E+01,-6.103516E-04,2.861023E-06]
-        '4':
-            range: [29.00,45.20]
-            coefficients: [-1.192093E-06,5.278073E+01,-3.492460E-09,2.000888E-11]
-    speed4:
-        1a:
-            range: [2.38,2.60]
-            coefficients: [-3.125000E-02,1.449293E+03,-9.765625E-03,9.765625E-04]
-        1b:
-            range: [2.60,3.02]
-            coefficients: [7.324219E-04,9.523802E+02,2.136230E-04,-2.288818E-05]
-        1d:
-            range: [3.02,3.52]
-            coefficients: [-1.220703E-03,9.803929E+02,-3.051758E-04,3.814697E-05]
-        1e:
-            range: [3.52,4.08]
-            coefficients: [-9.765625E-04,5.555562E+02,-1.983643E-04,1.144409E-05]
-        2a:
-            range: [4.08,5.30]
-            coefficients: [-3.433228E-05,5.464481E+02,-6.198883E-06,3.576279E-07]
-        2b:
-            range: [5.30,7.00]
-            coefficients: [7.629395E-06,2.358491E+02,1.072884E-06,-5.960464E-08]
-        2c:
-            range: [7.00,12.00]
-            coefficients: [-1.954786E+02,2.564253E+02,-5.419682E+00,7.909091E-01]
-        3a:
-            range: [12.00,16.50]
-            coefficients: [-1.621246E-05,1.398601E+02,-2.235174E-07,5.820766E-09]
-        3c:
-            range: [16.50,19.50]
-            coefficients: [-2.441406E-04,1.479291E+02,-1.907349E-06,2.980232E-08]
-        3d:
-            range: [19.50,27.50]
-            coefficients: [5.245209E-06,5.847953E+01,3.725290E-08,-2.910383E-10]
-        3e:
-            range: [27.50,29.00]
-            coefficients: [-6.250000E-02,5.587500E+01,-8.544922E-04,3.814697E-06]
-        '4':
-            range: [29.00,45.20]
-            coefficients: [-3.099442E-06,5.319149E+01,-6.053597E-09,6.002665E-11]
+    aot1:
+        speed1:
+            1a:
+                range: [2.38,2.60]
+                coefficients: [4.882812E-04,3.046318E+02,4.882812E-04,-2.136230E-04]
+            1b:
+                range: [2.60,3.02]
+                coefficients: [2.136230E-04,2.024104E+02,4.577637E-05,-5.722046E-06]
+            1d:
+                range: [3.02,3.52]
+                coefficients: [-3.662109E-04,2.060755E+02,-9.918213E-05,9.059906E-06]
+            1e:
+                range: [3.52,4.08]
+                coefficients: [-4.882812E-04,1.193681E+02,-1.106262E-04,9.536743E-06]
+            2a:
+                range: [4.08,5.30]
+                coefficients: [9.536743E-06,1.166469E+02,1.430511E-06,-8.195639E-08]
+            2b:
+                range: [5.30,7.00]
+                coefficients: [-2.861023E-06,5.231883E+01,-1.490116E-07,9.313226E-09]
+            2c:
+                range: [7.00,12.00]
+                coefficients: [-4.290993E+01,5.628847E+01,-1.189686E+00,1.736142E-01]
+            3a:
+                range: [12.00,16.50]
+                coefficients: [-3.576279E-06,3.296078E+01,-5.587935E-08,1.338776E-09]
+            3c:
+                range: [16.50,19.50]
+                coefficients: [-1.220703E-04,3.587808E+01,-8.344650E-07,2.235174E-08]
+            3d:
+                range: [19.50,27.50]
+                coefficients: [-2.384186E-07,1.566331E+01,1.396984E-09,1.455192E-11]
+            3e:
+                range: [27.50,29.00]
+                coefficients: [-2.343750E-02,1.961914E+01,-1.831055E-04,4.768372E-07]
+            4:
+                range: [29.00,45.20]
+                coefficients: [-1.013279E-06,1.975482E+01,-1.862645E-09,1.818989E-11]
+        speed2:
+            1a:
+                range: [2.38,2.60]
+                coefficients: [7.324219E-03,2.364673E+02,3.417969E-03,-5.798340E-04]
+            1b:
+                range: [2.60,3.02]
+                coefficients: [3.051758E-05,1.571563E+02,-1.525879E-05,0.000000E+00]
+            1d:
+                range: [3.02,3.52]
+                coefficients: [-2.746582E-04,1.599690E+02,-9.918213E-05,8.583069E-06]
+            1e:
+                range: [3.52,4.08]
+                coefficients: [-2.746582E-04,9.269925E+01,-4.959106E-05,4.768372E-06]
+            2a:
+                range: [4.08,5.30]
+                coefficients: [1.001358E-05,9.057486E+01,1.370907E-06,-8.940697E-08]
+            2b:
+                range: [5.30,7.00]
+                coefficients: [3.099442E-06,4.065574E+01,3.278255E-07,-1.396984E-08]
+            2c:
+                range: [7.00,12.00]
+                coefficients: [-3.333720E+01,4.373113E+01,-9.242803E-01,1.348828E-01]
+            3a:
+                range: [12.00,16.50]
+                coefficients: [-3.457069E-06,2.564690E+01,-5.215406E-08,1.105946E-09]
+            3c:
+                range: [16.50,19.50]
+                coefficients: [-3.814697E-05,2.793602E+01,-7.152557E-07,7.450581E-09]
+            3d:
+                range: [19.50,27.50]
+                coefficients: [5.960464E-08,1.222913E+01,2.793968E-09,-2.182787E-11]
+            3e:
+                range: [27.50,29.00]
+                coefficients: [-1.562500E-02,1.548535E+01,-1.525879E-04,-9.536743E-07]
+            4:
+                range: [29.00,45.20]
+                coefficients: [0.000000E+00,1.564286E+01,0.000000E+00,0.000000E+00]
+        speed3:
+            1a:
+                range: [2.38,2.60]
+                coefficients: [-3.906250E-03,4.551279E+02,-1.464844E-03,0.000000E+00]
+            1b:
+                range: [2.60,3.02]
+                coefficients: [4.577637E-04,3.022108E+02,1.220703E-04,-1.335144E-05]
+            1d:
+                range: [3.02,3.52]
+                coefficients: [-3.662109E-04,3.078788E+02,-1.525879E-04,1.335144E-05]
+            1e:
+                range: [3.52,4.08]
+                coefficients: [-2.746582E-04,1.781092E+02,-6.103516E-05,4.291534E-06]
+            2a:
+                range: [4.08,5.30]
+                coefficients: [2.861023E-06,1.741163E+02,3.576279E-07,0.000000E+00]
+            2b:
+                range: [5.30,7.00]
+                coefficients: [4.768372E-06,7.791284E+01,4.172325E-07,-2.235174E-08]
+            2c:
+                range: [7.00,12.00]
+                coefficients: [-6.394311E+01,8.387941E+01,-1.772835E+00,2.587147E-01]
+            3a:
+                range: [12.00,16.50]
+                coefficients: [-5.483627E-06,4.888718E+01,-7.823110E-08,1.979060E-09]
+            3c:
+                range: [16.50,19.50]
+                coefficients: [0.000000E+00,5.310343E+01,-2.384186E-07,-3.725290E-09]
+            3d:
+                range: [19.50,27.50]
+                coefficients: [3.576279E-07,2.299627E+01,4.656613E-09,-4.365575E-11]
+            3e:
+                range: [27.50,29.00]
+                coefficients: [1.718750E-01,2.789453E+01,6.103516E-04,-8.106232E-06]
+            4:
+                range: [29.00,45.20]
+                coefficients: [-8.940697E-07,2.787752E+01,-1.629815E-09,1.455192E-11]
+        speed4:
+            1a:
+                range: [2.38,2.60]
+                coefficients: [3.906250E-03,8.442227E+02,3.906250E-03,-9.765625E-04]
+            1b:
+                range: [2.60,3.02]
+                coefficients: [-1.831055E-04,5.590174E+02,-1.831055E-04,1.907349E-05]
+            1d:
+                range: [3.02,3.52]
+                coefficients: [-9.155273E-04,5.710976E+02,-3.204346E-04,2.861023E-05]
+            1e:
+                range: [3.52,4.08]
+                coefficients: [1.831055E-04,3.285352E+02,0.000000E+00,-2.861023E-06]
+            2a:
+                range: [4.08,5.30]
+                coefficients: [-1.907349E-05,3.217116E+02,-3.099442E-06,2.086163E-07]
+            2b:
+                range: [5.30,7.00]
+                coefficients: [3.814697E-06,1.425097E+02,3.576279E-07,-2.607703E-08]
+            2c:
+                range: [7.00,12.00]
+                coefficients: [-1.172871E+02,1.538552E+02,-3.251809E+00,4.745455E-01]
+            3a:
+                range: [12.00,16.50]
+                coefficients: [-8.106232E-06,8.792151E+01,-1.490116E-07,3.492460E-09]
+            3c:
+                range: [16.50,19.50]
+                coefficients: [-3.662109E-04,9.470191E+01,-3.099442E-06,5.215406E-08]
+            3d:
+                range: [19.50,27.50]
+                coefficients: [1.907349E-06,3.974856E+01,1.303852E-08,-7.275958E-11]
+            3e:
+                range: [27.50,29.00]
+                coefficients: [1.875000E-01,4.360352E+01,5.493164E-04,-9.536743E-06]
+            4:
+                range: [29.00,45.20]
+                coefficients: [-2.503395E-06,4.255319E+01,-6.053597E-09,4.729372E-11]
