@@ -513,6 +513,13 @@ class PAHFITBase:
         feature_dict.update(new_values_1)
         feature_dict.update(new_values_2)
 
+        if len(feature_dict['names']) == 0:
+            # if we removed all the things, be careful here. Setting to
+            # None should make the model construction function behave
+            # normally.
+            feature_dict = None
+            return feature_dict
+
         if update_fwhms:
             # observe the lines at the redshifted wavelength
             fwhm_min_max = fwhm(instrumentname, redshifted_waves(), as_bounded=True)
