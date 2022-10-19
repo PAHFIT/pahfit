@@ -15,8 +15,8 @@ def test_fitting_m101():
     # packfile = "scipack_ExGal_SpitzerIRSSLLL.ipac"
     packfile = "classic.yaml"
     # use a spitzer instrument model that covers the required range. SL1, SL2, LL1, LL2 should do
-    instrumentname = "spitzer.irs.*.[12]"
-    model = Model.from_yaml(packfile, instrumentname, 0)
+    spec.meta['instrument'] = "spitzer.irs.*.[12]"
+    model = Model.from_yaml(packfile)
 
     # fit
     model.guess(spec)

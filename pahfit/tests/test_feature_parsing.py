@@ -36,8 +36,8 @@ def test_feature_parsing():
     features = Features.read(packfile)
 
     def test_parsing(features_edit):
-        m = Model(features_edit, instrumentname, 0)
-        amodel = m._construct_astropy_model()
+        m = Model(features_edit)
+        amodel = m._construct_astropy_model(instrumentname, 0)
         m._parse_astropy_result(amodel)
 
     # Case 0: the whole table

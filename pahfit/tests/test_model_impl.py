@@ -18,8 +18,8 @@ def default_spec_and_model_fit(fit=True):
     spec = read_spectrum(spectrumfile)
     packfile = "classic.yaml"
     # use a spitzer instrument model that covers the required range. SL1, SL2, LL1, LL2 should do
-    instrumentname = "spitzer.irs.*.[12]"
-    model = Model.from_yaml(packfile, instrumentname, 0)
+    spec.meta["instrument"] = "spitzer.irs.*.[12]"
+    model = Model.from_yaml(packfile)
     if fit:
         model.guess(spec)
         model.fit(spec)
@@ -27,14 +27,16 @@ def default_spec_and_model_fit(fit=True):
 
 
 def test_feature_table_model_conversion():
-    _, model = default_spec_and_model_fit()
+    spec, model = default_spec_and_model_fit()
 
     # two versions of the fit result: one is fresh from the fit. The fit
     # results were then written to model.features. If everything went
     # correct, reconstructing the model from model.features should
     # result in the exact same model.
     fit_result = model.astropy_result
-    reconstructed_fit_result = model._construct_astropy_model()
+    reconstructed_fit_result = model._construct_astropy_model(
+        instrumentname=spec.meta["instrument"], redshift=0, use_instrument_fwhm=False
+    )
     for p in fit_result.param_names:
         p1 = getattr(fit_result, p)
         p2 = getattr(reconstructed_fit_result, p)
@@ -58,8 +60,10 @@ def test_model_edit():
     # make sure the original value is still the same
     assert model.features.loc[feature][col][0] == originalT
 
-    # construct astropy model
-    astropy_model_edit = model_to_edit._construct_astropy_model()
+    # construct astropy model with dummy instrument
+    astropy_model_edit = model_to_edit._construct_astropy_model(
+        instrumentname="spitzer.irs.*", redshift=0
+    )
 
     # Make sure the change is reflected in this model. Very handy that
     # we can access the right component by the feature name!
@@ -73,6 +77,4 @@ def test_save_load():
     model_loaded = Model.from_saved(temp_file.name)
 
     # all the things we want to recover
-    assert model.redshift == model_loaded.redshift
-    assert model.instrumentname == model_loaded.instrumentname
     assert_features_table_equality(model.features, model_loaded.features)

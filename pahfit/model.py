@@ -45,21 +45,12 @@ class Model:
 
     """
 
-    def __init__(self, features: Features, instrumentname, redshift):
+    def __init__(self, features: Features):
         """
         Parameters
         ----------
         features: Features
             Features table.
-
-        instrumentname : str or list of str
-            Qualified instrument name, see instrument.py. This will
-            determine what the line widths are, when going from the
-            features table to a fittable/plottable model.
-
-        redshift : float
-            Redshift used to shift from the physical model, to the
-            observed model.
 
         """
         if len(features) < 2:
@@ -67,8 +58,6 @@ class Model:
                 "Fewer than 2 features! Single component models are no allowed!"
             )
 
-        self.redshift = redshift
-        self.instrumentname = instrumentname
         self.features = features
         # if set to False, use set fwhm for lines to value in features
         # table at model construction
@@ -78,7 +67,7 @@ class Model:
         self.fit_info = None
 
     @classmethod
-    def from_yaml(cls, pack_file, instrumentname, redshift):
+    def from_yaml(cls, pack_file):
         """
         Generate feature table from YAML file.
 
@@ -94,7 +83,7 @@ class Model:
         """
         path = find_packfile(pack_file)
         features = Features.read(path)
-        return cls(features, instrumentname, redshift)
+        return cls(features)
 
     @classmethod
     def from_saved(cls, saved_model_file):
@@ -111,7 +100,7 @@ class Model:
         # features.read automatically switches to astropy table reader.
         # Maybe needs to be more advanced here in the future.
         features = Features.read(saved_model_file, format="ascii.ecsv")
-        return cls(features, features.meta["instrumentname"], features.meta["redshift"])
+        return cls(features)
 
     def save(self, fn, **write_kwargs):
         """Save the model to disk.
@@ -132,12 +121,9 @@ class Model:
         if fn.split(".")[-1] != "ecsv":
             raise NotImplementedError("Only ascii.ecsv is supported for now")
 
-        self.features.meta.update(
-            {"redshift": self.redshift, "instrumentname": self.instrumentname}
-        )
         self.features.write(fn, format="ascii.ecsv", **write_kwargs)
 
-    def guess(self, spec: Spectrum1D):
+    def guess(self, spec: Spectrum1D, redshift=None):
         """Make an initial guess of the physics, based on the given
         observational data.
 
@@ -149,21 +135,61 @@ class Model:
             for the segment-based joint fitting). Initial guess will be
             based on the flux in this spectrum.
 
+            spec.meta['instrument'] : str or list of str
+                Qualified instrument name, see instrument.py. This will
+                determine what the line widths are, when going from the
+                features table to a fittable/plottable model.
+
+        redshift : float
+            Redshift used to shift from the physical model, to the
+            observed model.
+
+            If None, will be taken from spec.redshift
+
         Returns
         -------
         Nothing, but internal feature table is updated.
 
         """
-        x = spec.spectral_axis.to(u.micron).value
-        y = spec.flux.value  # TODO figure out right unit
-        xz = x / (1 + self.redshift)
+        inst, z = self._parse_instrument_and_redshift(spec, redshift)
+        _, _, _, xz, yz, _ = self._convert_spec_data(spec, z)
 
         # remake param_info to make sure we have any feature updates from the user
-        param_info = self._kludge_param_info()
-        param_info = PAHFITBase.estimate_init(xz, y, param_info)
+        param_info = self._kludge_param_info(inst, z)
+        param_info = PAHFITBase.estimate_init(xz, yz, param_info)
         self._backport_param_info(param_info)
 
-    def fit(self, spec: Spectrum1D, maxiter=1000, verbose=True):
+    @staticmethod
+    def _convert_spec_data(spec, z):
+        """
+        Turn astropy quantities into fittable numbers.
+
+        Also corrects for redshift
+
+        Returns
+        -------
+        x, y, unc: wavelength in micron, flux, uncertainty
+
+        xz, yz, uncz: wavelength in micron, flux, uncertainty
+            corrected for redshift
+        """
+        x = spec.spectral_axis.to(u.micron).value
+        y = spec.flux.value
+        unc = spec.uncertainty.array
+
+        # transform observed wavelength to "physical" wavelength
+        xz = x / (1 + z)  # wavelength shorter
+        yz = y * (1 + z)  # energy higher
+        uncz = unc * (1 + z)  # uncertainty scales with flux
+        return x, y, unc, xz, yz, uncz
+
+    def fit(
+        self,
+        spec: Spectrum1D,
+        redshift=None,
+        maxiter=1000,
+        verbose=True,
+    ):
         """Fit the observed data.
 
         The model setup is based on the features table and instrument specification.
@@ -180,10 +206,21 @@ class Model:
         Parameters
         ----------
         spec : Spectrum1D
-            Observed spectrum containing wavelengths, flux, and
-            uncertainties. Needs to be compatible with the instrument
-            specification of this Model object.
-            TODO: convert flux to preferred units
+            1D (not 2D or 3D) spectrum object, containing the
+            observational data. (TODO: should support list of spectra,
+            for the segment-based joint fitting). Initial guess will be
+            based on the flux in this spectrum.
+
+            spec.meta['instrument'] : str or list of str
+                Qualified instrument name, see instrument.py. This will
+                determine what the line widths are, when going from the
+                features table to a fittable/plottable model.
+
+        redshift : float
+            Redshift used to shift from the physical model, to the
+            observed model.
+
+            If None, will be taken from spec.redshift
 
         maxiter : int
             maximum number of fitting iterations
@@ -192,26 +229,19 @@ class Model:
             set to provide screen output
 
         """
-        x = spec.spectral_axis.to(u.micron).value
-        y = spec.flux.value
-        unc = spec.uncertainty.array
+        # parse spectral data
+        inst, z = self._parse_instrument_and_redshift(spec, redshift)
+        x, _, _, xz, yz, uncz = self._convert_spec_data(spec, z)
 
         # check if observed spectrum is compatible with instrument model
-        instrument.check_range([min(x), max(x)], self.instrumentname)
+        instrument.check_range([min(x), max(x)], inst)
 
-        # transform observed wavelength to "physical" wavelength
-        xz = x / (1 + self.redshift)
-        yz = y * (1 + self.redshift)
-        uncz = unc * (1 + self.redshift)
+        # weigths
         w = 1.0 / uncz
 
-        # construct model
-        astropy_model = self._construct_astropy_model(self.use_instrument_fwhm)
-
-        # pick the fitter
+        # construct model and perform fit
+        astropy_model = self._construct_astropy_model(inst, z, use_instrument_fwhm=True)
         fit = LevMarLSQFitter(calc_uncertainties=True)
-
-        # fit
         self.astropy_result = fit(
             astropy_model,
             xz,
@@ -231,7 +261,7 @@ class Model:
         """Print out the last fit results."""
         print(self.astropy_result)
 
-    def plot(self, spec=None):
+    def plot(self, spec=None, redshift=None):
         """Plot model, and optionally compare to observational data.
 
         Parameters
@@ -239,8 +269,22 @@ class Model:
         spec : Spectrum1D
             Observational data. Does not have to be the same data that
             was used for guessing or fitting.
+
+        redshift : float
+            Redshift used to shift from the physical model, to the
+            observed model.
+
+            If None, will be taken from spec.redshift
+
         """
-        # copied some stuff from plot_pahfit
+        inst, z = self._parse_instrument_and_redshift(spec, redshift)
+        _, _, _, xz, yz, uncz = self._convert_spec_data(spec, z)
+        astropy_model = self._construct_astropy_model(
+            inst, z, use_instrument_fwhm=False
+        )
+
+        enough_samples = max(1000, len(spec.wavelength))
+
         fig, axs = plt.subplots(
             ncols=1,
             nrows=2,
@@ -248,16 +292,7 @@ class Model:
             gridspec_kw={"height_ratios": [3, 1]},
             sharex=True,
         )
-
-        x = spec.spectral_axis.to(u.micron).value
-        xz = x / (1 + self.redshift)
-        y = spec.flux.value
-        unc = spec.uncertainty.array
-        astropy_model = self._construct_astropy_model(use_instrument_fwhm=False)
-
-        enough_samples = max(1000, len(spec.wavelength))
-        PAHFITBase.plot(axs, xz, y, unc, astropy_model, model_samples=enough_samples)
-
+        PAHFITBase.plot(axs, xz, yz, uncz, astropy_model, model_samples=enough_samples)
         fig.subplots_adjust(hspace=0)
 
     def copy(self):
@@ -276,7 +311,7 @@ class Model:
         # A standard deepcopy works fine!
         return copy.deepcopy(self)
 
-    def sub_model(self, kind=None):
+    def sub_model(self, instrumentname, redshift, kind=None):
         """Return a function that represents part of the fit result.
 
         The arguments allow filtering components by name, group or kind.
@@ -291,33 +326,33 @@ class Model:
         if kind is not None:
             filtered_features = filtered_features[filtered_features["kind"] == kind]
 
-        sub_model = Model(filtered_features, self.instrumentname, self.redshift)
+        sub_model = Model(filtered_features)
         sub_astropy_model = sub_model._construct_astropy_model(
-            use_instrument_fwhm=False
+            instrumentname, redshift, use_instrument_fwhm=False
         )
         return sub_astropy_model
 
-    def _kludge_param_info(self, use_instrument_fwhm=True):
+    def _kludge_param_info(self, instrumentname, redshift, use_instrument_fwhm=True):
         param_info = PAHFITBase.parse_table(self.features)
         # edit line widths and drop lines out of range
 
         # h2_info
         param_info[2] = PAHFITBase.update_dictionary(
             param_info[2],
-            self.instrumentname,
+            instrumentname,
             update_fwhms=use_instrument_fwhm,
-            redshift=self.redshift,
+            redshift=redshift,
         )
         # ion_info
         param_info[3] = PAHFITBase.update_dictionary(
             param_info[3],
-            self.instrumentname,
+            instrumentname,
             update_fwhms=use_instrument_fwhm,
-            redshift=self.redshift,
+            redshift=redshift,
         )
         # abs_info
         param_info[4] = PAHFITBase.update_dictionary(
-            param_info[4], self.instrumentname, redshift=self.redshift
+            param_info[4], instrumentname, redshift
         )
 
         return param_info
@@ -337,7 +372,9 @@ class Model:
         astropy_model = PAHFITBase.model_from_param_info(param_info)
         self._parse_astropy_result(astropy_model)
 
-    def _construct_astropy_model(self, use_instrument_fwhm=True):
+    def _construct_astropy_model(
+        self, instrumentname, redshift, use_instrument_fwhm=True
+    ):
         """Convert the features table into a fittable model.
 
         Some nuances in the behavior
@@ -352,14 +389,10 @@ class Model:
         _kludge_param_info(), but the observational data might only
         cover a part of the instrument range.
 
-        Parameters
-        ----------
-        use_instrument_fwhm : bool
-            override the default behavior and use the fwhm from the
-            features table (if set)
-
         """
-        param_info = self._kludge_param_info(use_instrument_fwhm)
+        param_info = self._kludge_param_info(
+            instrumentname, redshift, use_instrument_fwhm
+        )
         return PAHFITBase.model_from_param_info(param_info)
 
     def _parse_astropy_result(self, astropy_model):
@@ -439,3 +472,21 @@ class Model:
             else:
                 # signal that it was not fit by masking the feature
                 self.features.mask_feature(name)
+
+    @staticmethod
+    def _parse_instrument_and_redshift(spec, redshift):
+        """Small utility to grab instrument and redshift from either
+        Spectrum1D metadata, or from arguments.
+
+        """
+        # the rest of the implementation doesn't like Quantity...
+        z = spec.redshift.value if redshift is None else redshift
+        if z is None:
+            # default of spec.redshift is None!
+            z = 0
+
+        inst = spec.meta["instrument"]
+        if inst is None:
+            raise PAHFITModelError("No instrument! Please set spec.meta['instrument'].")
+
+        return inst, z
