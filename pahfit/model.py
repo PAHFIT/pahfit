@@ -123,6 +123,19 @@ class Model:
 
         self.features.write(fn, format="ascii.ecsv", **write_kwargs)
 
+    def _status_message(self):
+        out = "Model features ("
+        if self.fit_info is None:
+            out += "not "
+        out += "fitted)\n"
+        return out
+
+    def __repr__(self):
+        return self._status_message() + self.features.__repr__()
+
+    def _repr_html_(self):
+        return self._status_message() + self.features._repr_html_()
+
     def guess(self, spec: Spectrum1D, redshift=None):
         """Make an initial guess of the physics, based on the given
         observational data.
