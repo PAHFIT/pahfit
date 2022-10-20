@@ -11,7 +11,7 @@ def test_classic_regression():
 
     """
     pass
-    # model_new = Model.from_yaml("classic.yaml", "spitzer.irs.sl.2", 0)
+    # model_new = Model.from_yaml("classic.yaml")
 
     # saved_path = pkg_resources.resource_filename("pahfit", "data/regression_test/classic_features_table.ascii.ecsv")
     # model_old = Model.from_saved(saved_path)

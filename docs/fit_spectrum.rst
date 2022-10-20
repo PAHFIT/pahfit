@@ -60,20 +60,23 @@ instrument packs, are encouraged to use the Model class directly. This class
 acts as the main Python API.
 
 The first step is to set up an instance of the model class. All that is needed,
-is a science pack and the instrument configuration the model should represent.
+is a science pack containing the features the model should represent.
 See File Formats <file_formats.rst>.
 
 .. code-block:: python
 
    from pahfit.model import Model
-   model = Model.from_yaml('classic.yaml', 'spitzer.irs.*.[12]')
+   model = Model.from_yaml('classic.yaml')
 
 This object will then be used to perform the initial guess (if needed), the
 fitting, and rudimentary analysis of the fit results.
 
 For guessing and fitting, observational data needs to be provided in the form
 of a ``Spectrum1D`` object. Any input format supported by the specutils package
-will work, as long as it has assigned units and uncertainties.
+will work, as long as it has assigned units and uncertainties. The Model class
+requires that an instrument pack and redshift are associated with the provided
+spectra. These should be stored in the ``meta['instrument']`` and ``redshift``
+attributes of the spectrum.
 
 The code below illustrates a minimal workflow.
 
@@ -82,6 +85,9 @@ The code below illustrates a minimal workflow.
    # load in an example spectrum
    from specutils import Spectrum1D
    spec = Spectrum1D.read(file_name)
+   # set instrument information, and redshift if > 0
+   spec.meta['instrument'] = 'spitzer.irs.*.[12]'
+   spec.set_redshift_to(0)
    # perform initial guess
    model.guess(spec)
    # perform fit
@@ -98,9 +104,9 @@ used for the fit, for comparative purposes.
 The more advanced user can experiment with different initial conditions by
 directly accessing the features table stored in the model object. As long as no
 columns are added or removed, the user can freely edit the parameters of this
-table or remove rows. Each row corresponds to one feature. Any edits to this
-table will immediately reflected when the next call to guess, fit, or plot is
-made.
+table or remove rows to disable features entirely. Each row corresponds to one
+feature. Any edits to this table will immediately reflected when the next call
+to guess, fit, or plot is made.
 
 .. code-block:: python
 
@@ -127,7 +133,8 @@ format is below. A value of `null` means that parameter not used by that
 component, and each 3-tuple represents [value, min, max]. The min/max bounds
 are not changed during the fitting, but they are saved for reference. Bounds
 set to `null` indicate that the parameter was fixed during the fit. Any extra
-needed to reload the model from this file, is stored in the ECSV metadata.
+needed to reload the fitted model from this file, is stored in the ECSV
+metadata. Fit uncertainties will be supported like this in the future.
 
 ::
 
@@ -144,9 +151,6 @@ needed to reload the model from this file, is stored in the ECSV metadata.
    # - {name: fwhm, unit: um, datatype: string, format: 0.4g, subtype: 'float64[3]'}
    # - {name: model, datatype: string}
    # - {name: geometry, datatype: string}
-   # meta: !!omap
-   # - {redshift: 0}
-   # - {instrumentname: 'spitzer.irs.*.[12]'}
    # schema: astropy-2.0
    name group kind temperature tau wavelength power fwhm model geometry
    starlight _none_ starlight [5000,null,null] [0.0,0.0,Infinity] [null,null,null] [null,null,null] [null,null,null] "" ""

@@ -103,9 +103,10 @@ def main():
 
     # read in the spectrum
     spec = read_spectrum(args.spectrumfile)
+    spec.meta['instrument'] = args.instrumentname
 
     # setup the model
-    model = Model.from_yaml(args.packfile, args.instrumentname, 0)
+    model = Model.from_yaml(args.packfile)
 
     # initial guess if not explicitly disabled
     if not args.no_starting_estimate:
