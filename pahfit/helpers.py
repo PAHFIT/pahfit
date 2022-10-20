@@ -72,7 +72,8 @@ def read_spectrum(specfile, colnames=["wavelength", "flux", "sigma"]):
         if os.path.isfile(test_specfile):
             specfile = test_specfile
         else:
-            raise ValueError("Input spectrumfile {} not found".format(specfile))
+            raise ValueError(
+                "Input spectrumfile {} not found".format(specfile))
 
     # get the table format (from extension of filename)
     tformat = specfile.split(".")[-1]

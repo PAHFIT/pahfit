@@ -16,6 +16,8 @@ import matplotlib as mpl
 
 from pahfit.instrument import within_segment, fwhm
 
+from pahfit.features import Features
+
 __all__ = ["PAHFITBase"]
 
 
@@ -135,7 +137,8 @@ class PAHFITBase:
         if bb_info is not None:
             bbs = []
             for k in range(len(bb_info["names"])):
-                BBClass = ModifiedBlackBody1D if bb_info["modified"][k] else BlackBody1D
+                BBClass = ModifiedBlackBody1D if bb_info["modified"][
+                    k] else BlackBody1D
                 bbs.append(
                     BBClass(
                         name=bb_info["names"][k],
@@ -172,8 +175,7 @@ class PAHFITBase:
                             "x_0": dust_features["x_0_fixed"][k],
                             "fwhm": dust_features["fwhms_fixed"][k],
                         },
-                    )
-                )
+                    ))
 
             df = sum(df[1:], df[0])
             if model:
@@ -191,8 +193,10 @@ class PAHFITBase:
                         mean=h2_features["x_0"][k],
                         stddev=h2_features["fwhms"][k] / 2.355,
                         bounds={
-                            "amplitude": h2_features["amps_limits"][k],
-                            "mean": h2_features["x_0_limits"][k],
+                            "amplitude":
+                            h2_features["amps_limits"][k],
+                            "mean":
+                            h2_features["x_0_limits"][k],
                             "stddev": (
                                 h2_features["fwhms"][k] * 0.9 / 2.355,
                                 h2_features["fwhms"][k] * 1.1 / 2.355,
@@ -203,8 +207,7 @@ class PAHFITBase:
                             "mean": h2_features["x_0_fixed"][k],
                             "stddev": h2_features["fwhms_fixed"][k],
                         },
-                    )
-                )
+                    ))
             h2 = sum(h2[1:], h2[0])
             if model:
                 model += h2
@@ -221,8 +224,10 @@ class PAHFITBase:
                         mean=ion_features["x_0"][k],
                         stddev=ion_features["fwhms"][k] / 2.355,
                         bounds={
-                            "amplitude": ion_features["amps_limits"][k],
-                            "mean": ion_features["x_0_limits"][k],
+                            "amplitude":
+                            ion_features["amps_limits"][k],
+                            "mean":
+                            ion_features["x_0_limits"][k],
                             "stddev": (
                                 ion_features["fwhms"][k] * 0.9 / 2.355,
                                 ion_features["fwhms"][k] * 1.1 / 2.355,
@@ -233,8 +238,7 @@ class PAHFITBase:
                             "mean": ion_features["x_0_fixed"][k],
                             "stddev": ion_features["fwhms_fixed"][k],
                         },
-                    )
-                )
+                    ))
             ions = sum(ions[1:], ions[0])
             if model:
                 model += ions
