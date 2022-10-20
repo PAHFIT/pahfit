@@ -1,17 +1,21 @@
-import numpy as np
-from pahfit.base import PAHFITBase
+from pahfit.model import Model
 from pahfit.helpers import find_packfile
 from pahfit.features import Features
-from pahfit.instrument import wave_range
+from pahfit.errors import PAHFITModelError
+import numpy as np
 
 def test_feature_parsing():
     """
     Goal
     ----
-    Test if the model is built correctly with certain features removed
+    Test if the model is built successfully with certain features removed
     from the science pack. For example, when this test was written,
-    generating the model without specifying any gaussians will cause the
+    generating the model without specifying any gaussians causes the
     code to crash. This test will try to provoke such crashes.
+
+    This test does not check the correctness of the parsing, only the
+    stability under certain edge cases. See the test_model_impl for
+    something quantitative.
 
     Desired behavior
     ----------------
@@ -22,16 +26,8 @@ def test_feature_parsing():
     features, ...) can deal with those feature not being there.
 
     """
-    # fake obsdata (will not actually do fitting in this test)
-    instrumentname = 'spitzer.irs.sl.2'
-    N = 100
-    wmin, wmax = wave_range(instrumentname)
-    obsdata = {
-        "x": np.linspace(wmin, wmax, N),
-        "y": np.linspace(1, 2, N),
-        "unc": np.full(N, 0.1),
-    }
-
+    # random instrument name
+    instrumentname = "spitzer.irs.sl.2"
 
     # choose any science pack
     packfile = find_packfile("classic.yaml")
@@ -39,27 +35,37 @@ def test_feature_parsing():
     # convert the yaml prescription to a features table
     features = Features.read(packfile)
 
-    # parse features table into the param_info dict, and init PAHFITBase
-    # object from it
-    def parse_and_init(features_instance):
-        param_info = PAHFITBase.parse_table(features_instance)
-        pmodel = PAHFITBase(
-            obsdata["x"],
-            obsdata["y"],
-            instrumentname,
-            estimate_start=True,
-            param_info=param_info,
-        )
-        return pmodel
+    def test_parsing(features_edit):
+        m = Model(features_edit)
+        amodel = m._construct_astropy_model(instrumentname, 0)
+        m._parse_astropy_result(amodel)
 
     # Case 0: the whole table
-    # whole_pmodel
-    _ = parse_and_init(features)
+    test_parsing(features)
 
-    # Case 1, 2, and 3 (no BB, Gauss, Drude)
-    remove_forms = ["BlackBody1D", "Gaussian1D", "Drude1D", "att_Drude1D"]
-    for kind in remove_forms:
-        _ = parse_and_init(features[features["kind"] != kind])
+    # Cases 1, 2, ...
+    kinds = [
+        "dust_continuum",
+        "dust_feature",
+        "line",
+        "starlight",
+        "attenuation",
+    ]
+    for kind in kinds:
+        try:
+            is_kind = features["kind"] == kind
+            # anything but this kind
+            test_parsing(features[np.logical_not(is_kind)])
+            # only this kind
+            test_parsing(features[is_kind])
+            # only one feature of this kind?
+            discard = is_kind # discard everything of this kind
+            discard[discard][0] = False # except the first one
+            test_parsing(features[np.logical_not(discard)])
+        except PAHFITModelError:
+            pass
+            # if one of these is thrown, then the model sufficiently
+            # warns about this edge case
 
 
 if __name__ == "__main__":
