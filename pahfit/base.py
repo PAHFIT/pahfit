@@ -48,8 +48,8 @@ def _ingest_limits(min_vals, max_vals):
     mask_max = max_vals.mask
     data_max = max_vals.data
 
-    mask_min_ind = np.where(mask_min == False)[0]
-    mask_max_ind = np.where(mask_max == False)[0]
+    mask_min_ind = np.where(np.logical_not(mask_min))[0]
+    mask_max_ind = np.where(np.logical_not(mask_max))[0]
 
     min_vals = np.zeros(len(mask_min))
     min_vals[mask_min_ind] = data_min[mask_min_ind]
@@ -85,10 +85,8 @@ def _ingest_fixed(fixed_vals):
     pfixed : list (boolean)
         True/False designation for parameters
     """
-
-    check_mask = fixed_vals.mask
-    mask_false_ind = np.where(check_mask == False)[0]
-    fixed_vals = ["True"] * len(check_mask)
+    mask_false_ind = np.where(np.logical_not(fixed_vals.mask))[0]
+    fixed_vals = ["True"] * len(fixed_vals.mask)
     for i in range(0, len(mask_false_ind)):
         ind = mask_false_ind[i]
         fixed_vals[ind] = "False"
@@ -263,11 +261,11 @@ class PAHFITBase:
 
         if att_info is not None:
             model *= S07_attenuation(
-                        name=att_info["name"],
-                        tau_sil=att_info["tau_sil"],
-                        bounds={"tau_sil": att_info["tau_sil_limits"]},
-                        fixed={"tau_sil": att_info["tau_sil_fixed"]},
-                    )
+                name=att_info["name"],
+                tau_sil=att_info["tau_sil"],
+                bounds={"tau_sil": att_info["tau_sil_limits"]},
+                fixed={"tau_sil": att_info["tau_sil_fixed"]},
+            )
 
         return model
 
