@@ -16,8 +16,6 @@ import matplotlib as mpl
 
 from pahfit.instrument import within_segment, fwhm
 
-from pahfit.features import Features
-
 __all__ = ["PAHFITBase"]
 
 

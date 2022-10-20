@@ -4,6 +4,7 @@ from pahfit.features import Features
 from pahfit.errors import PAHFITModelError
 import numpy as np
 
+
 def test_feature_parsing():
     """
     Goal
@@ -59,8 +60,8 @@ def test_feature_parsing():
             # only this kind
             test_parsing(features[is_kind])
             # only one feature of this kind?
-            discard = is_kind # discard everything of this kind
-            discard[discard][0] = False # except the first one
+            discard = is_kind  # discard everything of this kind
+            discard[discard][0] = False  # except the first one
             test_parsing(features[np.logical_not(discard)])
         except PAHFITModelError:
             pass

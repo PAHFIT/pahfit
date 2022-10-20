@@ -5,6 +5,7 @@ from pahfit.model import Model
 
 import warnings
 
+
 def test_fitting_m101():
 
     # read in the spectrum (goes from 5.257 to 38.299)
@@ -15,7 +16,7 @@ def test_fitting_m101():
     # packfile = "scipack_ExGal_SpitzerIRSSLLL.ipac"
     packfile = "classic.yaml"
     # use a spitzer instrument model that covers the required range. SL1, SL2, LL1, LL2 should do
-    spec.meta['instrument'] = "spitzer.irs.*.[12]"
+    spec.meta["instrument"] = "spitzer.irs.*.[12]"
     model = Model.from_yaml(packfile)
 
     # fit
@@ -64,7 +65,9 @@ def test_fitting_m101():
     # fmt: on
 
     try:
-        np.testing.assert_allclose(model.astropy_result.parameters, expvals, rtol=1e-6, atol=1e-6)
+        np.testing.assert_allclose(
+            model.astropy_result.parameters, expvals, rtol=1e-6, atol=1e-6
+        )
     except AssertionError as error:
         print(error)
         warnings.warn("A new regression test using the fit results is needed.")
