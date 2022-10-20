@@ -2,7 +2,7 @@ from pahfit.helpers import read_spectrum
 from pahfit.model import Model
 import tempfile
 import numpy as np
-
+from pathlib import Path
 
 def assert_features_table_equality(features1, features2):
     for string_col in ["name", "group", "kind", "model", "geometry"]:
@@ -73,8 +73,9 @@ def test_model_edit():
 def test_save_load():
     _, model = default_spec_and_model_fit()
     temp_file = tempfile.NamedTemporaryFile(suffix=".ecsv")
-    model.save(temp_file.name, overwrite=True)
-    model_loaded = Model.from_saved(temp_file.name)
+    temp_file_path = str(Path(temp_file.name).resolve())
+    model.save(temp_file_path, overwrite=True)
+    model_loaded = Model.from_saved(temp_file_path)
 
     # all the things we want to recover
     assert_features_table_equality(model.features, model_loaded.features)
