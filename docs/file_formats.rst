@@ -30,7 +30,7 @@ For features like `line` and `dust_feature`, the fit parameters are wavelength, 
 For `attenuation`, the fit parameters are tau, model, and geometry, while `absorption` features have tau, wavelength, fwhm and geometry.
 
 See :ref:`Example Input <example_input>` for an example of YAML input model file.
-For a detailed account of the YAML based science packs and the relevant syntax, please follow the `Wiki <https://github.com/PAHFIT/pahfit/wiki/PAHFIT-2022#science-packs>`_.
+For a detailed account of the YAML based science packs and the relevant syntax, please follow the `Wiki <https://github.com/PAHFIT/pahfit/wiki/PAHFIT-2022>`_.
 
 Table form
 ----------
