@@ -5,7 +5,11 @@ import argparse
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 
-from pahfit.helpers import read_spectrum, initialize_model
+from pahfit.model import Model
+from pahfit.base import PAHFITBase
+from pahfit.helpers import read_spectrum
+
+from astropy import units as u
 
 
 def initialize_parser():
@@ -53,16 +57,33 @@ def initialize_parser():
 
 
 def main():
-
     # commandline parser
     parser = initialize_parser()
     args = parser.parse_args()
 
     # read in the spectrum
-    obsdata = read_spectrum(args.spectrumfile)
+    spec = read_spectrum(args.spectrumfile)
 
-    # setup the model
-    pmodel = initialize_model(args.fitfilename, obsdata, estimate_start=False)
+    # setup the model from saved one
+    model = Model.from_saved(args.fitfilename)
+
+    fig = default_layout_plot(spec, model, args.scalefac_resid)
+
+    # show or save
+    outputname = args.spectrumfile.split(".")[0]
+    if args.savefig:
+        fig.savefig("{}.{}".format(outputname, args.savefig))
+    else:
+        plt.show()
+
+
+def default_layout_plot(spec, model, scalefac_resid):
+    """
+    Returns
+    -------
+    fig : Figure object
+
+    """
 
     # plot result
     fontsize = 18
@@ -75,21 +96,31 @@ def main():
     mpl.rc("xtick.minor", size=3, width=1)
     mpl.rc("ytick.minor", size=3, width=1)
 
-    fig, axs = plt.subplots(ncols=1, nrows=2, figsize=(15, 10),
-                            gridspec_kw={'height_ratios': [3, 1]},
-                            sharex=True)
+    fig, axs = plt.subplots(
+        ncols=1,
+        nrows=2,
+        figsize=(15, 10),
+        gridspec_kw={"height_ratios": [3, 1]},
+        sharex=True,
+    )
 
-    pmodel.plot(axs, obsdata["x"], obsdata["y"], obsdata["unc"], pmodel.model, scalefac_resid=args.scalefac_resid)
+    enough_samples = max(1000, len(spec.wavelength))
+
+    PAHFITBase.plot(
+        axs,
+        spec.wavelength.to(u.micron).value,
+        spec.flux,
+        spec.uncertainty.array,
+        model._construct_astropy_model(
+            spec.meta["instrument"], spec.redshift, use_instrument_fwhm=False
+        ),
+        model_samples=enough_samples,
+        scalefac_resid=scalefac_resid,
+    )
 
     # use the whitespace better
     fig.subplots_adjust(hspace=0)
-
-    # show or save
-    outputname = args.spectrumfile.split(".")[0]
-    if args.savefig:
-        fig.savefig("{}.{}".format(outputname, args.savefig))
-    else:
-        plt.show()
+    return fig
 
 
 if __name__ == "__main__":

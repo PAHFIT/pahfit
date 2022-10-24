@@ -6,7 +6,6 @@ from pahfit.component_models import (
     S07_attenuation,
     att_Drude1D,
 )
-from astropy.table import Table, vstack
 from astropy.modeling.physical_models import Drude1D
 
 from scipy import interpolate
@@ -15,15 +14,7 @@ import numpy as np
 
 import matplotlib as mpl
 
-from pahfit.instrument import test_waves_in_any_segment, fwhm_recommendation
-from pahfit.feature_strengths import (
-    pah_feature_strength,
-    line_strength,
-    featcombine,
-    eqws,
-)
-
-from pahfit.features import Features
+from pahfit.instrument import within_segment, fwhm
 
 __all__ = ["PAHFITBase"]
 
@@ -57,8 +48,8 @@ def _ingest_limits(min_vals, max_vals):
     mask_max = max_vals.mask
     data_max = max_vals.data
 
-    mask_min_ind = np.where(mask_min == False)[0]
-    mask_max_ind = np.where(mask_max == False)[0]
+    mask_min_ind = np.where(np.logical_not(mask_min))[0]
+    mask_max_ind = np.where(np.logical_not(mask_max))[0]
 
     min_vals = np.zeros(len(mask_min))
     min_vals[mask_min_ind] = data_min[mask_min_ind]
@@ -81,8 +72,8 @@ def _ingest_fixed(fixed_vals):
     """
     Ingest the fixed value read from a file and generate the appropriate
     internal format (list of booleans). Since this information is indirectly
-    hidden in the parameter of a feature, this function is needed to 
-    extract that. 
+    hidden in the parameter of a feature, this function is needed to
+    extract that.
 
     Parameters
     ----------
@@ -94,10 +85,8 @@ def _ingest_fixed(fixed_vals):
     pfixed : list (boolean)
         True/False designation for parameters
     """
-
-    check_mask = fixed_vals.mask
-    mask_false_ind = np.where(check_mask == False)[0]
-    fixed_vals = ["True"] * len(check_mask)
+    mask_false_ind = np.where(np.logical_not(fixed_vals.mask))[0]
+    fixed_vals = ["True"] * len(fixed_vals.mask)
     for i in range(0, len(mask_false_ind)):
         ind = mask_false_ind[i]
         fixed_vals[ind] = "False"
@@ -115,36 +104,13 @@ def _ingest_fixed(fixed_vals):
 
 class PAHFITBase:
     """
-    Base class for PAHFIT variants. Each variant nominally specifies the valid
-    wavelength range, instrument, and type of astronomical objects.
+    Old implementation. Some functions are still used by the new Model
+    class. The unused functionality has been removed.
 
-    For example, the original IDL version of PAHFIT was valid for
-    Spitzer/IRS SL/LL spectra (5-38 micron) and observations of parts or all
-    of external galaxies.
+    Construct that is still used for now
 
-    Mainly sets up the astropy.modeling compound model
-    that includes all the different components including
-    blackbodies for the continuum, drudes for the dust
-    emission features, and Gaussians for the gas emission features.
-
-    Parameters
-    ----------
-    obs_x and obs_y: np.array
-        the input spectrum
-
-    instrumentname: string
-        the instrument which which the input spectrum
-        was observed.    
-
-    filename: string
-        filename giving the pack that contains all the
-        info described for param_info
-
-    tformat: string
-        table format of filename (compatible with astropy Table.read)
-
-    param_info: tuple of dics
-        The dictonaries contain info for each type of component.  Each
+    param_info: tuple of dicts called (bb_info, df_info, h2_info, ion_info, abs_info, att_info)
+        The dictionaries contain info for each type of component. Each
         component of the dictonaries is a vector.
         bb_info -
         dict with {name, temps, temps_limits, temps_fixed,
@@ -153,47 +119,17 @@ class PAHFITBase:
         dict with {name amps, amps_limits, amps_fixed,
         x_0, x_0_limits, x_0_fixed, fwhms, fwhms_limits, fwhm_fixed}.
     """
-    def __init__(
-        self,
-        obs_x,
-        obs_y,
-        instrumentname,
-        estimate_start=False,
-        param_info=None,
-        filename=None,
-        tformat=None,
-    ):
-        """
-        Setup a variant based on inputs.  Generates an astropy.modeling
-        compound model.
-        """
-        # check that param_info or filename is set
-        if filename is None and param_info is None:
-            raise ValueError("Either param_info or filename need to be set \
-                             when initializing a PAHFITBase object")
-
-        # read in the parameter info from a file
-        if filename is not None:
-            param_info = self.read(filename, instrumentname, tformat=tformat)
-
-        if estimate_start:
-            # guess values and update starting point (if not set fixed) based on the input spectrum
-            param_info = self.estimate_init(obs_x, obs_y, param_info)
-
-        if not param_info:
-            raise ValueError("No parameter information set.")
-
-        self.param_info = param_info
-
+    @staticmethod
+    def model_from_param_info(param_info):
+        # setup the model
         bb_info = param_info[0]
         dust_features = param_info[1]
         h2_features = param_info[2]
         ion_features = param_info[3]
-        att_info = param_info[4]
+        abs_info = param_info[4]
+        att_info = param_info[5]
 
-        # setup the model
-        self.model = None
-        self.bb_info = bb_info
+        model = None
         if bb_info is not None:
             bbs = []
             for k in range(len(bb_info["names"])):
@@ -212,10 +148,10 @@ class PAHFITBase:
                             "temperature": bb_info["temps_fixed"][k],
                             "amplitude": bb_info["amps_fixed"][k],
                         },
-                    ))
-            self.model = sum(bbs[1:], bbs[0])
+                    )
+                )
+            model = sum(bbs[1:], bbs[0])
 
-        self.dust_features = dust_features
         if dust_features is not None:
             df = []
             for k in range(len(dust_features["names"])):
@@ -238,12 +174,11 @@ class PAHFITBase:
                     ))
 
             df = sum(df[1:], df[0])
-            if self.model:
-                self.model += df
+            if model:
+                model += df
             else:
-                self.model = df
+                model = df
 
-        self.h2_features = h2_features
         if h2_features is not None:
             h2 = []
             for k in range(len(h2_features["names"])):
@@ -270,12 +205,11 @@ class PAHFITBase:
                         },
                     ))
             h2 = sum(h2[1:], h2[0])
-            if self.model:
-                self.model += h2
+            if model:
+                model += h2
             else:
-                self.model = h2
+                model = h2
 
-        self.ion_features = ion_features
         if ion_features is not None:
             ions = []
             for k in range(len(ion_features["names"])):
@@ -302,39 +236,38 @@ class PAHFITBase:
                         },
                     ))
             ions = sum(ions[1:], ions[0])
-            if self.model:
-                self.model += ions
+            if model:
+                model += ions
             else:
-                self.model = ions
+                model = ions
 
         # add additional att components to the model if necessary
-        if not self.model:
+        if not model:
             raise ValueError("No model components found")
 
-        self.att_info = att_info
+        if abs_info is not None:
+            for k in range(len(abs_info["names"])):
+                model *= att_Drude1D(
+                    name=abs_info["names"][k],
+                    tau=abs_info["amps"][k],
+                    x_0=abs_info["x_0"][k],
+                    fwhm=abs_info["fwhms"][k],
+                    bounds={
+                        "tau": abs_info["amps_limits"][k],
+                        "fwhm": abs_info["fwhms_limits"][k],
+                    },
+                    fixed={"x_0": abs_info["x_0_fixed"][k]},
+                )
+
         if att_info is not None:
-            for k in range(len(att_info["names"])):
-                if (
-                        att_info["names"][k] == "S07_att"
-                ):  # Only loop through att components that can be parameterized
-                    self.model *= S07_attenuation(
-                        name=att_info["names"][k],
-                        tau_sil=att_info["amps"][k],
-                        bounds={"tau_sil": att_info["amps_limits"][k]},
-                        fixed={"tau_sil": att_info["amps_fixed"][k]},
-                    )
-                else:
-                    self.model *= att_Drude1D(
-                        name=att_info["names"][k],
-                        tau=att_info["amps"][k],
-                        x_0=att_info["x_0"][k],
-                        fwhm=att_info["fwhms"][k],
-                        bounds={
-                            "tau": att_info["amps_limits"][k],
-                            "fwhm": att_info["fwhms_limits"][k],
-                        },
-                        fixed={"x_0": att_info["x_0_fixed"][k]},
-                    )
+            model *= S07_attenuation(
+                name=att_info["name"],
+                tau_sil=att_info["tau_sil"],
+                bounds={"tau_sil": att_info["tau_sil_limits"]},
+                fixed={"tau_sil": att_info["tau_sil_fixed"]},
+            )
+
+        return model
 
     @staticmethod
     def plot(axs, x, y, yerr, model, model_samples=1000, scalefac_resid=2):
@@ -526,284 +459,23 @@ class PAHFITBase:
         ax.xaxis.set_major_formatter(mpl.ticker.ScalarFormatter())
 
     @staticmethod
-    def save(obs_fit, filename, outform):
-        """
-        Save the model parameters to a user defined file format.
-
-        Parameters
-        ----------
-        obs_fit : PAHFITBase model
-            Model giving all the components and parameters.
-        filename : string
-            String used to name the output file.
-            Currently using the input data file name (without the file's extension).
-        outform : string
-            Sets the output file format (ascii, fits, csv, etc.).
-        """
-        # setup the tables for the different components
-        bb_table = Table(
-            names=(
-                "Name",
-                "Form",
-                "temp",
-                "temp_min",
-                "temp_max",
-                "temp_fixed",
-                "amp",
-                "amp_min",
-                "amp_max",
-                "amp_fixed",
-            ),
-            dtype=(
-                "U25",
-                "U25",
-                "float64",
-                "float64",
-                "float64",
-                "bool",
-                "float64",
-                "float64",
-                "float64",
-                "bool",
-            ),
-        )
-        line_table = Table(
-            names=(
-                "Name",
-                "Form",
-                "x_0",
-                "x_0_min",
-                "x_0_max",
-                "x_0_fixed",
-                "amp",
-                "amp_min",
-                "amp_max",
-                "amp_fixed",
-                "fwhm",
-                "fwhm_min",
-                "fwhm_max",
-                "fwhm_fixed",
-                "strength",
-                "strength_unc",
-                "eqw",
-            ),
-            dtype=(
-                "U25",
-                "U25",
-                "float64",
-                "float64",
-                "float64",
-                "bool",
-                "float64",
-                "float64",
-                "float64",
-                "bool",
-                "float64",
-                "float64",
-                "float64",
-                "bool",
-                "float64",
-                "float64",
-                "float64",
-            ),
-        )
-        att_table = Table(
-            names=("Name", "Form", "amp", "amp_min", "amp_max", "amp_fixed"),
-            dtype=("U25", "U25", "float64", "float64", "float64", "bool"),
-        )
-
-        # attenuation components that can be characterized by a functional form
-        att_funct_table = Table(
-            names=(
-                "Name",
-                "Form",
-                "x_0",
-                "x_0_min",
-                "x_0_max",
-                "x_0_fixed",
-                "amp",
-                "amp_min",
-                "amp_max",
-                "amp_fixed",
-                "fwhm",
-                "fwhm_min",
-                "fwhm_max",
-                "fwhm_fixed",
-            ),
-            dtype=(
-                "U25",
-                "U25",
-                "float64",
-                "float64",
-                "float64",
-                "bool",
-                "float64",
-                "float64",
-                "float64",
-                "bool",
-                "float64",
-                "float64",
-                "float64",
-                "bool",
-            ),
-        )
-
-        for component in obs_fit:
-            comp_type = component.__class__.__name__
-
-            if isinstance(component, BlackBody1D):
-                bb_table.add_row([
-                    component.name,
-                    comp_type,
-                    component.temperature.value,
-                    component.temperature.bounds[0],
-                    component.temperature.bounds[1],
-                    component.temperature.fixed,
-                    component.amplitude.value,
-                    component.amplitude.bounds[0],
-                    component.amplitude.bounds[1],
-                    component.amplitude.fixed,
-                ])
-            elif isinstance(component, Drude1D):
-
-                # Calculate feature strength.
-                strength = pah_feature_strength(component.amplitude.value,
-                                                component.fwhm.value,
-                                                component.x_0.value)
-
-                strength_unc = None
-
-                # Calculate feature EQW.
-                if strength != 0.0:
-                    eqw = eqws(
-                        comp_type,
-                        component.x_0.value,
-                        component.amplitude.value,
-                        component.fwhm,
-                        obs_fit,
-                    )
-                else:
-                    eqw = 0.0
-
-                line_table.add_row([
-                    component.name,
-                    comp_type,
-                    component.x_0.value,
-                    component.x_0.bounds[0],
-                    component.x_0.bounds[1],
-                    component.x_0.fixed,
-                    component.amplitude.value,
-                    component.amplitude.bounds[0],
-                    component.amplitude.bounds[1],
-                    component.amplitude.fixed,
-                    component.fwhm.value,
-                    component.fwhm.bounds[0],
-                    component.fwhm.bounds[1],
-                    component.fwhm.fixed,
-                    strength,
-                    strength_unc,
-                    eqw,
-                ])
-            elif isinstance(component, Gaussian1D):
-
-                # Calculate feature strength.
-                strength = line_strength(
-                    component.amplitude.value,
-                    component.mean.value,
-                    component.stddev.value,
-                )
-
-                strength_unc = None
-
-                # Calculate feature EQW.
-                if strength != 0.0:
-                    eqw = eqws(
-                        comp_type,
-                        component.mean.value,
-                        component.amplitude.value,
-                        component.stddev.value,
-                        obs_fit,
-                    )
-                else:
-                    eqw = 0.0
-
-                line_table.add_row([
-                    component.name,
-                    comp_type,
-                    component.mean.value,
-                    component.mean.bounds[0],
-                    component.mean.bounds[1],
-                    component.mean.fixed,
-                    component.amplitude.value,
-                    component.amplitude.bounds[0],
-                    component.amplitude.bounds[1],
-                    component.amplitude.fixed,
-                    2.355 * component.stddev.value,
-                    2.355 * component.stddev.bounds[0],
-                    2.355 * component.stddev.bounds[1],
-                    component.stddev.fixed,
-                    strength,
-                    strength_unc,
-                    eqw,
-                ])
-            elif isinstance(component, S07_attenuation):
-                att_table.add_row([
-                    component.name,
-                    comp_type,
-                    component.tau_sil.value,
-                    component.tau_sil.bounds[0],
-                    component.tau_sil.bounds[1],
-                    component.tau_sil.fixed,
-                ])
-
-            elif isinstance(component, att_Drude1D):
-                att_funct_table.add_row([
-                    component.name,
-                    comp_type,
-                    component.x_0.value,
-                    component.x_0.bounds[0],
-                    component.x_0.bounds[1],
-                    component.x_0.fixed,
-                    component.tau.value,
-                    component.tau.bounds[0],
-                    component.tau.bounds[1],
-                    component.tau.fixed,
-                    component.fwhm.value,
-                    component.fwhm.bounds[0],
-                    component.fwhm.bounds[1],
-                    component.fwhm.fixed,
-                ])
-
-        # Call featcombine to calculate combined dust feature strengths.
-        cftable = featcombine(line_table)
-
-        # stack the tables (handles missing columns between tables)
-        out_table = vstack(
-            [bb_table, line_table, att_table, att_funct_table, cftable])
-
-        # Writing output table
-        out_table.write("{}_output.{}".format(filename, outform),
-                        format=outform,
-                        overwrite=True)
-
-    @staticmethod
-    def update_dictionary(feature_dict, instrumentname, update_fwhms=False):
+    def update_dictionary(feature_dict, instrumentname, update_fwhms=False, redshift=0):
         """
         Update parameter dictionary based on the instrument name.
-        Based on the instrument name, this function removes the 
+        Based on the instrument name, this function removes the
         features outside of the wavelength range and
-        updates the FWHMs of the lines. 
+        updates the FWHMs of the lines.
 
 
         Parameters
         ----------
         feature_dict : dictionary
             Dictionary created by reading in a science pack.
-            
+
         instrumentname : string
             Name of the instrument with which the input spectrum
             is observed.
-            
+
         update_fwhms = Boolean
             True for h2_info and ion_info
             False for df_info
@@ -812,10 +484,14 @@ class PAHFITBase:
         -------
         updated feature_dict
         """
+        if feature_dict is None:
+            return None
 
-        ind = np.nonzero(
-            test_waves_in_any_segment(feature_dict["x_0"], instrumentname)
-        )[0]
+        # convert from physical feature, to observed wavelength
+        def redshifted_waves():
+            return feature_dict["x_0"] * (1 + redshift)
+
+        ind = np.nonzero(within_segment(redshifted_waves(), instrumentname))[0]
 
         # select the valid entries in these arrays
         array_keys = ("x_0", "amps", "fwhms", "names")
@@ -837,14 +513,29 @@ class PAHFITBase:
         feature_dict.update(new_values_1)
         feature_dict.update(new_values_2)
 
+        if len(feature_dict['names']) == 0:
+            # if we removed all the things, be careful here. Setting to
+            # None should make the model construction function behave
+            # normally.
+            feature_dict = None
+            return feature_dict
+
         if update_fwhms:
-            waves = feature_dict["x_0"]
-            values, fixed, mins, maxes = fwhm_recommendation(instrumentname, waves)
+            # observe the lines at the redshifted wavelength
+            fwhm_min_max = fwhm(instrumentname, redshifted_waves(), as_bounded=True)
+            # shift the observed fwhm back to the rest frame (where the
+            # observed data will be moved, and its features will become
+            # narrower)
+            fwhm_min_max /= (1 + redshift)
+            # For astropy a numpy.bool does not work for the 'fixed'
+            # parameter. It needs to be a regular bool. Doing tolist()
+            # instead of using the array mask directly solves this.
             feature_dict.update(
                 {
-                    "fwhms": values,
-                    "fwhms_fixed": fixed,
-                    "fwhms_limits": list(zip(mins, maxes)),
+                    "fwhms": fwhm_min_max[:, 0],
+                    # masked means there is no min/max, i.e. they need to be fixed
+                    "fwhms_fixed": fwhm_min_max[:, 1].mask.tolist(),
+                    "fwhms_limits": fwhm_min_max[:, 1:].tolist(),
                 }
             )
 
@@ -873,8 +564,8 @@ class PAHFITBase:
                           | (pack_table["kind"] == "dust_continuum"))[0]
         df_ind = np.where(pack_table["kind"] == "dust_feature")[0]
         ga_ind = np.where(pack_table["kind"] == "line")[0]
-        at_ind = np.where((pack_table["kind"] == "attenuation")
-                          | (pack_table["kind"] == "absorption"))[0]
+        at_ind = np.where(pack_table["kind"] == "attenuation")[0]
+        ab_ind = np.where(pack_table["kind"] == "absorption")[0]
 
         # now split the gas emission lines between H2 and ions
         names = [str(i) for i in pack_table["name"][ga_ind]]
@@ -1022,10 +713,11 @@ class PAHFITBase:
                 _ingest_fixed(pack_table["fwhm"][:, 1][ion_ind].data),
             }
 
-        # Create the attenuation dict
-        att_info = None
-        if len(at_ind) > 0:
-            att_info = {
+        # Create the attenuation dict (could be absorption drudes
+        # and S07 model)
+        abs_info = None
+        if len(ab_ind) > 0:
+            abs_info = {
                 "names":
                 np.array(pack_table["name"][at_ind].data),
                 "x_0":
@@ -1057,48 +749,17 @@ class PAHFITBase:
                 _ingest_fixed(pack_table["fwhm"][:, 1][at_ind]),
             }
 
-        if att_info["names"] == 'silicate':
-            name_array = np.array(['S07_att'])
-            att_info.update({'names': name_array})
+        att_info = None
+        if len(at_ind) > 1:
+            raise NotImplementedError("More than one attenuation component not supported")
+        elif len(at_ind) == 1:
+            i = at_ind[0]
+            att_info = {"name": pack_table["name"][i],
+                        "tau_sil": pack_table["tau"][i][0],
+                        "tau_sil_limits": pack_table["tau"][i][1:],
+                        "tau_sil_fixed": True if pack_table["tau"][i].mask[1] else False}
 
-        return (bb_info, df_info, h2_info, ion_info, att_info)
-
-    @staticmethod
-    def read(filename, instrumentname, tformat=None):
-        """
-        Create model by reading the parameters from a file.
-
-        Parameters
-        ----------
-        filename : string
-            The name of the input file containing fit results.
-
-        tformat: string
-            table format of filename (compatible with astropy Table.read)
-
-        Returns
-        -------
-        readout : tuple
-            Tuple containing dictionaries of all components from
-            the input file.
-        """
-        # get the table format
-        if tformat is None:
-            tformat = filename.split(".")[-1]
-
-        # Reading the input file as table
-        t = Features.read(filename)
-        bb_info, df_info, h2_info, ion_info, att_info = PAHFITBase.parse_table(
-            t)
-        df_info = PAHFITBase.update_dictionary(df_info, instrumentname)
-        h2_info = PAHFITBase.update_dictionary(h2_info,
-                                               instrumentname,
-                                               update_fwhms=True)
-        ion_info = PAHFITBase.update_dictionary(ion_info,
-                                                instrumentname,
-                                                update_fwhms=True)
-
-        return (bb_info, df_info, h2_info, ion_info, att_info)
+        return [bb_info, df_info, h2_info, ion_info, abs_info, att_info]
 
     @staticmethod
     def estimate_init(obs_x, obs_y, param_info):

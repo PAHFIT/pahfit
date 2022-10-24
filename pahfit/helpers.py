@@ -1,24 +1,17 @@
 import os
 import pkg_resources
 
-import numpy as np
-
 import astropy.units as u
 from astropy.table import Table
 
-from astropy.modeling.fitting import LevMarLSQFitter
-
-from pahfit.base import PAHFITBase
-from pahfit.instrument import test_wave_minmax
-from pahfit.features import Features
+from specutils import Spectrum1D
+from astropy.nddata import StdDevUncertainty
 
 from pahfit.component_models import BlackBody1D, S07_attenuation
 from astropy.modeling.physical_models import Drude1D
 from astropy.modeling.functional_models import Gaussian1D
 
-__all__ = [
-    "read_spectrum", "initialize_model", "fit_spectrum", "calculate_compounds"
-]
+__all__ = ["read_spectrum", "calculate_compounds"]
 
 
 def find_packfile(packfile):
@@ -68,9 +61,8 @@ def read_spectrum(specfile, colnames=["wavelength", "flux", "sigma"]):
 
     Returns
     -------
-    obsdata : dict
-        x is wavelength in microns and y/unc are the spectrum/unc in units
-        of Jy
+    spec1d : Spectrum1D
+        spectral_axis in microns, flux and uncertainties in units of Jy
     """
     # read in the observed spectrum
     # assumed to be astropy table compatibile and include units
@@ -88,160 +80,11 @@ def read_spectrum(specfile, colnames=["wavelength", "flux", "sigma"]):
     if tformat == "ecsv":
         tformat = "ascii.ecsv"
     obs_spectrum = Table.read(specfile, format=tformat)
-    obsdata = {}
-    obsdata["x"] = obs_spectrum[colnames[0]].to(u.micron,
-                                                equivalencies=u.spectral())
-    obsdata["y"] = obs_spectrum[colnames[1]].to(
-        u.Jy, equivalencies=u.spectral_density(obsdata["x"]))
-    obsdata["unc"] = obs_spectrum[colnames[2]].to(
-        u.Jy, equivalencies=u.spectral_density(obsdata["x"]))
+    x = obs_spectrum[colnames[0]].to(u.micron, equivalencies=u.spectral())
+    y = obs_spectrum[colnames[1]].to(u.Jy, equivalencies=u.spectral_density(x))
+    unc = obs_spectrum[colnames[2]].to(u.Jy, equivalencies=u.spectral_density(x))
 
-    return obsdata
-
-
-def initialize_model(packfile, instrumentname, obsdata, estimate_start=False):
-    """
-    Initialize a model based on the packfile
-
-    Parameters
-    ----------
-    packfile : string
-        file with the PAHFIT pack information
-
-    instrumentname: string
-         name of the instrument with which the input spectrum is observed       
-
-    obsdata : dict
-        observed data where x = wavelength, y = SED, and unc = uncertainties
-
-    estimate_start : boolean
-        estimate the starting parameters based on the observed data
-
-    Returns
-    -------
-    pmodel : PAHFITBase model
-        PAHFIT model
-    """
-
-    packfile_found = find_packfile(packfile)
-
-    if not test_wave_minmax(obsdata["x"].value, instrumentname):
-        raise ValueError(
-            "Wavelength range of the input spectrum and the instrument do not match"
-        )
-
-    pmodel = PAHFITBase(
-        obsdata["x"].value,
-        obsdata["y"].value,
-        instrumentname,
-        estimate_start=estimate_start,
-        filename=packfile_found,
-    )
-
-    return pmodel
-
-
-def initialize_trimmed_model(packfile, obsdata, instrumentname):
-    """
-    Initialize a model based on the packfile, ignoring components outside of the wavelength range.
-
-    Parameters
-    ----------
-    packfile : string
-        file with the PAHFIT pack information
-
-    obsdata : dict
-        observed data where x = wavelength, y = SED, and unc = uncertainties
-
-    Returns
-    -------
-    pmodel: PAHFITBase model
-        PAHFIT model based on trimmed science pack table
-
-    """
-    # read in and edit the table before we parse it
-    packfile_found = find_packfile(packfile)
-    t = Features.read(packfile_found)
-
-    # determine wavelength range
-    w = obsdata["x"].value
-    wmin = np.amin(w)
-    wmax = np.amax(w)
-
-    # decide which rows we are going to keep
-    keep_row = np.full(len(t), True)
-
-    # Only keep drudes and gauss with center within 1 FWHM
-    is_drude_or_gauss = np.logical_or(t["kind"] == "dust_feature",
-                                      t["kind"] == "line")
-    x0 = t[is_drude_or_gauss]["x_0"]
-    fwhm = t[is_drude_or_gauss]["fwhm"]
-    keep_row[is_drude_or_gauss] = np.logical_and(wmin < x0 + fwhm,
-                                                 x0 - fwhm < wmax)
-
-    # now parse the trimmed table
-    print("Keeping these rows")
-    print(t[keep_row])
-    param_info = PAHFITBase.parse_table(t[keep_row])
-    param_info[2] = PAHFITBase.update_dictionary(param_info[2],
-                                                 instrumentname,
-                                                 update_fwhms=True)
-    param_info[3] = PAHFITBase.update_dictionary(param_info[3],
-                                                 instrumentname,
-                                                 update_fwhms=True)
-
-    # and create a new model (and don't pass a file name, so that the
-    # current contents of param_info are used)
-    trimmed_model = PAHFITBase(
-        obsdata["x"].value,
-        obsdata["y"].value,
-        estimate_start=True,
-        param_info=param_info,
-    )
-    return trimmed_model
-
-
-def fit_spectrum(obsdata, pmodel, maxiter=1000, verbose=True):
-    """
-    Fit the observed data using the input PAHFIT model.
-
-    Parameters
-    ----------
-    obsdata : dict
-        observed data where x = wavelength, y = SED, and unc = uncertainties
-
-    pmodel : PAHFITBase model
-        PAHFIT model
-
-    maxiter : int
-        maximum number of fitting iterations
-
-    verbose : boolean
-        set to provide screen output
-
-    Returns
-    -------
-    obsfit : PAHFITBase model (astropy modeling CompoundModel)
-        PAHFIT model with best fit parameters
-    """
-
-    # pick the fitter
-    fit = LevMarLSQFitter()
-
-    # fit
-    obs_fit = fit(
-        pmodel.model,
-        obsdata["x"].value,
-        obsdata["y"].value,
-        weights=1.0 / obsdata["unc"].value,
-        maxiter=maxiter,
-        epsilon=1e-10,
-        acc=1e-10,
-    )
-    if verbose:
-        print(fit.fit_info["message"])
-
-    return obs_fit
+    return Spectrum1D(spectral_axis=x, flux=y, uncertainty=StdDevUncertainty(unc))
 
 
 def calculate_compounds(obsdata, pmodel):
