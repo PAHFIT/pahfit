@@ -111,7 +111,9 @@ def default_layout_plot(spec, model, scalefac_resid):
         spec.wavelength.to(u.micron).value,
         spec.flux,
         spec.uncertainty.array,
-        model._construct_astropy_model(),
+        model._construct_astropy_model(
+            spec.meta["instrument"], spec.redshift, use_instrument_fwhm=False
+        ),
         model_samples=enough_samples,
         scalefac_resid=scalefac_resid,
     )
