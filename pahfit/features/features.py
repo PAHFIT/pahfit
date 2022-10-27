@@ -41,24 +41,32 @@ class UniqueKeyLoader(yaml.SafeLoader):
 def value_bounds(val, bounds):
     """Compute bounds for a bounded value.
 
-    Arguments:
+    Parameters
     ----------
-      val: The value to bound.
+      val : float
+          The value to bound.
 
-      bounds: Either None for no relevant bounds (i.e. fixed), or a
-        two element iterable specifying (min, max) bounds.  Each of
-        min and max can be a numerical value, None (for infinite
-        bounds, either negative or positive, as appropriate), or a
-        string ending in:
+      bounds : float or str iterable, or None
+          Either None for no relevant bounds (i.e. fixed), or a two
+          element iterable specifying (min, max) bounds.  Each of min
+          and max can be a numerical value, None (for infinite bounds,
+          either negative or positive, as appropriate), or a string
+          ending in:
 
-          #: an absolute offset from the value
-          %: a percentage offset from the value
+            #: an absolute offset from the value
+            %: a percentage offset from the value
 
-        Offsets are necessarily negative for min bound, positive for
-        max bounds.
+          Offsets are necessarily negative for min bound, positive for
+          max bounds.
 
-    Examples:
-    ---------
+    Returns:
+    -------
+
+      The value and bounds as a 3 element tuple (value, min, max).
+          Any missing bound is replaced with the numpy `masked' value.
+
+    Notes
+    --------
 
       A bound of ('-1.5%', '0%') would indicate a minimum bound
         1.5% below the value, and a max bound at the value itself.
@@ -66,19 +74,13 @@ def value_bounds(val, bounds):
       A bound of ('-0.1#', None) would indicate a minimum bound 0.1 below
         the value, and infinite maximum bound.
 
-    Returns:
-    -------
-
-      The value, if unbounded, or a 3 element tuple (value, min, max).
-        Any missing bound is replaced with the numpy `masked' value.
-
     Raises:
     -------
 
       ValueError: if bounds are specified and the value does not fall
-        between them.
-
+          between them.
     """
+    
     if val is None:
         val = np.ma.masked
     if not bounds:
@@ -102,10 +104,16 @@ def value_bounds(val, bounds):
 
 
 class Features(Table):
-    """A class for holding PAHFIT features and their associated
-    parameter information.  Note that each parameter has an associated
-    `kind', and that each kind has an associated set of allowable
-    parameters (see _kind_params, below).
+    """A class for holding a table of PAHFIT features and associated
+    parameter information.
+
+    Note that each parameter has an associated `kind', and that each
+    kind has an associated set of allowable parameters (see
+    `_kind_params`, below).
+
+    See Also
+    --------
+    `~astropy.table.Table`: The parent table class.
     """
 
     TableFormatter = BoundedParTableFormatter
@@ -128,8 +136,22 @@ class Features(Table):
     def read(cls, file, *args, **kwargs):
         """Read a table from file.
 
-        If reading a YAML file, read it in as a science pack and
-        return the new table. Otherwise, use astropy's normal Table
+        Parameters
+        ----------
+
+          file : str
+              The name of the file to read, either a full valid path,
+              or named file in the PAHFIT science_packs directory.
+
+        Returns
+        -------
+          table : Features
+              A filled `~pahfit.features.Features` table.
+
+        Notes
+        -----
+        If reading a YAML file, reads it in as a science pack and
+        return the new table. Otherwise, uses astropy's normal Table
         reader.
         """
         if file.endswith(".yaml") or file.endswith(".yml"):
@@ -143,16 +165,7 @@ class Features(Table):
     def _read_scipack(cls, file):
         """Read a science pack specification from YAML file.
 
-        Arguments:
-        ----------
-
-          file: the name of the file, either a full valid path, or
-            named file in the PAHFIT science_packs directory.!
-
-        Returns:
-        --------
-
-          table: A filled pahfit.features.Features table.
+        For parameters and return, see `read`.
         """
 
         feat_tables = dict()
@@ -299,11 +312,11 @@ class Features(Table):
 
     @classmethod
     def _construct_table(cls, inp: dict):
-        """Construct a masked table with units from input dictionary
-        INP.  INP is a dictionary with feature names as the key, and a
+        """Construct a masked table from input dictionary INP.
+        INP is a dictionary with feature names as the keys, and a
         dictionary of feature parameters as value.  Each value in the
         feature parameter dictionary is either a value or tuple of 3
-        values for bounds.
+        values, expressing bounds.
         """
         tables = []
         for (kind, features) in inp.items():
