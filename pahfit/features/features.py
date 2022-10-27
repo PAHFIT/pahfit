@@ -30,7 +30,7 @@ from pahfit.features.features_format import BoundedMaskedColumn, BoundedParTable
 class UniqueKeyLoader(yaml.SafeLoader):
     def construct_mapping(self, node, deep=False):
         mapping = set()
-        for key_node, value_node in node.value:
+        for key_node, _ in node.value:
             key = self.construct_object(key_node, deep=deep)
             if key in mapping:
                 raise PAHFITFeatureError(f"Duplicate {key!r} key found in YAML.")
