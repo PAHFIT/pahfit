@@ -38,7 +38,7 @@ class UniqueKeyLoader(yaml.SafeLoader):
         return super().construct_mapping(node, deep)
 
 
-def value_bounds(val, bounds):
+def value_bounds(val, bounds, no_masked=False):
     """Compute bounds for a bounded value.
 
     Parameters
@@ -58,6 +58,12 @@ def value_bounds(val, bounds):
 
           Offsets are necessarily negative for min bound, positive for
           max bounds.
+
+    Keywords
+    --------
+
+      no_masked: bool, default: False
+          If set, the value ``None`` will be use instead of `np.ma.masked`.
 
     Returns:
     -------
@@ -80,26 +86,25 @@ def value_bounds(val, bounds):
       ValueError: if bounds are specified and the value does not fall
           between them.
     """
-    
-    if val is None:
-        val = np.ma.masked
-    if not bounds:
-        return (val,) + 2 * (np.ma.masked,)  # Fixed
+
+    ma_val = None if no_masked else np.ma.masked
+    if val is None or not bounds:
+        return (val,) + 2 * (ma_val,)  # Fixed
     ret = [val]
     for i, b in enumerate(bounds):
-        if isinstance(b, str):
+        if isinstance(b, str) and val:
             if b.endswith('%'):
                 b = val * (1. + float(b[:-1]) / 100.)
             elif b.endswith('#'):
                 b = val + float(b[:-1])
             else:
-                raise PAHFITFeatureError(f"Incorrectly formatted bound {b}")
+                raise PAHFITFeatureError(f"Incorrectly formatted bound: {b}")
         elif b is None:
-            b = np.inf if i else -np.inf
+            b = np.inf if i else -np.inf  # lower/upper bound missing
         ret.append(b)
 
     if (val < ret[1] or val > ret[2]):
-        raise PAHFITFeatureError(f"Value <{ret[0]}> is not between bounds: {ret[1:]}")
+        raise ValueError(f"Value <{ret[0]}> is not between bounds: {ret[1:]}")
     return tuple(ret)
 
 
@@ -128,9 +133,21 @@ class Features(Table):
                     'absorption': {'wavelength', 'fwhm', 'tau', 'geometry'}}
 
     _units = {'temperature': u.K, 'wavelength': u.um, 'fwhm': u.um}
-    _group_attrs = set(('bounds', 'features', 'kind'))  # group-level attributes
-    _param_attrs = set(('value', 'bounds'))  # Each parameter can have these attributes
+    _param_attrs = set(('value', 'bounds', 'tied'))  # params can have these attributes
+    _group_attrs = set(('bounds', 'features', 'kind', 'tied'))  # group-level attributes
     _no_bounds = set(('name', 'group', 'geometry', 'model'))  # String attributes (no bounds)
+
+    def __repr__(self):
+        repr = super().__repr__()
+        if '_ratios' in self.meta:
+            good = [k for k in self.meta['_ratios'].keys()
+                    if k in self['name'] or k in self['group']]
+            if good:
+                st = tuple(x + " ("
+                           + ", ".join(self.meta['_ratios'][x].keys()) + ")"
+                           for x in good)
+                repr += "\n\n" + "Tied:\t" + "\n\t".join(st)
+        return repr
 
     @classmethod
     def read(cls, file, *args, **kwargs):
@@ -158,7 +175,7 @@ class Features(Table):
             return cls._read_scipack(file)
         else:
             table = super().read(file, *args, **kwargs)
-            table.add_index('name')
+            cls._index_table(table)
             return table
 
     @classmethod
@@ -204,7 +221,7 @@ class Features(Table):
             hasFeatures = 'features' in elem
             hasLists = any(k not in cls._group_attrs
                            and (isinstance(v, (tuple, list))
-                                or (isinstance(v, dict)
+                                or (isinstance(v, dict)  # names: values dict
                                     and cls._param_attrs.isdisjoint(v.keys())))
                            for (k, v) in elem.items())
             if hasFeatures and hasLists:
@@ -213,7 +230,7 @@ class Features(Table):
             isGroup = (hasFeatures or hasLists)
             bounds = None
             if isGroup:  # A named group of features
-                if 'bounds' in elem:
+                if 'bounds' in elem:  # group-level bounds
                     if not isinstance(elem['bounds'], dict):
                         for p in cls._no_bounds:
                             if p in elem:
@@ -228,6 +245,14 @@ class Features(Table):
                                                      "cannot specify "
                                                      f"'features': {name}\n\t{file}")
                     bounds = elem.pop('bounds')
+                if 'tied' in elem:  # group-level ties
+                    for denom, tie in elem.pop('tied').items():
+                        if not ('param' in tie):
+                            raise PAHFITFeatureError(f"Group-level ties require param: {name}")
+                        try:
+                            cls._add_tie_ratio(feat_tables, name, tie['param'], denom, tie)
+                        except ValueError as e:
+                            raise PAHFITFeatureError(f"{e}: {name}, {tie['param']}")
                 if hasFeatures:  # our group uses a features dict
                     for n, v in elem['features'].items():
                         if bounds and 'bounds' not in v:  # inherit bounds
@@ -267,6 +292,55 @@ class Features(Table):
         return cls._construct_table(feat_tables)
 
     @classmethod
+    def _add_tie_ratio(cls, t: dict, num: str, param: str, denom: str, tie):
+        """Add tie ratios to dictionary t.
+
+        Creates a ``_ratios`` entry for ratio (with bounds) between
+        numerator ``num`` to denominator ``denom`` (both feature or
+        group names), for parameter ``param``.  Pass the ``tie`` dict
+        or string.  If ``tie`` is a string, it is ignored.
+        """
+        if '_ratios' not in t:
+            t['_ratios'] = {}
+        if num not in t['_ratios']:
+            t['_ratios'][num] = {}
+        if isinstance(tie, dict) and 'ratio' in tie:
+            # Table doesn't like masked in .meta
+            ratio = value_bounds(*cls._parse_value(tie['ratio']), no_masked=True)
+        else:
+            ratio = None
+        t['_ratios'][num][param] = dict(denom=denom, ratio=ratio)
+
+    @classmethod
+    def _parse_value(cls, val):
+        """Parse a value for param with optional bounds.
+
+        Parameters
+        ----------
+
+        val : dict or float
+            The value to parse
+
+        Returns
+        -------
+
+        (value, bounds) : (float, None or tuple)
+        """
+        bounds = None
+        if isinstance(val, dict):  # A param attribute dictionary
+            unknown_attrs = [x for x in val.keys() if x not in cls._param_attrs]
+            if unknown_attrs:
+                raise ValueError(f"Unknown parameter attributes {', '.join(unknown_attrs)}")
+            if 'value' not in val:
+                raise ValueError("Missing 'value' attribute")
+            value = val['value']
+            if 'bounds' in val:  # individual param bounds
+                bounds = val['bounds']
+        else:
+            value = val  # a bare value
+        return (value, bounds)
+
+    @classmethod
     def _add_feature(cls, kind: str, t: dict, name: str, *,
                      bounds=None, group='_none_', **pars):
         """Adds an individual feature to the passed dictionary t."""
@@ -279,36 +353,41 @@ class Features(Table):
         for (param, val) in pars.items():
             if param not in cls._kind_params[kind]:
                 continue
-            if isinstance(val, dict):  # A param attribute dictionary
-                unknown_attrs = [x for x in val.keys() if x not in cls._param_attrs]
-                if unknown_attrs:
-                    raise PAHFITFeatureError("Unknown parameter attributes for"
-                                             f" {name} ({kind}, {group}): "
-                                             f"{', '.join(unknown_attrs)}")
-                if 'value' not in val:
-                    raise PAHFITFeatureError("Missing 'value' attribute for "
-                                             f"{name} ({kind}, {group})")
-                value = val['value']
-                if 'bounds' in val:  # individual param bounds
-                    if param in cls._no_bounds:
-                        raise PAHFITFeatureError("Parameter {param} cannot have bounds: "
-                                                 f"{name} ({kind}, {group})")
-                    bounds = val['bounds']
+            if isinstance(val, dict) and 'tied' in val:
+                tie = val['tied']
+                if isinstance(tie, dict):
+                    try:
+                        feat = tie['feature']
+                    except KeyError:
+                        raise PAHFITFeatureError(f"Tie requires feature: {name}, {param}")
+                else:
+                    feat = tie  # Just a name of a feature or group: no ratio!
+                try:
+                    cls._add_tie_ratio(t, name, param, feat, tie)
+                except ValueError as e:
+                    raise PAHFITFeatureError(f"{e}: {name}, {param}")
             else:
-                value = val  # a bare value
-            if isinstance(bounds, dict):
-                b = bounds.get(param)
+                try:
+                    (value, b) = cls._parse_value(val)
+                except ValueError as e:
+                    raise PAHFITFeatureError(f"{name} ({kind}, {group}):\n\t{e}")
+                if isinstance(bounds, dict):  # group-level bounds
+                    if param in bounds:
+                        if b:
+                            raise PAHFITFeatureError("Cannot set both group and feature bounds"
+                                                     f" for {param}: {name} ({kind=}, {group=})")
+                        b = bounds[param]
+                else:
+                    b = b or bounds  # maybe none
                 if b and param in cls._no_bounds:
-                    raise PAHFITFeatureError("Parameter {param} cannot have bounds: "
-                                             f"{name} ({kind}, {group})")
-            else:  # Simple bounds
-                b = bounds
-            try:
-                t[kind][name][param] = (value if param in cls._no_bounds
-                                        else value_bounds(value, b))
-            except ValueError as e:
-                raise PAHFITFeatureError("Error initializing value and bounds for"
-                                         f" {name} ({kind}, {group}):\n\t{e}")
+                    raise PAHFITFeatureError(f"Parameter {param} cannot have bounds: "
+                                             f"{name} ({kind=}, {group=})")
+                try:
+                    t[kind][name][param] = (value if param in cls._no_bounds
+                                            else value_bounds(value, b))
+                except ValueError as e:
+                    raise PAHFITFeatureError("Error initializing value and bounds for"
+                                             f" {name} ({kind}, {group}):\n\t{e}")
 
     @classmethod
     def _construct_table(cls, inp: dict):
@@ -320,13 +399,15 @@ class Features(Table):
         """
         tables = []
         for (kind, features) in inp.items():
+            if kind == "_ratios":
+                continue
             kind_params = cls._kind_params[kind]  # All params for this kind
             rows = []
             for (name, params) in features.items():
                 for missing in kind_params - params.keys():
                     if missing in cls._no_bounds:
                         params[missing] = 0.0
-                    else:
+                    else:  # Any missing required parameters: [0,] bounds
                         params[missing] = value_bounds(0.0, bounds=(0.0, None))
                 rows.append(dict(name=name, **params))
             table_columns = rows[0].keys()
@@ -339,8 +420,16 @@ class Features(Table):
         for cn, col in tables.columns.items():
             if cn in cls._units:
                 col.unit = cls._units[cn]
-        tables.add_index('name')
+        cls._index_table(tables)
+
+        if '_ratios' in inp:
+            tables.meta['_ratios'] = inp['_ratios']
         return tables
+
+    @staticmethod
+    def _index_table(tbl):
+        for indx in ('name', 'group'):
+            tbl.add_index(indx)
 
     def mask_feature(self, name, mask_value=True):
         """Mask all the parameters of a feature.
