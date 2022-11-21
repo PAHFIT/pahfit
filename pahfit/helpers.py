@@ -81,7 +81,7 @@ def read_spectrum(specfile, format=None):
     if format is None:
         suffix = specfile.split(".")[-1].lower()
         if suffix == "ecsv":
-            tformat = "ascii.ecsv"
+            tformat = "ECSV"
         elif suffix == "ipac":
             tformat = "IPAC"
     else:
