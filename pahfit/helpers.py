@@ -46,45 +46,48 @@ def find_packfile(packfile):
     return packfile_found
 
 
-def read_spectrum(specfile, colnames=["wavelength", "flux", "sigma"]):
+def read_spectrum(specfile, format=None):
     """
-    Read in a spectrum and convert intput units to the expected internal PAHFIT units.
+    Find included spectrum file and read it in as a Spectrum1D object.
 
     Parameters
     ----------
     specfile : string
-        file with the spectrum to be fit
+        File name. Will resolve to a path relative to the working
+        directory, or if not found, a path relative to the PAHFIT
+        included data directory (pahfit/data).
 
-    colnames : list of strings
-        list giving the column names of the wavelength, flux, and flux uncertainty
-        in the spectrum file with default =  ["wavelength", "flux", "sigma"]
+    format : string
+        Format option to pass to Spectum1D.read
 
     Returns
     -------
     spec1d : Spectrum1D
         spectral_axis in microns, flux and uncertainties in units of Jy
     """
-    # read in the observed spectrum
-    # assumed to be astropy table compatibile and include units
+    # resolve filename
     if not os.path.isfile(specfile):
         pack_path = pkg_resources.resource_filename("pahfit", "data/")
         test_specfile = "{}/{}".format(pack_path, specfile)
         if os.path.isfile(test_specfile):
             specfile = test_specfile
         else:
-            raise ValueError(
-                "Input spectrumfile {} not found".format(specfile))
+            raise ValueError("Input spectrumfile {} not found".format(specfile))
 
-    # get the table format (from extension of filename)
-    tformat = specfile.split(".")[-1]
-    if tformat == "ecsv":
-        tformat = "ascii.ecsv"
-    obs_spectrum = Table.read(specfile, format=tformat)
-    x = obs_spectrum[colnames[0]].to(u.micron, equivalencies=u.spectral())
-    y = obs_spectrum[colnames[1]].to(u.Jy, equivalencies=u.spectral_density(x))
-    unc = obs_spectrum[colnames[2]].to(u.Jy, equivalencies=u.spectral_density(x))
+    # File assumed to be compatible with specutils.Spectrum1D.read
+    # Default option is to auto-identify format
+    tformat = None
+    # process user-specified or filename extension based format
+    if format is None:
+        suffix = specfile.split(".")[-1].lower()
+        if suffix == "ecsv":
+            tformat = "ascii.ecsv"
+        elif suffix == "ipac":
+            tformat = "IPAC"
+    else:
+        tformat = format
 
-    return Spectrum1D(spectral_axis=x, flux=y, uncertainty=StdDevUncertainty(unc))
+    return Spectrum1D.read(specfile, format=tformat)
 
 
 def calculate_compounds(obsdata, pmodel):
