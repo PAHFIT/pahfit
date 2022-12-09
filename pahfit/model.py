@@ -3,7 +3,7 @@ from astropy import units as u
 import copy
 from astropy.modeling.fitting import LevMarLSQFitter
 from matplotlib import pyplot as plt
-from astropy.table import Table
+import numpy as np
 
 from pahfit.helpers import find_packfile
 from pahfit.features import Features
@@ -325,59 +325,27 @@ class Model:
         # A standard deepcopy works fine!
         return copy.deepcopy(self)
 
-    def flux_function(self, instrumentname, redshift=0, kind=None):
-        """Create function representing flux as function of wavelength.
-
-        Parameters
-        ----------
-        instrumentname : str or list of str
-            Qualified instrument name, see instrument.py. This
-            determines the wavelength range of features to be included.
-            The FWHM of the unresolved lines will be determined by the
-            value in the features table, instead of the instrument. This
-            allows us to visualize the fitted line widths in the
-            spectral overlap regions.
-
-        redshift: float
-            The redshift also affects the wavelength range of features
-            to be included.
-
-        kind: str
-            Filter the features by kind, before constructing the flux
-            function. Consult the Model.features['kind'] column to see
-            the options. Includes all features when set to None.
-
-        Returns
-        -------
-        flux_function : callable
-            This function is constructed according to the contents of
-            the features table. It can be evaluated at a wavelength (or
-            a grid of wavelengths) in micron, using the call operator,
-            e.g. flux_function(wav).
-
-        """
-        filtered_features = self.features.copy()
-        if kind is not None:
-            filtered_features = filtered_features[filtered_features["kind"] == kind]
-
-        alt_model = Model(filtered_features)
-        flux_function = alt_model._construct_astropy_model(
-            instrumentname, redshift, use_instrument_fwhm=False
-        )
-        return flux_function
-
-    def save_model_flux(
-        self, fn, wavelengths, instrumentname, redshift=0, kind=None, flux_unit=None
+    def tabulate(
+        self,
+        instrumentname,
+        redshift=0,
+        wavelengths=None,
+        spec=None,
+        flux_unit=None,
+        feature_mask=None,
     ):
-        """Save tabulated flux model to a file.
+        """Tabulate model flux on a wavelength grid, and export as Spectrum1D
 
         Parameters
         ----------
-        fn : str
-            File name. Suggested type is ecsv.
-
         wavelengths : array
-            Wavelengths in micron at which to evaluate the function
+            Wavelengths in micron at which to evaluate the function.
+            Will be multiplied with 1/(1+z) if redshift z is given.
+
+        spec : Spectrum1D
+            Alternative to wavelengths, a reference spectrum can be
+            given. Its wavelengths will be used to tabulate the flux,
+            and the returned Spectrum1D object will have the same units.
 
         instrumentname : str or list of str
             Qualified instrument name, see instrument.py. This
@@ -397,31 +365,60 @@ class Model:
             the options. Includes all features when set to None.
 
         flux_unit : Unit
-            The unit of the flux to save in the output file. Unitless by
-            default.
+            Specify or override the flux unit. Needs to be compatible
+            with MJy or MJy / sr.
 
-        Output
-        ------
-        Writes astropy table to file, containing the model spectrum at
-        rest-frame wavelengths.
+        feature_mask : row mask
+            Mask used to select specific rows of the feature table. In
+            most use cases, this mask can be made by applying a boolean
+            operation to self.features, e.g.
+            model.features['wavelength']>8.5
 
+        Returns
+        -------
+        model_spectrum : Spectrum1D
+            The flux model, evaluated at the given wavelengths, packaged
+            as a Spectrum1D object.
         """
-        # evaluate at rest wavelength
-        oneplusz = 1 + redshift
-        wrest = wavelengths / oneplusz
-        flux_values = self.flux_function(instrumentname, redshift, kind)
+        # apply feature mask, make sub model, and set up functional
+        if feature_mask is not None:
+            features_copy = self.features.copy()
+            features_to_use = features_copy[feature_mask]
+        else:
+            features_to_use = self.features
+        alt_model = Model(features_to_use)
+        flux_function = alt_model._construct_astropy_model(
+            instrumentname, redshift, use_instrument_fwhm=False
+        )
+
+        # decide which wavelength grid to use
+        if wavelengths is not None:
+            wav = wavelengths
+        elif spec is not None:
+            wav = spec.spectral_axis.to(u.micron).value
+        else:
+            ranges = instrument.wave_range(instrumentname)
+            wmin = min(r[0] for r in ranges)
+            wmax = max(r[1] for r in ranges)
+            wfwhm = instrument.fwhm(instrumentname, wmin, as_bounded=True)[0, 0]
+            wav = np.arange(wmin, wmax, wfwhm / 2)
+
+        # shift the "observed wavelength grid" to "physical wavelength grid"
+        wav /= 1 + redshift
+        flux_values = flux_function(wav)
 
         # Can only set unit unambiguously when we properly deal with the
-        # flux units of the input. (what about the cases where we don't
-        # have an input spectrum anyway?)
+        # flux units of the input. When no reference spectrum is given,
+        # we need to guess a unit.
         if flux_unit is not None:
-            flux_values *= flux_unit
+            flux_unit_to_use = flux_unit
+        elif spec is not None:
+            flux_unit_to_use = spec.flux.unit
+        else:
+            flux_unit_to_use = u.dimensionless_unscaled
 
-        t = Table()
-        t.add_column(wrest * u.micron, name="WAVELENGTH")
-        t.add_column(flux_values, name="FLUX")
-        t.write(
-            fn, format="ascii.ecsv" if fn.endswith(".ecsv") else None, overwrite=True
+        return Spectrum1D(
+            spectral_axis=wav * u.micron, flux=flux_values * flux_unit_to_use
         )
 
     def _kludge_param_info(self, instrumentname, redshift, use_instrument_fwhm=True):
