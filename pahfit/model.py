@@ -338,7 +338,6 @@ class Model:
         instrumentname,
         redshift=0,
         wavelengths=None,
-        spec=None,
         flux_unit=None,
         feature_mask=None,
     ):
@@ -346,14 +345,11 @@ class Model:
 
         Parameters
         ----------
-        wavelengths : array
+        wavelengths : Spectrum1D or array-like
             Wavelengths in micron at which to evaluate the function.
             Will be multiplied with 1/(1+z) if redshift z is given.
-
-        spec : Spectrum1D
-            Alternative to wavelengths, a reference spectrum can be
-            given. Its wavelengths will be used to tabulate the flux,
-            and the returned Spectrum1D object will have the same units.
+            If a Spectrum1D is given, wavelengths.spectral_axis will be
+            converted to micron and then used as wavelengths.
 
         instrumentname : str or list of str
             Qualified instrument name, see instrument.py. This
@@ -367,11 +363,6 @@ class Model:
             The redshift is needed to evaluate the flux model at the
             right rest wavelengths.
 
-        kind : str
-            Filter the features by kind, before constructing the flux
-            function. Consult the Model.features['kind'] column to see
-            the options. Includes all features when set to None.
-
         flux_unit : Unit
             Specify or override the flux unit. Needs to be compatible
             with MJy or MJy / sr.
@@ -379,7 +370,7 @@ class Model:
         feature_mask : row mask
             Mask used to select specific rows of the feature table. In
             most use cases, this mask can be made by applying a boolean
-            operation to self.features, e.g.
+            operation to a column of self.features, e.g.
             model.features['wavelength']>8.5
 
         Returns
@@ -400,34 +391,39 @@ class Model:
         )
 
         # decide which wavelength grid to use
-        if wavelengths is not None:
-            wav = wavelengths
-        elif spec is not None:
-            wav = spec.spectral_axis.to(u.micron).value
-        else:
+        if wavelengths is None:
             ranges = instrument.wave_range(instrumentname)
             wmin = min(r[0] for r in ranges)
             wmax = max(r[1] for r in ranges)
             wfwhm = instrument.fwhm(instrumentname, wmin, as_bounded=True)[0, 0]
             wav = np.arange(wmin, wmax, wfwhm / 2)
+        elif isinstance(wavelengths, Spectrum1D):
+            wav = wavelengths.spectral_axis.to(u.micron).value
+        else:
+            # any other iterable will be accepted and converted to array
+            wav = np.asarray(wavelengths)
 
         # shift the "observed wavelength grid" to "physical wavelength grid"
         wav /= 1 + redshift
         flux_values = flux_function(wav)
 
-        # Can only set unit unambiguously when we properly deal with the
-        # flux units of the input. When no reference spectrum is given,
-        # we need to guess a unit.
-        if flux_unit is not None:
-            flux_unit_to_use = flux_unit
-        elif spec is not None:
-            flux_unit_to_use = spec.flux.unit
+        # apply unit stored in features table (comes from from last fit
+        # or from loading previous result from disk)
+        if self.features.meta["unit"] is None:
+            flux_quantity = flux_values * u.dimensionless_unscaled
         else:
-            flux_unit_to_use = u.dimensionless_unscaled
+            flux_quantity = flux_values * self.features.meta["unit"]
 
-        return Spectrum1D(
-            spectral_axis=wav * u.micron, flux=flux_values * flux_unit_to_use
-        )
+        # apply unit override if requested
+        if flux_unit is not None:
+            # if dimensionless, set unit
+            if flux_quantity.unit == u.dimensionless_unscaled:
+                flux_quantity *= flux_unit
+            # if already has unit, convert quantity
+            else:
+                flux_quantity = flux_quantity.to(flux_unit)
+
+        return Spectrum1D(spectral_axis=wav * u.micron, flux=flux_quantity)
 
     def _kludge_param_info(self, instrumentname, redshift, use_instrument_fwhm=True):
         param_info = PAHFITBase.parse_table(self.features)
