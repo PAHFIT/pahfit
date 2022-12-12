@@ -60,6 +60,12 @@ class Model:
             )
 
         self.features = features
+
+        # If features table does not originate from a previous fit, and
+        # hence has no unit yet, we initialize it as None.
+        if "unit" not in self.features.meta:
+            self.features.meta["unit"] = None
+
         # if set to False, use set fwhm for lines to value in features
         # table at model construction
         self.use_instrument_fwhm = True
@@ -165,6 +171,7 @@ class Model:
         Nothing, but internal feature table is updated.
 
         """
+        self.features.meta["unit"] = spec.flux.unit
         inst, z = self._parse_instrument_and_redshift(spec, redshift)
         _, _, _, xz, yz, _ = self._convert_spec_data(spec, z)
 
@@ -244,6 +251,7 @@ class Model:
 
         """
         # parse spectral data
+        self.features.meta["unit"] = spec.flux.unit
         inst, z = self._parse_instrument_and_redshift(spec, redshift)
         x, _, _, xz, yz, uncz = self._convert_spec_data(spec, z)
 
