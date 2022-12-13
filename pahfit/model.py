@@ -5,7 +5,6 @@ from astropy.modeling.fitting import LevMarLSQFitter
 from matplotlib import pyplot as plt
 import numpy as np
 
-from pahfit.helpers import find_packfile
 from pahfit.features import Features
 from pahfit.base import PAHFITBase
 from pahfit import instrument
@@ -88,8 +87,7 @@ class Model:
         Model instance
 
         """
-        path = find_packfile(pack_file)
-        features = Features.read(path)
+        features = Features.read(pack_file)
         return cls(features)
 
     @classmethod
