@@ -344,9 +344,10 @@ class Model:
         Parameters
         ----------
         wavelengths : Spectrum1D or array-like
-            Wavelengths in micron at which to evaluate the function.
-            Will be multiplied with 1/(1+z) if redshift z is given.
-            If a Spectrum1D is given, wavelengths.spectral_axis will be
+            Wavelengths in micron in the observed frame. Will be
+            multiplied with 1/(1+z) if redshift z is given, so that the
+            model is evaluated in the rest frame as intended. If a
+            Spectrum1D is given, wavelengths.spectral_axis will be
             converted to micron and then used as wavelengths.
 
         instrumentname : str or list of str
