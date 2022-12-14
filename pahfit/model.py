@@ -126,6 +126,9 @@ class Model:
         if fn.split(".")[-1] != "ecsv":
             raise NotImplementedError("Only ascii.ecsv is supported for now")
 
+        self.features.meta['use_instrument_fwhm'] = self.use_instrument_fwhm
+        self.features.meta['fit_info'] = self.fit_info
+
         self.features.write(fn, format="ascii.ecsv", **write_kwargs)
 
     def _status_message(self):
@@ -172,6 +175,10 @@ class Model:
         self.features.meta["unit"] = spec.flux.unit
         inst, z = self._parse_instrument_and_redshift(spec, redshift)
         _, _, _, xz, yz, _ = self._convert_spec_data(spec, z)
+
+        # save these as part of the model (will be written to disk too)
+        self.features.meta["redshift"] = inst
+        self.features.meta["instrument"] = z
 
         # remake param_info to make sure we have any feature updates from the user
         param_info = self._kludge_param_info(inst, z)
@@ -252,6 +259,10 @@ class Model:
         self.features.meta["unit"] = spec.flux.unit
         inst, z = self._parse_instrument_and_redshift(spec, redshift)
         x, _, _, xz, yz, uncz = self._convert_spec_data(spec, z)
+
+        # save these as part of the model (will be written to disk too)
+        self.features.meta["redshift"] = inst
+        self.features.meta["instrument"] = z
 
         # check if observed spectrum is compatible with instrument model
         instrument.check_range([min(x), max(x)], inst)
