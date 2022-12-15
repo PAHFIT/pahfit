@@ -36,9 +36,9 @@ KIND_PARAMS = {'starlight': {'temperature', 'tau'},
                'absorption': {'wavelength', 'fwhm', 'tau', 'geometry'}}
 
 # Parameter default units: flux density/intensity/power (other units determined on fit)
-PARAM_UNITS = {'temperature': UNITS.temperature,
-               'wavelength': UNITS.wavelength,
-               'fwhm': UNITS.wavelength}
+PARAM_UNITS = {'temperature': UNITS.temperature.value,
+               'wavelength': UNITS.wavelength.value,
+               'fwhm': UNITS.wavelength.value}
 
 
 class UniqueKeyLoader(yaml.SafeLoader):
