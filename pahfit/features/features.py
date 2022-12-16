@@ -25,7 +25,7 @@ import astropy.units as u
 from importlib import resources
 from pahfit.errors import PAHFITFeatureError
 from pahfit.features.features_format import BoundedMaskedColumn, BoundedParTableFormatter
-from pahfit.units import UNITS
+import pahfit.units
 
 # Feature kinds and associated parameters
 KIND_PARAMS = {'starlight': {'temperature', 'tau'},
@@ -36,9 +36,9 @@ KIND_PARAMS = {'starlight': {'temperature', 'tau'},
                'absorption': {'wavelength', 'fwhm', 'tau', 'geometry'}}
 
 # Parameter default units: flux density/intensity/power (other units determined on fit)
-PARAM_UNITS = {'temperature': UNITS.temperature.value,
-               'wavelength': UNITS.wavelength.value,
-               'fwhm': UNITS.wavelength.value}
+PARAM_UNITS = {'temperature': pahfit.units.temperature,
+               'wavelength': pahfit.units.wavelength,
+               'fwhm': pahfit.units.wavelength}
 
 
 class UniqueKeyLoader(yaml.SafeLoader):
