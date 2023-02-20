@@ -1,11 +1,7 @@
 import os
 import pkg_resources
 
-import astropy.units as u
-from astropy.table import Table
-
 from specutils import Spectrum1D
-from astropy.nddata import StdDevUncertainty
 
 from pahfit.component_models import BlackBody1D, S07_attenuation
 from astropy.modeling.physical_models import Drude1D
