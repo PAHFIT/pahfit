@@ -349,10 +349,12 @@ class Model:
         instrumentname,
         redshift=0,
         wavelengths=None,
-        flux_unit=None,
         feature_mask=None,
     ):
         """Tabulate model flux on a wavelength grid, and export as Spectrum1D
+
+        The flux unit will be the same as the last fitted spectrum, or
+        dimensionless if the model is tabulated before being fit.
 
         Parameters
         ----------
@@ -375,9 +377,6 @@ class Model:
             The redshift is needed to evaluate the flux model at the
             right rest wavelengths.
 
-        flux_unit : Unit
-            Specify or override the flux unit. Needs to be compatible
-            with MJy or MJy / sr.
         feature_mask : array of bool of length len(features)
             Mask used to select specific rows of the feature table. In
             most use cases, this mask can be made by applying a boolean
@@ -424,15 +423,6 @@ class Model:
             flux_quantity = flux_values * u.dimensionless_unscaled
         else:
             flux_quantity = flux_values * self.features.meta["unit"]
-
-        # apply unit override if requested
-        if flux_unit is not None:
-            # if dimensionless, set unit
-            if flux_quantity.unit == u.dimensionless_unscaled:
-                flux_quantity *= flux_unit
-            # if already has unit, convert quantity
-            else:
-                flux_quantity = flux_quantity.to(flux_unit)
 
         return Spectrum1D(spectral_axis=wav * u.micron, flux=flux_quantity)
 
