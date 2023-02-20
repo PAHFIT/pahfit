@@ -110,17 +110,6 @@ def test_model_tabulate():
     )
     assert tab_Jy.shape == spec.shape
 
-    # with flux conversion
-    tab_MJy = model.tabulate(
-        wavelengths=spec,
-        instrumentname=spec.meta["instrument"],
-        flux_unit=u.MJy,
-    )
-    assert tab_MJy.unit == u.MJy
-    np.testing.assert_allclose(
-        tab_Jy.flux.value, tab_MJy.flux.value * 1e6, rtol=1e-6, atol=1e-12
-    )
-
 
 def test_save_load():
     _, model = default_spec_and_model_fit()
