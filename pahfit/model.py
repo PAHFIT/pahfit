@@ -53,11 +53,6 @@ class Model:
             Features table.
 
         """
-        if len(features) < 2:
-            raise PAHFITModelError(
-                "Fewer than 2 features! Single component models are no allowed!"
-            )
-
         self.features = features
 
         # If features table does not originate from a previous fit, and
@@ -510,6 +505,13 @@ class Model:
         necessary.
 
         """
+        if len(self.features) < 2:
+            # Plotting and tabulating works fine, but the code below
+            # will not work with only one component. This can be
+            # addressed later, when the internal API is made agnostic of
+            # the fitting backend (astropy vs our own).
+            raise PAHFITModelError("Fit with fewr than 2 components not allowed!")
+
         # Some translation rules between astropy model components and
         # feature table names and values.
 
