@@ -62,7 +62,8 @@ class Model:
 
         # if set to False, use set fwhm for lines to value in features
         # table at model construction
-        self.use_instrument_fwhm = True
+        if "use_instrument_fwhm" not in self.features.meta:
+            self.features.meta["use_instrument_fwhm"] = True
 
         # store fit_info dict of last fit
         self.fit_info = None
@@ -120,8 +121,6 @@ class Model:
         """
         if fn.split(".")[-1] != "ecsv":
             raise NotImplementedError("Only ascii.ecsv is supported for now")
-
-        self.features.meta["use_instrument_fwhm"] = self.use_instrument_fwhm
 
         self.features.write(fn, format="ascii.ecsv", **write_kwargs)
 
@@ -268,7 +267,9 @@ class Model:
         w = 1.0 / uncz
 
         # construct model and perform fit
-        astropy_model = self._construct_astropy_model(inst, z, use_instrument_fwhm=True)
+        astropy_model = self._construct_astropy_model(
+            inst, z, use_instrument_fwhm=self.features.meta["use_instrument_fwhm"]
+        )
         fit = LevMarLSQFitter(calc_uncertainties=True)
         self.astropy_result = fit(
             astropy_model,
@@ -307,6 +308,8 @@ class Model:
         """
         inst, z = self._parse_instrument_and_redshift(spec, redshift)
         _, _, _, xz, yz, uncz = self._convert_spec_data(spec, z)
+        # Always use the current FWHM here (use_instrument_fwhm would
+        # overwrite the value in the instrument overlap regions!)
         astropy_model = self._construct_astropy_model(
             inst, z, use_instrument_fwhm=False
         )
@@ -391,6 +394,9 @@ class Model:
         else:
             features_to_use = self.features
         alt_model = Model(features_to_use)
+
+        # Always use the current FWHM here (use_instrument_fwhm would
+        # overwrite the value in the instrument overlap regions!)
         flux_function = alt_model._construct_astropy_model(
             instrumentname, redshift, use_instrument_fwhm=False
         )
