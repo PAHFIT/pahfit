@@ -15,6 +15,7 @@ import numpy as np
 import matplotlib as mpl
 
 from pahfit.instrument import within_segment, fwhm
+from pahfit.errors import PAHFITModelError
 
 __all__ = ["PAHFITBase"]
 
@@ -243,7 +244,7 @@ class PAHFITBase:
 
         # add additional att components to the model if necessary
         if not model:
-            raise ValueError("No model components found")
+            raise PAHFITModelError("No model components found")
 
         if abs_info is not None:
             for k in range(len(abs_info["names"])):
