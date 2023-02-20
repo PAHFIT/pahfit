@@ -126,8 +126,7 @@ class Model:
         if fn.split(".")[-1] != "ecsv":
             raise NotImplementedError("Only ascii.ecsv is supported for now")
 
-        self.features.meta['use_instrument_fwhm'] = self.use_instrument_fwhm
-        self.features.meta['fit_info'] = self.fit_info
+        self.features.meta["use_instrument_fwhm"] = self.use_instrument_fwhm
 
         self.features.write(fn, format="ascii.ecsv", **write_kwargs)
 
@@ -172,6 +171,7 @@ class Model:
         Nothing, but internal feature table is updated.
 
         """
+        # parse spectral data
         self.features.meta["unit"] = spec.flux.unit
         inst, z = self._parse_instrument_and_redshift(spec, redshift)
         _, _, _, xz, yz, _ = self._convert_spec_data(spec, z)
@@ -188,9 +188,10 @@ class Model:
     @staticmethod
     def _convert_spec_data(spec, z):
         """
-        Turn astropy quantities into fittable numbers.
+        Turn astropy quantities stored in Spectrum1D into fittable
+        numbers.
 
-        Also corrects for redshift
+        Also corrects for redshift.
 
         Returns
         -------
@@ -218,7 +219,8 @@ class Model:
     ):
         """Fit the observed data.
 
-        The model setup is based on the features table and instrument specification.
+        The model setup is based on the features table and instrument
+        specification.
 
         The last fit results can accessed through the variable
         model.astropy_result. The results are also stored back to the
@@ -376,12 +378,11 @@ class Model:
         flux_unit : Unit
             Specify or override the flux unit. Needs to be compatible
             with MJy or MJy / sr.
-
-        feature_mask : row mask
+        feature_mask : array of bool of length len(features)
             Mask used to select specific rows of the feature table. In
             most use cases, this mask can be made by applying a boolean
             operation to a column of self.features, e.g.
-            model.features['wavelength']>8.5
+            model.features['wavelength'] > 8.5
 
         Returns
         -------
