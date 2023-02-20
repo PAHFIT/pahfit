@@ -57,8 +57,8 @@ class Model:
 
         # If features table does not originate from a previous fit, and
         # hence has no unit yet, we initialize it as None.
-        if "unit" not in self.features.meta:
-            self.features.meta["unit"] = None
+        if "user_unit" not in self.features.meta:
+            self.features.meta["user_unit"] = None
 
         # if set to False, use set fwhm for lines to value in features
         # table at model construction
@@ -166,7 +166,7 @@ class Model:
 
         """
         # parse spectral data
-        self.features.meta["unit"] = spec.flux.unit
+        self.features.meta["user_unit"] = spec.flux.unit
         inst, z = self._parse_instrument_and_redshift(spec, redshift)
         _, _, _, xz, yz, _ = self._convert_spec_data(spec, z)
 
@@ -252,7 +252,7 @@ class Model:
 
         """
         # parse spectral data
-        self.features.meta["unit"] = spec.flux.unit
+        self.features.meta["user_unit"] = spec.flux.unit
         inst, z = self._parse_instrument_and_redshift(spec, redshift)
         x, _, _, xz, yz, uncz = self._convert_spec_data(spec, z)
 
@@ -420,10 +420,10 @@ class Model:
 
         # apply unit stored in features table (comes from from last fit
         # or from loading previous result from disk)
-        if self.features.meta["unit"] is None:
+        if self.features.meta["user_unit"] is None:
             flux_quantity = flux_values * u.dimensionless_unscaled
         else:
-            flux_quantity = flux_values * self.features.meta["unit"]
+            flux_quantity = flux_values * self.features.meta["user_unit"]
 
         return Spectrum1D(spectral_axis=wav * u.micron, flux=flux_quantity)
 
