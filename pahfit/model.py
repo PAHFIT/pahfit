@@ -56,9 +56,9 @@ class Model:
         self.features = features
 
         # If features table does not originate from a previous fit, and
-        # hence has no unit yet, we initialize it as None.
+        # hence has no unit yet, we initialize it as an empty dict.
         if "user_unit" not in self.features.meta:
-            self.features.meta["user_unit"] = None
+            self.features.meta["user_unit"] = {}
 
         # store fit_info dict of last fit
         self.fit_info = None
@@ -161,7 +161,7 @@ class Model:
 
         """
         # parse spectral data
-        self.features.meta["user_unit"] = spec.flux.unit
+        self.features.meta["user_unit"]["flux"] = spec.flux.unit
         inst, z = self._parse_instrument_and_redshift(spec, redshift)
         _, _, _, xz, yz, _ = self._convert_spec_data(spec, z)
 
@@ -256,7 +256,7 @@ class Model:
 
         """
         # parse spectral data
-        self.features.meta["user_unit"] = spec.flux.unit
+        self.features.meta["user_unit"]["flux"] = spec.flux.unit
         inst, z = self._parse_instrument_and_redshift(spec, redshift)
         x, _, _, xz, yz, uncz = self._convert_spec_data(spec, z)
 
@@ -409,25 +409,25 @@ class Model:
             wmin = min(r[0] for r in ranges)
             wmax = max(r[1] for r in ranges)
             wfwhm = instrument.fwhm(instrumentname, wmin, as_bounded=True)[0, 0]
-            wav = np.arange(wmin, wmax, wfwhm / 2)
+            wav = np.arange(wmin, wmax, wfwhm / 2) * u.micron
         elif isinstance(wavelengths, Spectrum1D):
-            wav = wavelengths.spectral_axis.to(u.micron).value
+            wav = wavelengths.spectral_axis.to(u.micron)
         else:
             # any other iterable will be accepted and converted to array
-            wav = np.asarray(wavelengths)
+            wav = np.asarray(wavelengths) * u.micron
 
         # shift the "observed wavelength grid" to "physical wavelength grid"
         wav /= 1 + redshift
-        flux_values = flux_function(wav)
+        flux_values = flux_function(wav.value)
 
         # apply unit stored in features table (comes from from last fit
         # or from loading previous result from disk)
-        if self.features.meta["user_unit"] is None:
+        if "flux" not in self.features.meta["user_unit"]:
             flux_quantity = flux_values * u.dimensionless_unscaled
         else:
-            flux_quantity = flux_values * self.features.meta["user_unit"]
+            flux_quantity = flux_values * self.features.meta["user_unit"]["flux"]
 
-        return Spectrum1D(spectral_axis=wav * u.micron, flux=flux_quantity)
+        return Spectrum1D(spectral_axis=wav, flux=flux_quantity)
 
     def _kludge_param_info(self, instrumentname, redshift, use_instrument_fwhm=True):
         param_info = PAHFITBase.parse_table(self.features)
