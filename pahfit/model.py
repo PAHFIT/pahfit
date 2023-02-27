@@ -60,11 +60,6 @@ class Model:
         if "user_unit" not in self.features.meta:
             self.features.meta["user_unit"] = None
 
-        # if set to False, use set fwhm for lines to value in features
-        # table at model construction
-        if "use_instrument_fwhm" not in self.features.meta:
-            self.features.meta["use_instrument_fwhm"] = True
-
         # store fit_info dict of last fit
         self.fit_info = None
 
@@ -210,6 +205,7 @@ class Model:
         redshift=None,
         maxiter=1000,
         verbose=True,
+        use_instrument_fwhm=True,
     ):
         """Fit the observed data.
 
@@ -250,6 +246,14 @@ class Model:
         verbose : boolean
             set to provide screen output
 
+        use_instrument_fwhm : bool
+            Use the instrument model to calculate the fwhm of the
+            emission lines, instead of fitting them, which is the
+            default behavior. This can be set to False to set the fwhm
+            manually using the value in the science pack. If False and
+            bounds are provided on the fwhm for a line, the fwhm for
+            this line will be fit to the data.
+
         """
         # parse spectral data
         self.features.meta["user_unit"] = spec.flux.unit
@@ -267,9 +271,7 @@ class Model:
         w = 1.0 / uncz
 
         # construct model and perform fit
-        astropy_model = self._construct_astropy_model(
-            inst, z, use_instrument_fwhm=self.features.meta["use_instrument_fwhm"]
-        )
+        astropy_model = self._construct_astropy_model(inst, z, use_instrument_fwhm)
         fit = LevMarLSQFitter(calc_uncertainties=True)
         self.astropy_result = fit(
             astropy_model,
@@ -309,7 +311,7 @@ class Model:
         inst, z = self._parse_instrument_and_redshift(spec, redshift)
         _, _, _, xz, yz, uncz = self._convert_spec_data(spec, z)
         # Always use the current FWHM here (use_instrument_fwhm would
-        # overwrite the value in the instrument overlap regions!)
+        # overwrite the fitted value in the instrument overlap regions!)
         astropy_model = self._construct_astropy_model(
             inst, z, use_instrument_fwhm=False
         )
