@@ -518,7 +518,7 @@ class Model:
             # will not work with only one component. This can be
             # addressed later, when the internal API is made agnostic of
             # the fitting backend (astropy vs our own).
-            raise PAHFITModelError("Fit with fewr than 2 components not allowed!")
+            raise PAHFITModelError("Fit with fewer than 2 components not allowed!")
 
         # Some translation rules between astropy model components and
         # feature table names and values.
