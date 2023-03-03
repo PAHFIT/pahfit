@@ -3,8 +3,8 @@ from astropy import units as u
 import copy
 from astropy.modeling.fitting import LevMarLSQFitter
 from matplotlib import pyplot as plt
+import numpy as np
 
-from pahfit.helpers import find_packfile
 from pahfit.features import Features
 from pahfit.base import PAHFITBase
 from pahfit import instrument
@@ -53,15 +53,12 @@ class Model:
             Features table.
 
         """
-        if len(features) < 2:
-            raise PAHFITModelError(
-                "Fewer than 2 features! Single component models are no allowed!"
-            )
-
         self.features = features
-        # if set to False, use set fwhm for lines to value in features
-        # table at model construction
-        self.use_instrument_fwhm = True
+
+        # If features table does not originate from a previous fit, and
+        # hence has no unit yet, we initialize it as an empty dict.
+        if "user_unit" not in self.features.meta:
+            self.features.meta["user_unit"] = {}
 
         # store fit_info dict of last fit
         self.fit_info = None
@@ -81,8 +78,7 @@ class Model:
         Model instance
 
         """
-        path = find_packfile(pack_file)
-        features = Features.read(path)
+        features = Features.read(pack_file)
         return cls(features)
 
     @classmethod
@@ -164,8 +160,14 @@ class Model:
         Nothing, but internal feature table is updated.
 
         """
+        # parse spectral data
+        self.features.meta["user_unit"]["flux"] = spec.flux.unit
         inst, z = self._parse_instrument_and_redshift(spec, redshift)
         _, _, _, xz, yz, _ = self._convert_spec_data(spec, z)
+
+        # save these as part of the model (will be written to disk too)
+        self.features.meta["redshift"] = inst
+        self.features.meta["instrument"] = z
 
         # remake param_info to make sure we have any feature updates from the user
         param_info = self._kludge_param_info(inst, z)
@@ -175,9 +177,10 @@ class Model:
     @staticmethod
     def _convert_spec_data(spec, z):
         """
-        Turn astropy quantities into fittable numbers.
+        Turn astropy quantities stored in Spectrum1D into fittable
+        numbers.
 
-        Also corrects for redshift
+        Also corrects for redshift.
 
         Returns
         -------
@@ -202,10 +205,12 @@ class Model:
         redshift=None,
         maxiter=1000,
         verbose=True,
+        use_instrument_fwhm=True,
     ):
         """Fit the observed data.
 
-        The model setup is based on the features table and instrument specification.
+        The model setup is based on the features table and instrument
+        specification.
 
         The last fit results can accessed through the variable
         model.astropy_result. The results are also stored back to the
@@ -241,10 +246,23 @@ class Model:
         verbose : boolean
             set to provide screen output
 
+        use_instrument_fwhm : bool
+            Use the instrument model to calculate the fwhm of the
+            emission lines, instead of fitting them, which is the
+            default behavior. This can be set to False to set the fwhm
+            manually using the value in the science pack. If False and
+            bounds are provided on the fwhm for a line, the fwhm for
+            this line will be fit to the data.
+
         """
         # parse spectral data
+        self.features.meta["user_unit"]["flux"] = spec.flux.unit
         inst, z = self._parse_instrument_and_redshift(spec, redshift)
         x, _, _, xz, yz, uncz = self._convert_spec_data(spec, z)
+
+        # save these as part of the model (will be written to disk too)
+        self.features.meta["redshift"] = inst
+        self.features.meta["instrument"] = z
 
         # check if observed spectrum is compatible with instrument model
         instrument.check_range([min(x), max(x)], inst)
@@ -253,7 +271,7 @@ class Model:
         w = 1.0 / uncz
 
         # construct model and perform fit
-        astropy_model = self._construct_astropy_model(inst, z, use_instrument_fwhm=True)
+        astropy_model = self._construct_astropy_model(inst, z, use_instrument_fwhm)
         fit = LevMarLSQFitter(calc_uncertainties=True)
         self.astropy_result = fit(
             astropy_model,
@@ -292,6 +310,8 @@ class Model:
         """
         inst, z = self._parse_instrument_and_redshift(spec, redshift)
         _, _, _, xz, yz, uncz = self._convert_spec_data(spec, z)
+        # Always use the current FWHM here (use_instrument_fwhm would
+        # overwrite the fitted value in the instrument overlap regions!)
         astropy_model = self._construct_astropy_model(
             inst, z, use_instrument_fwhm=False
         )
@@ -324,26 +344,90 @@ class Model:
         # A standard deepcopy works fine!
         return copy.deepcopy(self)
 
-    def sub_model(self, instrumentname, redshift, kind=None):
-        """Return a function that represents part of the fit result.
+    def tabulate(
+        self,
+        instrumentname,
+        redshift=0,
+        wavelengths=None,
+        feature_mask=None,
+    ):
+        """Tabulate model flux on a wavelength grid, and export as Spectrum1D
 
-        The arguments allow filtering components by name, group or kind.
+        The flux unit will be the same as the last fitted spectrum, or
+        dimensionless if the model is tabulated before being fit.
 
-        The FWHM of the unresolved lines will be determined by the value
-        in the features table, instead of the instrument. This allows us
-        to visualize the fitted line widths in the spectral overlap
-        regions.
+        Parameters
+        ----------
+        wavelengths : Spectrum1D or array-like
+            Wavelengths in micron in the observed frame. Will be
+            multiplied with 1/(1+z) if redshift z is given, so that the
+            model is evaluated in the rest frame as intended. If a
+            Spectrum1D is given, wavelengths.spectral_axis will be
+            converted to micron and then used as wavelengths.
 
+        instrumentname : str or list of str
+            Qualified instrument name, see instrument.py. This
+            determines the wavelength range of features to be included.
+            The FWHM of the unresolved lines will be determined by the
+            value in the features table, instead of the instrument. This
+            allows us to visualize the fitted line widths in the
+            spectral overlap regions.
+
+        redshift : float
+            The redshift is needed to evaluate the flux model at the
+            right rest wavelengths.
+
+        feature_mask : array of bool of length len(features)
+            Mask used to select specific rows of the feature table. In
+            most use cases, this mask can be made by applying a boolean
+            operation to a column of self.features, e.g.
+            model.features['wavelength'] > 8.5
+
+        Returns
+        -------
+        model_spectrum : Spectrum1D
+            The flux model, evaluated at the given wavelengths, packaged
+            as a Spectrum1D object.
         """
-        filtered_features = self.features.copy()
-        if kind is not None:
-            filtered_features = filtered_features[filtered_features["kind"] == kind]
+        # apply feature mask, make sub model, and set up functional
+        if feature_mask is not None:
+            features_copy = self.features.copy()
+            features_to_use = features_copy[feature_mask]
+        else:
+            features_to_use = self.features
+        alt_model = Model(features_to_use)
 
-        sub_model = Model(filtered_features)
-        sub_astropy_model = sub_model._construct_astropy_model(
+        # Always use the current FWHM here (use_instrument_fwhm would
+        # overwrite the value in the instrument overlap regions!)
+        flux_function = alt_model._construct_astropy_model(
             instrumentname, redshift, use_instrument_fwhm=False
         )
-        return sub_astropy_model
+
+        # decide which wavelength grid to use
+        if wavelengths is None:
+            ranges = instrument.wave_range(instrumentname)
+            wmin = min(r[0] for r in ranges)
+            wmax = max(r[1] for r in ranges)
+            wfwhm = instrument.fwhm(instrumentname, wmin, as_bounded=True)[0, 0]
+            wav = np.arange(wmin, wmax, wfwhm / 2) * u.micron
+        elif isinstance(wavelengths, Spectrum1D):
+            wav = wavelengths.spectral_axis.to(u.micron)
+        else:
+            # any other iterable will be accepted and converted to array
+            wav = np.asarray(wavelengths) * u.micron
+
+        # shift the "observed wavelength grid" to "physical wavelength grid"
+        wav /= 1 + redshift
+        flux_values = flux_function(wav.value)
+
+        # apply unit stored in features table (comes from from last fit
+        # or from loading previous result from disk)
+        if "flux" not in self.features.meta["user_unit"]:
+            flux_quantity = flux_values * u.dimensionless_unscaled
+        else:
+            flux_quantity = flux_values * self.features.meta["user_unit"]["flux"]
+
+        return Spectrum1D(spectral_axis=wav, flux=flux_quantity)
 
     def _kludge_param_info(self, instrumentname, redshift, use_instrument_fwhm=True):
         param_info = PAHFITBase.parse_table(self.features)
@@ -429,6 +513,13 @@ class Model:
         necessary.
 
         """
+        if len(self.features) < 2:
+            # Plotting and tabulating works fine, but the code below
+            # will not work with only one component. This can be
+            # addressed later, when the internal API is made agnostic of
+            # the fitting backend (astropy vs our own).
+            raise PAHFITModelError("Fit with fewer than 2 components not allowed!")
+
         # Some translation rules between astropy model components and
         # feature table names and values.
 

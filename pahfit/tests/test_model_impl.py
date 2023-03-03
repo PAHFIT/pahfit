@@ -3,6 +3,7 @@ from pahfit.model import Model
 import tempfile
 import numpy as np
 import os
+from astropy import units as u
 
 
 def assert_features_table_equality(features1, features2):
@@ -69,6 +70,45 @@ def test_model_edit():
     # Make sure the change is reflected in this model. Very handy that
     # we can access the right component by the feature name!
     assert astropy_model_edit[feature].temperature == newT
+
+
+def test_model_tabulate():
+    """This function has several options. The following tests runs will
+    make these more maintainable."""
+    # do not fit yet
+    spec, model = default_spec_and_model_fit(False)
+
+    # test tabulate before fitting, unit needs to be unitless
+    df = model.tabulate(
+        instrumentname="spitzer.irs.*.[12]",
+        feature_mask=model.features["kind"] == "dust_feature",
+    )
+    assert df.unit == u.dimensionless_unscaled
+
+    # with spec given (should still be dimensionless)
+    df = model.tabulate(
+        wavelengths=spec,
+        instrumentname="spitzer.irs.*.[12]",
+        feature_mask=model.features["kind"] == "dust_feature",
+    )
+    assert df.unit == u.dimensionless_unscaled
+
+    # after fitting
+    model.fit(spec)
+
+    # default wavelength grid. Unit should be the same as spec.
+    df = model.tabulate(
+        instrumentname="spitzer.irs.*.[12]",
+        feature_mask=model.features["kind"] == "dust_feature",
+    )
+    assert df.unit == spec.unit
+
+    # spec wavelength grid. Length should be the same as spec.
+    tab_Jy = model.tabulate(
+        wavelengths=spec,
+        instrumentname="spitzer.irs.*.[12]",
+    )
+    assert tab_Jy.shape == spec.shape
 
 
 def test_save_load():
