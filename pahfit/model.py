@@ -7,12 +7,11 @@ import numpy as np
 from scipy import interpolate, integrate
 
 from pahfit.features.util import bounded_is_fixed
-from pahfit.component_models import BlackBody1D, Drude1D
-from pahfit.helpers import find_packfile
 from pahfit.features import Features
 from pahfit.base import PAHFITBase
 from pahfit import instrument
 from pahfit.errors import PAHFITModelError
+from pahfit.component_models import BlackBody1D
 
 
 class Model:
@@ -549,21 +548,6 @@ class Model:
         )
 
         return param_info
-
-    def _backport_param_info(self, param_info):
-        """Convert param_info to values in features table.
-
-        Temporary hack to make the new system compatible with the old system.
-
-        TODO: if we remove the param_info stuff entirely, we won't need this
-
-        """
-        # unfortunately, there is no implementation for this, even in
-        # the original code. That one goes straight from astropy model
-        # to table... But we can do a kludge here: convert to model
-        # first, and then back to table.
-        astropy_model = PAHFITBase.model_from_param_info(param_info)
-        self._parse_astropy_result(astropy_model)
 
     def _construct_astropy_model(
         self, instrumentname, redshift, use_instrument_fwhm=True
