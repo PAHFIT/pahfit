@@ -256,7 +256,7 @@ class Model:
             else:
                 power_guess = 0
             return power_guess / fwhm
-        
+
         # calc line amplitude using instrumental fwhm and integral over data
         loop_over_non_fixed(
             "line", "power", lambda row: amp_guess(row, line_fwhm_guess(row))
@@ -264,6 +264,11 @@ class Model:
         # set the fwhms in the features table requested
         if calc_line_fwhm:
             loop_over_non_fixed("line", "fwhm", line_fwhm_guess, force=True)
+
+        # Same logic as in the old function: just use same amp for all
+        # dust features.
+        some_flux = 0.5 * np.median(yz)
+        loop_over_non_fixed("dust_feature", "power", lambda row: some_flux)
 
     @staticmethod
     def _convert_spec_data(spec, z):
