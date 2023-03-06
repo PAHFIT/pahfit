@@ -135,7 +135,13 @@ class Model:
     def _repr_html_(self):
         return self._status_message() + self.features._repr_html_()
 
-    def guess(self, spec: Spectrum1D, redshift=None, calc_line_fwhm=True):
+    def guess(
+        self,
+        spec: Spectrum1D,
+        redshift=None,
+        integrate_line_flux=False,
+        calc_line_fwhm=True,
+    ):
         """Make an initial guess of the physics, based on the given
         observational data.
 
@@ -157,6 +163,15 @@ class Model:
             observed model.
 
             If None, will be taken from spec.redshift
+
+        integrate_line_flux : bool
+            Use the trapezoid rule to estimate line fluxes. Default is
+            False, where a simpler line guess is used (~ median flux).
+
+        calc_line_fwhm : bool
+            Default, True. Can be set to False to disable the instrument
+            model during the guess, as to avoid overwriting any manually
+            specified line widths.
 
         Returns
         -------
@@ -256,18 +271,22 @@ class Model:
                 power_guess = 0
             return power_guess / fwhm
 
-        # calc line amplitude using instrumental fwhm and integral over data
-        loop_over_non_fixed(
-            "line", "power", lambda row: amp_guess(row, line_fwhm_guess(row))
-        )
-        # set the fwhms in the features table requested
-        if calc_line_fwhm:
-            loop_over_non_fixed("line", "fwhm", line_fwhm_guess, force=True)
-
         # Same logic as in the old function: just use same amp for all
         # dust features.
         some_flux = 0.5 * np.median(yz)
         loop_over_non_fixed("dust_feature", "power", lambda row: some_flux)
+
+        if integrate_line_flux:
+            # calc line amplitude using instrumental fwhm and integral over data
+            loop_over_non_fixed(
+                "line", "power", lambda row: amp_guess(row, line_fwhm_guess(row))
+            )
+        else:
+            loop_over_non_fixed("line", "power", lambda row: some_flux)
+
+        # set the fwhms in the features table
+        if calc_line_fwhm:
+            loop_over_non_fixed("line", "fwhm", line_fwhm_guess, force=True)
 
     @staticmethod
     def _convert_spec_data(spec, z):
