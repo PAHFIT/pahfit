@@ -1,5 +1,8 @@
-from astropy.modeling.functional_models import Gaussian1D
+import numpy as np
+import matplotlib as mpl
 
+from pahfit.instrument import within_segment, fwhm
+from pahfit.errors import PAHFITModelError
 from pahfit.component_models import (
     BlackBody1D,
     ModifiedBlackBody1D,
@@ -7,15 +10,7 @@ from pahfit.component_models import (
     att_Drude1D,
 )
 from astropy.modeling.physical_models import Drude1D
-
-from scipy import interpolate
-
-import numpy as np
-
-import matplotlib as mpl
-
-from pahfit.instrument import within_segment, fwhm
-from pahfit.errors import PAHFITModelError
+from astropy.modeling.functional_models import Gaussian1D
 
 __all__ = ["PAHFITBase"]
 
