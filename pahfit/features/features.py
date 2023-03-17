@@ -132,8 +132,8 @@ class Features(Table):
     MaskedColumn = BoundedMaskedColumn
 
     param_covar = TableAttribute(default=[])
-    _param_attrs = set(('value', 'bounds', 'tied'))  # params can have these attributes
-    _group_attrs = set(('bounds', 'features', 'kind', 'tied'))  # group-level attributes
+    _param_attrs = set(('value', 'bounds'))  # params can have these attributes
+    _group_attrs = set(('bounds', 'features', 'kind'))  # group-level attributes
     _no_bounds = set(('name', 'group', 'geometry', 'model'))  # String attributes (no bounds)
 
     @classmethod
