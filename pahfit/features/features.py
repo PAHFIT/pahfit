@@ -21,7 +21,6 @@ import os
 import numpy as np
 from astropy.table import vstack, Table, TableAttribute
 from astropy.io.misc.yaml import yaml
-import astropy.units as u
 from pkg_resources import resource_filename
 from pahfit.errors import PAHFITFeatureError
 from pahfit.features.features_format import BoundedMaskedColumn, BoundedParTableFormatter
@@ -94,7 +93,7 @@ def value_bounds(val, bounds):
       ValueError: if bounds are specified and the value does not fall
           between them.
     """
-    
+
     if val is None:
         val = np.ma.masked
     if not bounds:
