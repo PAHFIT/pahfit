@@ -53,7 +53,7 @@ Contributions welcome (see below).
 
 Contributors
 ------------
-* Dries van De Putte*
+* Dries van De Putte
 * J.D. Smith
 * Karl Gordon
 * Thomas Lai
