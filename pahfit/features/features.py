@@ -345,6 +345,11 @@ class Features(Table):
             tables.meta['_ratios'] = inp['_ratios']
         return tables
 
+    @staticmethod
+    def _index_table(tbl):
+        for indx in ('name', 'group'):
+            tbl.add_index(indx)
+
     def mask_feature(self, name, mask_value=True):
         """Mask all the parameters of a feature.
 
