@@ -21,7 +21,6 @@ import os
 import numpy as np
 from astropy.table import vstack, Table, TableAttribute
 from astropy.io.misc.yaml import yaml
-import astropy.units as u
 from importlib import resources
 from pahfit.errors import PAHFITFeatureError
 from pahfit.features.features_format import BoundedMaskedColumn, BoundedParTableFormatter
