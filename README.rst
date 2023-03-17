@@ -1,6 +1,7 @@
 PAHFIT
 ======
 
+
 ``PAHFIT`` is a decomposition model and tool for astronomical infrared spectra, focusing on dust and gas emission features from the interstellar medium (see `Smith, J.D.T., Draine B.T., et al., 2007, ApJ, 656, 770 <http://tir.astro.utoledo.edu/jdsmith/research/pahfit.php>`_).
 
 This package provides an updated python implementation of ``PAHFIT``.  While the original versions of ``PAHFIT`` (``v1.x``) were written in IDL and focused mainly on Spitzer/IRS spectroscopic observations, the newer python-based versions (``>=v2.0``) will expand instrument coverage to other existing (e.g., AKARI) and planned (e.g., JWST) facilities, and will offer a more flexible modeling framework suitable for modeling a wider range of astrophysical sources.
@@ -40,6 +41,8 @@ Packaging
 Documentation
 -------------
 
+Note that as of March, 2023, a significant change to the PAHFIT API and model specification was merged; the documentation do not reflect these changes and will be improved soon.
+
 Hosted by readthedocs: <http://pahfit.readthedocs.io/en/latest/>
 
 In Development!
@@ -50,11 +53,13 @@ Contributions welcome (see below).
 
 Contributors
 ------------
-* Thomas Lai
-* Alexandros Maragkoudakis
+* Dries van De Putte*
 * J.D. Smith
 * Karl Gordon
+* Thomas Lai
+* Alexandros Maragkoudakis
 * Els Peeters
+* Jan Cami
 * Ameek Sidhu
 * Dries Van De Putte
 
