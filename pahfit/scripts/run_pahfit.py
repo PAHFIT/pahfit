@@ -3,9 +3,10 @@
 import argparse
 
 import matplotlib.pyplot as plt
-import matplotlib as mpl
 
-from pahfit.helpers import read_spectrum, initialize_model, fit_spectrum
+from pahfit.helpers import read_spectrum
+from pahfit.model import Model
+from pahfit.scripts.plot_pahfit import default_layout_plot
 
 
 def initialize_parser():
@@ -32,9 +33,29 @@ def initialize_parser():
         "raw",
     ]
     savetypes = ["fits", "votable", "ipac", "ascii.ecsv"]
+    instrumenttypes = [
+        "spitzer.irs.sl.1",
+        "spitzer.irs.sl.2",
+        "spitzer.irs.sl.3",
+        "spitzer.irs.ll.1",
+        "spitzer.irs.ll.2",
+        "spitzer.irs.ll.3",
+        "spitzer.irs.sh",
+        "spitzer.irs.lh",
+        "iso.sws.speed0",
+        "iso.sws.speed1",
+        "iso.sws.speed2",
+        "iso.sws.speed3",
+        "iso.sws.speed4",
+    ]
     parser = argparse.ArgumentParser()
     parser.add_argument("spectrumfile", help="name of file with observed spectrum")
     parser.add_argument("packfile", help="name of PAHFIT pack file")
+    parser.add_argument(
+        "instrumentname",
+        # choices=instrumenttypes,
+        help="Name of the instrument. Available:" + str(instrumenttypes),
+    )
     parser.add_argument(
         "--savefig",
         action="store",
@@ -48,7 +69,7 @@ def initialize_parser():
     parser.add_argument(
         "--saveoutput",
         action="store",
-        default="ipac",
+        default="ascii.ecsv",
         choices=savetypes,
         help="Save fit results to a file of specified type",
     )
@@ -81,48 +102,27 @@ def main():
     args = parser.parse_args()
 
     # read in the spectrum
-    obsdata = read_spectrum(args.spectrumfile)
+    spec = read_spectrum(args.spectrumfile)
+    spec.meta['instrument'] = args.instrumentname
 
     # setup the model
-    pmodel = initialize_model(args.packfile, obsdata, not args.no_starting_estimate)
+    model = Model.from_yaml(args.packfile)
+
+    # initial guess if not explicitly disabled
+    if not args.no_starting_estimate:
+        model.guess(spec)
 
     # fit the spectrum
-    obsfit = fit_spectrum(obsdata, pmodel, maxiter=args.fit_maxiter)
+    model.fit(spec, maxiter=args.fit_maxiter)
 
     # save fit results to file
-    outputname = args.spectrumfile.split(".")[0]
-    pmodel.save(obsfit, outputname, args.saveoutput)
+    basename = args.spectrumfile.split(".")[0]
+    extension = args.saveoutput
+    outputname = f"{basename}_output.{extension}"
+    print("Writing result to ", outputname)
+    model.save(outputname)
 
-    # plot result
-    fontsize = 18
-    font = {"size": fontsize}
-    mpl.rc("font", **font)
-    mpl.rc("lines", linewidth=2)
-    mpl.rc("axes", linewidth=2)
-    mpl.rc("xtick.major", size=5, width=1)
-    mpl.rc("ytick.major", size=5, width=1)
-    mpl.rc("xtick.minor", size=3, width=1)
-    mpl.rc("ytick.minor", size=3, width=1)
-
-    fig, axs = plt.subplots(
-        ncols=1,
-        nrows=2,
-        figsize=(15, 10),
-        gridspec_kw={"height_ratios": [3, 1]},
-        sharex=True,
-    )
-
-    pmodel.plot(
-        axs,
-        obsdata["x"],
-        obsdata["y"],
-        obsdata["unc"],
-        obsfit,
-        scalefac_resid=args.scalefac_resid,
-    )
-
-    # use the whitespace better
-    fig.subplots_adjust(hspace=0)
+    fig = default_layout_plot(spec, model, args.scalefac_resid)
 
     # show
     if args.showplot:

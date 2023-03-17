@@ -11,11 +11,11 @@ use the `--savefig` command line option.
 
 .. code-block:: console
 
-  $ plot_pahfit M101_Nucleus_irs.ipac M101_Nucleus_irs_output.ipac
+  $ plot_pahfit M101_Nucleus_irs.ipac M101_Nucleus_irs_output.ascii.ecsv
 
 The first argument gives the file with the observed spectrum.
 The second argument gives the file with the output of the ``run_pahfit``
-script.
+script, or a model that was saved using ``Model.save()``.
 
 Help for the possible command line options for the ``plot_pahfit`` script
 can be seen by:
@@ -23,6 +23,10 @@ can be seen by:
 .. code-block:: console
 
   $ plot_pahfit --help
+
+For making custom plots, the model can be loaded in python using ``Model.from_saved()``. The
+default plot is made using ``Model.plot()``. Several methods that return a certain model
+components, to be used for plotting and analysis, will be implemented in the future.
 
 Example Plot
 ============
