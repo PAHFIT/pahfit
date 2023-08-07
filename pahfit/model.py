@@ -255,7 +255,7 @@ class Model:
             factor = 1.5
             wmin = w - factor * fwhm
             wmax = w + factor * fwhm
-            xz_window = np.logical_and(wmin < xz, xz < wmax)
+            xz_window = (xz > wmin) & (xz < wmax)
             xpoints = xz[xz_window]
             ypoints = yz[xz_window]
             if np.count_nonzero(xz_window) >= 2:
