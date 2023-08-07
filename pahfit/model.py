@@ -227,16 +227,14 @@ class Model:
             fmax_lam = 2898.0 / temp
             bb = BlackBody1D(1, temp)
             if fmax_lam >= wmin and fmax_lam <= wmax:
-                w = fmax_lam
-                flux_ref = sp(w)
+                w_ref = fmax_lam
             elif fmax_lam > wmax:
-                w = wmax
-                flux_ref = yz[np.argmax(xz)]
+                w_ref = wmax
             else:
-                w = wmin
-                flux_ref = yz[np.argmin(xz)]
+                w_ref = wmin
 
-            amp_guess = flux_ref / bb(w)
+            flux_ref = np.median(yz[(xz > w_ref - 0.2) & (xz < w_ref + 0.2)])
+            amp_guess = flux_ref / bb(w_ref)
             return amp_guess / nbb
 
         loop_over_non_fixed("dust_continuum", "tau", dust_continuum_guess)
