@@ -26,7 +26,7 @@ def pah_feature_strength(ampl, fwhm, x_0):
     Returns
     -------
     strength : float
-        PAH feature strength in W/m^2/Hz units.
+        PAH feature strength in W/m^2 units.
 
     """
 
