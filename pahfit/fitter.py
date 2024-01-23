@@ -111,7 +111,7 @@ class Fitter(ABC):
         pass
 
     @abstractmethod
-    def register_dust_features(self, name, power, wavelength, fwhm):
+    def register_dust_feature(self, name, power, wavelength, fwhm):
         """Register a dust feature.
 
         Typically a Drude profile.
