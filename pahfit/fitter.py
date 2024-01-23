@@ -32,11 +32,14 @@ class Fitter(ABC):
     implementation to set up the Fitter. The Model has access to the
     Features table and the instrument model, and needs to set up Fitter
     with the correct initial values, bounds, and "fixed" flags (e.g.
-    setting a fixed FWHM based on the instrument for the lines). After
-    all the components have been added, the finalize_model() function
-    can be called to finish setting up the internal astropy model. After
-    this has finished, fit() can be called to apply the model and the
-    astropy fitter to the data.
+    setting a fixed FWHM based on the instrument for the lines).
+
+    After all the components have been added, the finalize_model()
+    function can be called to combine all the features into one model (a
+    potentially expensive operation, so we have a single
+    finalize_model() call following potentially many register_*()
+    calls). After this has finished, fit() can be called to apply the
+    underlying model and fitter implementation to the data.
 
     """
 
