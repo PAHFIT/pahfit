@@ -101,7 +101,7 @@ jobs:
       run: |
         tox -e py311-cov
     - name: Upload coverage to codecov
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v1
       with:
         token: ${{ secrets.CODECOV }}
         fail_ci_if_error: true
