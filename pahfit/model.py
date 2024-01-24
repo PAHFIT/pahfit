@@ -4,11 +4,14 @@ import copy
 from astropy.modeling.fitting import LevMarLSQFitter
 from matplotlib import pyplot as plt
 import numpy as np
+from scipy import interpolate, integrate
 
+from pahfit.features.util import bounded_is_fixed
 from pahfit.features import Features
 from pahfit.base import PAHFITBase
 from pahfit import instrument
 from pahfit.errors import PAHFITModelError
+from pahfit.component_models import BlackBody1D
 
 
 class Model:
@@ -132,7 +135,13 @@ class Model:
     def _repr_html_(self):
         return self._status_message() + self.features._repr_html_()
 
-    def guess(self, spec: Spectrum1D, redshift=None):
+    def guess(
+        self,
+        spec: Spectrum1D,
+        redshift=None,
+        integrate_line_flux=False,
+        calc_line_fwhm=True,
+    ):
         """Make an initial guess of the physics, based on the given
         observational data.
 
@@ -155,24 +164,127 @@ class Model:
 
             If None, will be taken from spec.redshift
 
+        integrate_line_flux : bool
+            Use the trapezoid rule to estimate line fluxes. Default is
+            False, where a simpler line guess is used (~ median flux).
+
+        calc_line_fwhm : bool
+            Default, True. Can be set to False to disable the instrument
+            model during the guess, as to avoid overwriting any manually
+            specified line widths.
+
         Returns
         -------
         Nothing, but internal feature table is updated.
 
         """
-        # parse spectral data
-        self.features.meta["user_unit"]["flux"] = spec.flux.unit
         inst, z = self._parse_instrument_and_redshift(spec, redshift)
-        _, _, _, xz, yz, _ = self._convert_spec_data(spec, z)
-
         # save these as part of the model (will be written to disk too)
         self.features.meta["redshift"] = inst
         self.features.meta["instrument"] = z
 
-        # remake param_info to make sure we have any feature updates from the user
-        param_info = self._kludge_param_info(inst, z)
-        param_info = PAHFITBase.estimate_init(xz, yz, param_info)
-        self._backport_param_info(param_info)
+        # parse spectral data
+        self.features.meta["user_unit"]["flux"] = spec.flux.unit
+        _, _, _, xz, yz, _ = self._convert_spec_data(spec, z)
+        wmin = min(xz)
+        wmax = max(xz)
+
+        # simple linear interpolation function for spectrum
+        sp = interpolate.interp1d(xz, yz)
+
+        # we will repeat this loop logic several times
+        def loop_over_non_fixed(kind, parameter, estimate_function, force=False):
+            for row_index in np.where(self.features["kind"] == kind)[0]:
+                row = self.features[row_index]
+                if not bounded_is_fixed(row[parameter]) or force:
+                    guess_value = estimate_function(row)
+                    # print(f"{row['name']}: setting {parameter} to {guess_value}")
+                    self.features[row_index][parameter][0] = guess_value
+
+        # guess starting point of bb
+        def starlight_guess(row):
+            bb = BlackBody1D(1, row["temperature"][0])
+            w = wmin + 0.1  # the wavelength used to compare
+            if w < 5:
+                # wavelength is short enough to not have numerical
+                # issues. Evaluate both at w.
+                amp_guess = sp(w) / bb(w)
+            else:
+                # wavelength too long for stellar BB. Evaluate BB at
+                # 5 micron, and spectrum data at minimum wavelength.
+                wsafe = 5
+                amp_guess = sp(w) / bb(wsafe)
+
+            return amp_guess
+
+        loop_over_non_fixed("starlight", "tau", starlight_guess)
+
+        # count number of blackbodies in the model
+        nbb = len(self.features[self.features["kind"] == "dust_continuum"])
+
+        def dust_continuum_guess(row):
+            temp = row["temperature"][0]
+            fmax_lam = 2898.0 / temp
+            bb = BlackBody1D(1, temp)
+            if fmax_lam >= wmin and fmax_lam <= wmax:
+                w_ref = fmax_lam
+            elif fmax_lam > wmax:
+                w_ref = wmax
+            else:
+                w_ref = wmin
+
+            flux_ref = np.median(yz[(xz > w_ref - 0.2) & (xz < w_ref + 0.2)])
+            amp_guess = flux_ref / bb(w_ref)
+            return amp_guess / nbb
+
+        loop_over_non_fixed("dust_continuum", "tau", dust_continuum_guess)
+
+        def line_fwhm_guess(row):
+            w = row["wavelength"][0]
+            if not instrument.within_segment(w, inst):
+                return 0
+
+            fwhm = instrument.fwhm(inst, w, as_bounded=True)[0][0]
+            return fwhm
+
+        def amp_guess(row, fwhm):
+            w = row["wavelength"][0]
+            if not instrument.within_segment(w, inst):
+                return 0
+
+            factor = 1.5
+            wmin = w - factor * fwhm
+            wmax = w + factor * fwhm
+            xz_window = (xz > wmin) & (xz < wmax)
+            xpoints = xz[xz_window]
+            ypoints = yz[xz_window]
+            if np.count_nonzero(xz_window) >= 2:
+                # difference between flux in window and flux around it
+                power_guess = integrate.trapezoid(yz[xz_window], xz[xz_window])
+                # subtract continuum estimate, but make sure we don't go negative
+                continuum = (ypoints[0] + ypoints[-1]) / 2 * (xpoints[-1] - xpoints[0])
+                if continuum < power_guess:
+                    power_guess -= continuum
+            else:
+                power_guess = 0
+            return power_guess / fwhm
+
+        # Same logic as in the old function: just use same amp for all
+        # dust features.
+        some_flux = 0.5 * np.median(yz)
+        loop_over_non_fixed("dust_feature", "power", lambda row: some_flux)
+
+        if integrate_line_flux:
+            # calc line amplitude using instrumental fwhm and integral over data
+            loop_over_non_fixed(
+                "line", "power", lambda row: amp_guess(row, line_fwhm_guess(row))
+            )
+        else:
+            loop_over_non_fixed("line", "power", lambda row: some_flux)
+
+        # set the fwhms in the features table
+        if calc_line_fwhm:
+            loop_over_non_fixed("line", "fwhm", line_fwhm_guess, force=True)
 
     @staticmethod
     def _convert_spec_data(spec, z):
@@ -453,21 +565,6 @@ class Model:
         )
 
         return param_info
-
-    def _backport_param_info(self, param_info):
-        """Convert param_info to values in features table.
-
-        Temporary hack to make the new system compatible with the old system.
-
-        TODO: if we remove the param_info stuff entirely, we won't need this
-
-        """
-        # unfortunately, there is no implementation for this, even in
-        # the original code. That one goes straight from astropy model
-        # to table... But we can do a kludge here: convert to model
-        # first, and then back to table.
-        astropy_model = PAHFITBase.model_from_param_info(param_info)
-        self._parse_astropy_result(astropy_model)
 
     def _construct_astropy_model(
         self, instrumentname, redshift, use_instrument_fwhm=True
