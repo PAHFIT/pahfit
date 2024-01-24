@@ -81,7 +81,7 @@ fixes, code, or documentation (no git or GitHub experience necessary):
 
 * `Coding Guidelines <https://docs.astropy.org/en/latest/development/codeguide.html>`_
 
-* `Developer Documentation <https://docs.astropy.org/en/latest/#developer-documentation>`_
+* `Developer Documentation <https://docs.astropy.org/en/latest/index_dev.html>`_
 
 For the complete list of contributors please see the `pahfit
 contributors page on Github
