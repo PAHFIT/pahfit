@@ -22,7 +22,7 @@ import numpy as np
 from astropy.table import vstack, Table, TableAttribute
 from astropy.io.misc.yaml import yaml
 import astropy.units as u
-from pkg_resources import resource_filename
+from importlib import resources
 from pahfit.errors import PAHFITFeatureError
 from pahfit.features.features_format import BoundedMaskedColumn, BoundedParTableFormatter
 
@@ -158,8 +158,7 @@ class Features(Table):
         feat_tables = dict()
 
         if not os.path.isfile(file):
-            pack_path = resource_filename("pahfit", "packs/science")
-            file = os.path.join(pack_path, file)
+            file = resources.files("pahfit") / "packs/science" / file
         try:
             with open(file) as fd:
                 scipack = yaml.load(fd, Loader=UniqueKeyLoader)

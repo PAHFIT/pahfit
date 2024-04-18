@@ -1,5 +1,5 @@
 import os
-import pkg_resources
+from importlib import resources
 
 from specutils import Spectrum1D
 
@@ -32,14 +32,13 @@ def find_packfile(packfile):
     if os.path.isfile(packfile):
         packfile_found = packfile
     else:
-        pack_path = pkg_resources.resource_filename("pahfit", "packs/science/")
-        test_packfile = "{}/{}".format(pack_path, packfile)
+        test_packfile = resources.files("pahfit") / "packs/science" / packfile
         if os.path.isfile(test_packfile):
             packfile_found = test_packfile
         else:
             raise ValueError("Input packfile {} not found".format(packfile))
 
-    return packfile_found
+    return str(packfile_found)
 
 
 def read_spectrum(specfile, format=None):
@@ -63,8 +62,7 @@ def read_spectrum(specfile, format=None):
     """
     # resolve filename
     if not os.path.isfile(specfile):
-        pack_path = pkg_resources.resource_filename("pahfit", "data/")
-        test_specfile = "{}/{}".format(pack_path, specfile)
+        test_specfile = resources.files("pahfit") / "data" / specfile
         if os.path.isfile(test_specfile):
             specfile = test_specfile
         else:
@@ -75,7 +73,7 @@ def read_spectrum(specfile, format=None):
     tformat = None
     # process user-specified or filename extension based format
     if format is None:
-        suffix = specfile.split(".")[-1].lower()
+        suffix = specfile.name.split(".")[-1].lower()
         if suffix == "ecsv":
             tformat = "ECSV"
         elif suffix == "ipac":

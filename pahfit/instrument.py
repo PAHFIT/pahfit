@@ -11,11 +11,10 @@ supported telescopes, instruments, and instrument modes, see TBD.
 
 import os
 from pathlib import Path
-import glob
 import numpy as np
 from numpy.polynomial import Polynomial
 from astropy.io.misc import yaml
-from pkg_resources import resource_filename
+from importlib import resources
 from pahfit.errors import PAHFITPackError, PAHFITWarning
 from warnings import warn
 
@@ -25,7 +24,7 @@ packs = {}
 def read_instrument_packs():
     """Read all instrument packs into the 'packs' variable."""
     global packs
-    for pack in glob.glob(resource_filename("pahfit", "packs/instrument/*.yaml")):
+    for pack in (resources.files("pahfit") / "packs/instrument").glob("*.yaml"):
         try:
             with open(pack) as fd:
                 p = yaml.load(fd)
