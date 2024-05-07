@@ -416,6 +416,7 @@ class Model:
         redshift=None,
         use_instrument_fwhm=False,
         label_lines=False,
+        scalefac_resid=2,
         **errorbar_kwargs,
     ):
         """Plot model, and optionally compare to observational data.
@@ -436,7 +437,12 @@ class Model:
             will be determined by the instrument model instead.
 
         label_lines : bool
-            Add labels with the names of the lines, at the position of each line.
+            Add labels with the names of the lines, at the position of
+            each line.
+
+        scalefac_resid : float
+            Factor multiplying the standard deviation of the residuals
+            to adjust plot limits.
 
         errorbar_kwargs : dict
             Customize the data points plot by passing the given keyword
@@ -630,7 +636,6 @@ class Model:
             alpha=errorbar_kwargs.get("alpha", None),
             linestyle="none",
         )
-        scalefac_resid = 2
         ax.set_ylim(-scalefac_resid * std, scalefac_resid * std)
         ax.set_xlim(np.floor(np.amin(xz)), np.ceil(np.amax(xz)))
         ax.set_xlabel(r"$\lambda$ [$\mu m$]")

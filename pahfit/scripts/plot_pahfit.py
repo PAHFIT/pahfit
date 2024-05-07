@@ -6,10 +6,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 
 from pahfit.model import Model
-from pahfit.base import PAHFITBase
 from pahfit.helpers import read_spectrum
-
-from astropy import units as u
 
 
 def initialize_parser():
@@ -78,14 +75,6 @@ def main():
 
 
 def default_layout_plot(spec, model, scalefac_resid):
-    """
-    Returns
-    -------
-    fig : Figure object
-
-    """
-
-    # plot result
     fontsize = 18
     font = {"size": fontsize}
     mpl.rc("font", **font)
@@ -96,29 +85,7 @@ def default_layout_plot(spec, model, scalefac_resid):
     mpl.rc("xtick.minor", size=3, width=1)
     mpl.rc("ytick.minor", size=3, width=1)
 
-    fig, axs = plt.subplots(
-        ncols=1,
-        nrows=2,
-        figsize=(15, 10),
-        gridspec_kw={"height_ratios": [3, 1]},
-        sharex=True,
-    )
-
-    enough_samples = max(1000, len(spec.wavelength))
-
-    PAHFITBase.plot(
-        axs,
-        spec.wavelength.to(u.micron).value,
-        spec.flux,
-        spec.uncertainty.array,
-        model._construct_astropy_model(
-            spec.meta["instrument"], spec.redshift, use_instrument_fwhm=False
-        ),
-        model_samples=enough_samples,
-        scalefac_resid=scalefac_resid,
-    )
-
-    # use the whitespace better
+    fig = model.plot(spec, scalefac_resid=scalefac_resid)
     fig.subplots_adjust(hspace=0)
     return fig
 
