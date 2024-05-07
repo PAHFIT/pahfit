@@ -110,6 +110,7 @@ class Features(Table):
 
     TableFormatter = BoundedParTableFormatter
     MaskedColumn = BoundedMaskedColumn
+    Column = BoundedMaskedColumn
 
     param_covar = TableAttribute(default=[])
     _kind_params = {'starlight': {'temperature', 'tau'},
