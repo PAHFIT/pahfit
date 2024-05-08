@@ -35,9 +35,13 @@ KIND_PARAMS = {'starlight': {'temperature', 'tau'},
                'absorption': {'wavelength', 'fwhm', 'tau', 'geometry'}}
 
 # Parameter default units: flux density/intensity/power (other units determined on fit)
+# Note: power is actually amplitude for now. Change this to
+# intensity_power when the power features are implemented.
+
 PARAM_UNITS = {'temperature': pahfit.units.temperature,
                'wavelength': pahfit.units.wavelength,
-               'fwhm': pahfit.units.wavelength}
+               'fwhm': pahfit.units.wavelength,
+               'power': pahfit.units.intensity}
 
 
 class UniqueKeyLoader(yaml.SafeLoader):
