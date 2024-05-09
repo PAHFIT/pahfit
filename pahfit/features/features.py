@@ -69,8 +69,8 @@ def value_bounds(val, bounds):
     Returns:
     -------
 
-      The value, if unbounded, or a 3 element tuple (value, min, max).
-        Any missing bound is replaced with the numpy `masked' value.
+      A 3 element tuple (value, min, max).
+        Any missing bound is replaced with the numpy.nan value.
 
     Raises:
     -------
@@ -82,7 +82,7 @@ def value_bounds(val, bounds):
     if val is None:
         val = np.ma.masked
     if not bounds:
-        return (val,) + 2 * (np.nan,)  # Fixed
+        return (val,) + 2 * (np.nan,)  # (val,nan,nan) indicates fixed
     ret = [val]
     for i, b in enumerate(bounds):
         if isinstance(b, str):
