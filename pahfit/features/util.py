@@ -5,7 +5,7 @@ import numpy as np
 def bounded_is_missing(val):
     """Return a mask array indicating which of the bounded values
     are missing.  A missing bounded value has a masked value."""
-    return getattr(a['val'], 'mask', None) or np.zeros_like(a['val'], dtype=bool)
+    return getattr(val['val'], 'mask', None) or np.zeros_like(val['val'], dtype=bool)
 
 
 def bounded_is_fixed(val):
