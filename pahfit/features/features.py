@@ -24,7 +24,7 @@ from astropy.io.misc.yaml import yaml
 import astropy.units as u
 from pkg_resources import resource_filename
 from pahfit.errors import PAHFITFeatureError
-from pahfit.features.features_format import BoundedMaskedColumn, BoundedParTableFormatter
+from pahfit.features.features_format import BoundedParTableFormatter
 
 
 class UniqueKeyLoader(yaml.SafeLoader):
@@ -109,7 +109,6 @@ class Features(Table):
     """
 
     TableFormatter = BoundedParTableFormatter
-    MaskedColumn = BoundedMaskedColumn
 
     param_covar = TableAttribute(default=[])
     _kind_params = {'starlight': {'temperature', 'tau'},
