@@ -355,3 +355,7 @@ class Features(Table):
     def unmask_feature(self, name):
         """Remove the mask for all parameters of a feature."""
         self.mask_feature(name, mask_value=False)
+
+    def _base_repr_(self, *args, **kwargs):
+        """Omit dtype on self-print."""
+        return super()._base_repr_(*args, ** kwargs | dict(show_dtype=False))
