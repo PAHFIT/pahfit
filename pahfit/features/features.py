@@ -121,7 +121,7 @@ class Features(Table):
     _units = {'temperature': u.K, 'wavelength': u.um, 'fwhm': u.um}
     _group_attrs = set(('bounds', 'features', 'kind'))  # group-level attributes
     _param_attrs = set(('value', 'bounds'))  # Each parameter can have these attributes
-    _no_bounds = set(('name', 'group', 'geometry', 'model'))  # String attributes (no bounds)
+    _no_bounds = set(('name', 'group', 'kind', 'geometry', 'model'))  # str attributes (no bounds)
     _bounds_dtype = np.dtype([("val", "f4"), ("min", "f4"), ("max", "f4")])
 
     @classmethod
@@ -316,12 +316,9 @@ class Features(Table):
                     else:
                         params[missing] = value_bounds(0.0, bounds=(0.0, None))
                 rows.append(dict(name=name, **params))
-            dtypes = [str if x in cls._no_bounds else cls._bounds_dtype for x in kind_params]
-            dtypes.insert(0, str)  # For the name
-            t = cls(rows, names=rows[0].keys(), dtype=dtypes)
-            for p in cls._kind_params[kind]:
-                if p not in cls._no_bounds:
-                    t[p].info.format = "0.4g"  # Nice format (customized by Formatter)
+            param_names = rows[0].keys()
+            dtypes = [str if x in cls._no_bounds else cls._bounds_dtype for x in param_names]
+            t = cls(rows, names=param_names, dtype=dtypes)
             tables.append(t)
         tables = vstack(tables)
         for cn, col in tables.columns.items():
