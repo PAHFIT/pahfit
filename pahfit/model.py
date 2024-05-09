@@ -307,7 +307,7 @@ class Model:
 
         """
         if not spec.flux.unit.is_equivalent(units.intensity):
-            raise PAHFITModelError("PAHFIT only supports intensity units, i.e. convertible to MJy / sr.")
+            raise PAHFITModelError("For now, PAHFIT only supports intensity units, i.e. convertible to MJy / sr.")
         y = spec.flux.to(units.intensity).value
         x = spec.spectral_axis.to(u.micron).value
         unc = (spec.uncertainty.array * spec.flux.unit).to(units.intensity).value
