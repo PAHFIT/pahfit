@@ -25,7 +25,7 @@ class BoundedParTableFormatter(TableFormatter):
         bpcols = []
         try:
             for col in table.columns.values():
-                if len(col.dtype) == 3 # bounded!
+                if len(col.dtype) == 3: # bounded!
                     bpcols.append((col, col.info.format))
                     col.info.format = fmt_func(col.info.format or "g")
             return super()._pformat_table(table, *args, **kwargs)
