@@ -82,7 +82,7 @@ def value_bounds(val, bounds):
     if val is None:
         val = np.ma.masked
     if not bounds:
-        return (val,) + 2 * (np.ma.masked,)  # Fixed
+        return (val,) + 2 * (np.nan,)  # Fixed
     ret = [val]
     for i, b in enumerate(bounds):
         if isinstance(b, str):
@@ -123,7 +123,8 @@ class Features(Table):
     _group_attrs = set(('bounds', 'features', 'kind'))  # group-level attributes
     _param_attrs = set(('value', 'bounds'))  # Each parameter can have these attributes
     _no_bounds = set(('name', 'group', 'geometry', 'model'))  # String attributes (no bounds)
-
+    _bounds_dtype = np.dtype([("val", "f4"), ("min", "f4"), ("max", "f4")])
+    
     @classmethod
     def read(cls, file, *args, **kwargs):
         """Read a table from file.
@@ -308,7 +309,7 @@ class Features(Table):
         tables = []
         for (kind, features) in inp.items():
             kind_params = cls._kind_params[kind]  # All params for this kind
-            rows = []
+            rows, dtypes = [], []
             for (name, params) in features.items():
                 for missing in kind_params - params.keys():
                     if missing in cls._no_bounds:
@@ -316,8 +317,8 @@ class Features(Table):
                     else:
                         params[missing] = value_bounds(0.0, bounds=(0.0, None))
                 rows.append(dict(name=name, **params))
-            table_columns = rows[0].keys()
-            t = cls(rows, names=table_columns)
+                dtypes.append(None if name in cls._no_bounds else cls._bounds_dtypes)
+            t = cls(rows, names=rows[0].keys(), dtype=dtypes)
             for p in cls._kind_params[kind]:
                 if p not in cls._no_bounds:
                     t[p].info.format = "0.4g"  # Nice format (customized by Formatter)
@@ -352,7 +353,7 @@ class Features(Table):
                 pass
             else:
                 # mask only the value, not the bounds
-                row[col_name].mask[0] = mask_value
+                row[col_name].mask['val'] = mask_value
 
     def unmask_feature(self, name):
         """Remove the mask for all parameters of a feature."""
