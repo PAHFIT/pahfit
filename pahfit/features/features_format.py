@@ -3,7 +3,11 @@ from astropy.table.pprint import TableFormatter
 
 
 # * Special table formatting for bounded (val, min, max) values
-def fmt_func(fmt):
+def fmt_func(fmt: str):
+    """Format bounded variables specially."""
+    if fmt.startswith('%'):
+        fmt = fmt[1:]
+
     def _fmt(x):
         ret = f"{x['val']:{fmt}}"
         if np.isnan(x['min']) and np.isnan(x['max']):
@@ -24,11 +28,13 @@ class BoundedParTableFormatter(TableFormatter):
     """
     def _pformat_table(self, table, *args, **kwargs):
         bpcols = []
+        tlfmt = table.meta.get('pahfit_format')
         try:
             for col in table.columns.values():
                 if len(col.dtype) == 3:  # bounded!
                     bpcols.append((col, col.info.format))
-                    col.info.format = fmt_func(col.info.format or "g")
+                    fmt = col.meta.get('pahfit_format') or tlfmt or "g"
+                    col.info.format = fmt_func(fmt)
             return super()._pformat_table(table, *args, **kwargs)
         finally:
             for col, fmt in bpcols:
