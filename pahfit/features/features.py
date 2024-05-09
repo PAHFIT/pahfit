@@ -316,7 +316,8 @@ class Features(Table):
                     else:
                         params[missing] = value_bounds(0.0, bounds=(0.0, None))
                 rows.append(dict(name=name, **params))
-                dtypes.append(None if name in cls._no_bounds else cls._bounds_dtype)
+            dtypes = [None if x in cls._no_bounds else cls._bounds_dtype for x in kind_params]
+            dtypes.insert(0, None)  # For the name
             t = cls(rows, names=rows[0].keys(), dtype=dtypes)
             for p in cls._kind_params[kind]:
                 if p not in cls._no_bounds:
