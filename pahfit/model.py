@@ -12,6 +12,7 @@ from pahfit.base import PAHFITBase
 from pahfit import instrument
 from pahfit.errors import PAHFITModelError
 from pahfit.component_models import BlackBody1D
+from pahfit import units
 
 
 class Model:
@@ -288,9 +289,12 @@ class Model:
 
     @staticmethod
     def _convert_spec_data(spec, z):
-        """
-        Turn astropy quantities stored in Spectrum1D into fittable
-        numbers.
+        """Convert Spectrum1D Quantities to fittable numbers.
+
+        The unit of the input spectrum has to be a multiple of MJy / sr,
+        the internal intensity unit. The output of this function
+        consists of simple unitless arrays (the numbers in these arrays
+        are assumed to be consistent with the internal units).
 
         Also corrects for redshift.
 
@@ -300,10 +304,13 @@ class Model:
 
         xz, yz, uncz: wavelength in micron, flux, uncertainty
             corrected for redshift
+
         """
+        if not spec.flux.unit.is_equivalent(units.intensity):
+            raise PAHFITModelError("For now, PAHFIT only supports intensity units, i.e. convertible to MJy / sr.")
+        y = spec.flux.to(units.intensity).value
         x = spec.spectral_axis.to(u.micron).value
-        y = spec.flux.value
-        unc = spec.uncertainty.array
+        unc = (spec.uncertainty.array * spec.flux.unit).to(units.intensity).value
 
         # transform observed wavelength to "physical" wavelength
         xz = x / (1 + z)  # wavelength shorter

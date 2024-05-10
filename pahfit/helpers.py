@@ -1,11 +1,14 @@
 import os
 from importlib import resources
 
-from specutils import Spectrum1D
-
 from pahfit.component_models import BlackBody1D, S07_attenuation
+from pahfit import units
+
+from specutils import Spectrum1D
 from astropy.modeling.physical_models import Drude1D
 from astropy.modeling.functional_models import Gaussian1D
+from astropy import units as u
+from astropy.nddata import StdDevUncertainty
 
 __all__ = ["read_spectrum", "calculate_compounds"]
 
@@ -81,8 +84,18 @@ def read_spectrum(specfile, format=None):
     else:
         tformat = format
 
-    return Spectrum1D.read(specfile, format=tformat)
+    s = Spectrum1D.read(specfile, format=tformat)
 
+    # Convert to intensity units by assuming an arbitrary solid angle
+    # for now. To be removed when dual unit support (intensity and flux
+    # density) is supported.
+    if s.flux.unit.is_equivalent(units.flux_density):
+        solid_angle = (3 * u.arcsec)**2
+        alt_flux = (s.flux / solid_angle).to(units.intensity)
+        alt_unc_array = (s.uncertainty.array * s.flux.unit / solid_angle).to(units.intensity)
+        s = Spectrum1D(alt_flux, s.spectral_axis, uncertainty=StdDevUncertainty(alt_unc_array))
+
+    return s
 
 def calculate_compounds(obsdata, pmodel):
     """

@@ -21,16 +21,33 @@ import os
 import numpy as np
 from astropy.table import vstack, Table, TableAttribute
 from astropy.io.misc.yaml import yaml
-import astropy.units as u
 from importlib import resources
 from pahfit.errors import PAHFITFeatureError
 from pahfit.features.features_format import BoundedMaskedColumn, BoundedParTableFormatter
+import pahfit.units
+
+# Feature kinds and associated parameters
+KIND_PARAMS = {'starlight': {'temperature', 'tau'},
+               'dust_continuum': {'temperature', 'tau'},
+               'line': {'wavelength', 'power'},  # 'fwhm', Instrument Pack detail!
+               'dust_feature': {'wavelength', 'fwhm', 'power'},
+               'attenuation': {'model', 'tau', 'geometry'},
+               'absorption': {'wavelength', 'fwhm', 'tau', 'geometry'}}
+
+# Parameter default units: flux density/intensity/power (other units determined on fit)
+# Note: power is actually amplitude for now. Change this to
+# intensity_power when the power features are implemented.
+
+PARAM_UNITS = {'temperature': pahfit.units.temperature,
+               'wavelength': pahfit.units.wavelength,
+               'fwhm': pahfit.units.wavelength,
+               'power': pahfit.units.intensity}
 
 
 class UniqueKeyLoader(yaml.SafeLoader):
     def construct_mapping(self, node, deep=False):
         mapping = set()
-        for key_node, value_node in node.value:
+        for key_node, _ in node.value:
             key = self.construct_object(key_node, deep=deep)
             if key in mapping:
                 raise PAHFITFeatureError(f"Duplicate {key!r} key found in YAML.")
@@ -102,26 +119,24 @@ def value_bounds(val, bounds):
 
 
 class Features(Table):
-    """A class for holding PAHFIT features and their associated
-    parameter information.  Note that each parameter has an associated
-    `kind', and that each kind has an associated set of allowable
-    parameters (see _kind_params, below).
+    """A class for holding a table of PAHFIT features and associated
+    parameter information.
+
+    Note that each parameter has an associated `kind', and that each
+    kind has an associated set of allowable parameters (see
+    `KIND_PARAMS`).
+
+    See Also
+    --------
+    `~astropy.table.Table`: The parent table class.
     """
 
     TableFormatter = BoundedParTableFormatter
     MaskedColumn = BoundedMaskedColumn
 
     param_covar = TableAttribute(default=[])
-    _kind_params = {'starlight': {'temperature', 'tau'},
-                    'dust_continuum': {'temperature', 'tau'},
-                    'line': {'wavelength', 'power'},  # 'fwhm', Instrument Pack detail!
-                    'dust_feature': {'wavelength', 'fwhm', 'power'},
-                    'attenuation': {'model', 'tau', 'geometry'},
-                    'absorption': {'wavelength', 'fwhm', 'tau', 'geometry'}}
-
-    _units = {'temperature': u.K, 'wavelength': u.um, 'fwhm': u.um}
+    _param_attrs = set(('value', 'bounds'))  # params can have these attributes
     _group_attrs = set(('bounds', 'features', 'kind'))  # group-level attributes
-    _param_attrs = set(('value', 'bounds'))  # Each parameter can have these attributes
     _no_bounds = set(('name', 'group', 'geometry', 'model'))  # String attributes (no bounds)
 
     @classmethod
@@ -178,7 +193,7 @@ class Features(Table):
                 raise PAHFITFeatureError(f"No kind found for {name}\n\t{file}")
 
             try:
-                valid_params = cls._kind_params[kind]
+                valid_params = KIND_PARAMS[kind]
             except KeyError:
                 raise PAHFITFeatureError(f"Unknown kind {kind} for {name}\n\t{file}")
             unknown_params = [x for x in keys
@@ -263,7 +278,7 @@ class Features(Table):
         t[kind][name]['group'] = group
         t[kind][name]['kind'] = kind
         for (param, val) in pars.items():
-            if param not in cls._kind_params[kind]:
+            if param not in KIND_PARAMS[kind]:
                 continue
             if isinstance(val, dict):  # A param attribute dictionary
                 unknown_attrs = [x for x in val.keys() if x not in cls._param_attrs]
@@ -306,10 +321,12 @@ class Features(Table):
         """
         tables = []
         for (kind, features) in inp.items():
-            kind_params = cls._kind_params[kind]  # All params for this kind
+            if kind == "_ratios":
+                continue
+            kp = KIND_PARAMS[kind]  # All params for this kind
             rows = []
             for (name, params) in features.items():
-                for missing in kind_params - params.keys():
+                for missing in kp - params.keys():
                     if missing in cls._no_bounds:
                         params[missing] = 0.0
                     else:
@@ -317,16 +334,24 @@ class Features(Table):
                 rows.append(dict(name=name, **params))
             table_columns = rows[0].keys()
             t = cls(rows, names=table_columns)
-            for p in cls._kind_params[kind]:
+            for p in KIND_PARAMS[kind]:
                 if p not in cls._no_bounds:
                     t[p].info.format = "0.4g"  # Nice format (customized by Formatter)
             tables.append(t)
         tables = vstack(tables)
         for cn, col in tables.columns.items():
-            if cn in cls._units:
-                col.unit = cls._units[cn]
-        tables.add_index('name')
+            if cn in PARAM_UNITS:
+                col.unit = PARAM_UNITS[cn]
+        cls._index_table(tables)
+
+        if '_ratios' in inp:
+            tables.meta['_ratios'] = inp['_ratios']
         return tables
+
+    @staticmethod
+    def _index_table(tbl):
+        for indx in ('name', 'group'):
+            tbl.add_index(indx)
 
     def mask_feature(self, name, mask_value=True):
         """Mask all the parameters of a feature.
@@ -344,7 +369,7 @@ class Features(Table):
 
         """
         row = self.loc[name]
-        relevant_params = self._kind_params[row['kind']]
+        relevant_params = KIND_PARAMS[row['kind']]
         for col_name in relevant_params:
             if col_name in self._no_bounds:
                 # these are all strings, so can't mask
