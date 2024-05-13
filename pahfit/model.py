@@ -7,6 +7,7 @@ from matplotlib import pyplot as plt
 import numpy as np
 from scipy import interpolate, integrate
 
+from pahfit import units
 from pahfit.features.util import bounded_is_fixed
 from pahfit.features import Features
 from pahfit.base import PAHFITBase
