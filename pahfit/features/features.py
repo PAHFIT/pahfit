@@ -23,7 +23,7 @@ from astropy.table import vstack, Table, TableAttribute
 from astropy.io.misc.yaml import yaml
 from importlib import resources
 from pahfit.errors import PAHFITFeatureError
-from pahfit.features.features_format import BoundedMaskedColumn, BoundedParTableFormatter
+from pahfit.features.features_format import BoundedParTableFormatter
 import pahfit.units
 
 # Feature kinds and associated parameters
@@ -86,8 +86,8 @@ def value_bounds(val, bounds):
     Returns:
     -------
 
-      The value, if unbounded, or a 3 element tuple (value, min, max).
-        Any missing bound is replaced with the numpy `masked' value.
+      A 3 element tuple (value, min, max).
+        Any missing bound is replaced with the numpy.nan value.
 
     Raises:
     -------
@@ -99,7 +99,7 @@ def value_bounds(val, bounds):
     if val is None:
         val = np.ma.masked
     if not bounds:
-        return (val,) + 2 * (np.ma.masked,)  # Fixed
+        return (val,) + 2 * (np.nan,)  # (val,nan,nan) indicates fixed
     ret = [val]
     for i, b in enumerate(bounds):
         if isinstance(b, str):
@@ -132,12 +132,12 @@ class Features(Table):
     """
 
     TableFormatter = BoundedParTableFormatter
-    MaskedColumn = BoundedMaskedColumn
 
     param_covar = TableAttribute(default=[])
-    _param_attrs = set(('value', 'bounds'))  # params can have these attributes
     _group_attrs = set(('bounds', 'features', 'kind'))  # group-level attributes
-    _no_bounds = set(('name', 'group', 'geometry', 'model'))  # String attributes (no bounds)
+    _param_attrs = set(('value', 'bounds'))  # Each parameter can have these attributes
+    _no_bounds = set(('name', 'group', 'kind', 'geometry', 'model'))  # str attributes (no bounds)
+    _bounds_dtype = np.dtype([("val", "f4"), ("min", "f4"), ("max", "f4")]) # bounded param type
 
     @classmethod
     def read(cls, file, *args, **kwargs):
@@ -332,11 +332,9 @@ class Features(Table):
                     else:
                         params[missing] = value_bounds(0.0, bounds=(0.0, None))
                 rows.append(dict(name=name, **params))
-            table_columns = rows[0].keys()
-            t = cls(rows, names=table_columns)
-            for p in KIND_PARAMS[kind]:
-                if p not in cls._no_bounds:
-                    t[p].info.format = "0.4g"  # Nice format (customized by Formatter)
+            param_names = rows[0].keys()
+            dtypes = [str if x in cls._no_bounds else cls._bounds_dtype for x in param_names]
+            t = cls(rows, names=param_names, dtype=dtypes)
             tables.append(t)
         tables = vstack(tables)
         for cn, col in tables.columns.items():
@@ -376,8 +374,12 @@ class Features(Table):
                 pass
             else:
                 # mask only the value, not the bounds
-                row[col_name].mask[0] = mask_value
+                row[col_name].mask['val'] = mask_value
 
     def unmask_feature(self, name):
         """Remove the mask for all parameters of a feature."""
         self.mask_feature(name, mask_value=False)
+
+    def _base_repr_(self, *args, **kwargs):
+        """Omit dtype on self-print."""
+        return super()._base_repr_(*args, ** kwargs | dict(show_dtype=False))
