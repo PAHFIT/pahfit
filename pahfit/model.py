@@ -15,6 +15,7 @@ from pahfit import instrument
 from pahfit.errors import PAHFITModelError
 from pahfit.component_models import BlackBody1D, S07_attenuation
 
+
 class Model:
     """This class acts as the main API for PAHFIT.
 
@@ -425,8 +426,10 @@ class Model:
         Parameters
         ----------
         spec : Spectrum1D
-            Observational data. Does not have to be the same data that
-            was used for guessing or fitting.
+            Observational data. The units should be compatible with the
+            data that were used for the fit, but it does not have to be
+            the exact same spectrum. The spectrum will be converted to
+            internal units before plotting.
 
         redshift : float
             Redshift used to shift from the physical model, to the
@@ -434,7 +437,7 @@ class Model:
 
         use_instrument_fwhm : bool
             For the lines, the default is to use the fwhm values
-            contained in the features table. When set to True, the fwhm
+            contained in the Features table. When set to True, the fwhm
             will be determined by the instrument model instead.
 
         label_lines : bool
@@ -452,10 +455,6 @@ class Model:
         """
         inst, z = self._parse_instrument_and_redshift(spec, redshift)
         _, _, _, xz, yz, uncz = self._convert_spec_data(spec, z)
-        # total model
-        model = self._construct_astropy_model(
-            inst, z, use_instrument_fwhm=use_instrument_fwhm
-        )
         enough_samples = max(10000, len(spec.wavelength))
         x_mod = np.logspace(np.log10(min(xz)), np.log10(max(xz)), enough_samples)
 
@@ -606,8 +605,8 @@ class Model:
             ncol=3,
         )
 
-        # residuals, lower sub-figure
-        res = yz - model(xz)
+        # residuals = data in rest frame - (model evaluated at rest frame wavelengths)
+        res = yz - self.tabulate(inst, 0, xz).flux.value
         std = np.nanstd(res)
         ax = axs[1]
 
@@ -630,7 +629,7 @@ class Model:
         ax.plot(
             xz,
             res,
-            "ko-",
+            "ko",
             fillstyle="none",
             zorder=1,
             markersize=errorbar_kwargs.get("markersize", None),
