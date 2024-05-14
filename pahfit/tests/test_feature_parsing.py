@@ -38,8 +38,8 @@ def test_feature_parsing():
 
     def test_parsing(features_edit):
         m = Model(features_edit)
-        amodel = m._construct_astropy_model(instrumentname, 0)
-        m._parse_astropy_result(amodel)
+        fitter = m._set_up_fitter(instrumentname, 0)
+        m._ingest_fit_result_to_features(fitter)
 
     # Case 0: the whole table
     test_parsing(features)

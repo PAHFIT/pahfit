@@ -66,7 +66,7 @@ def test_fitting_m101():
 
     try:
         np.testing.assert_allclose(
-            model.astropy_result.parameters, expvals, rtol=1e-6, atol=1e-6
+            model.fitter.model, expvals, rtol=1e-6, atol=1e-6
         )
     except AssertionError as error:
         print(error)

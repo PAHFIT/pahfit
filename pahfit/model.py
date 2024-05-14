@@ -1,19 +1,19 @@
 from specutils import Spectrum1D
 from astropy import units as u
 import copy
-from astropy.modeling.fitting import LevMarLSQFitter
 import matplotlib as mpl
 from matplotlib import pyplot as plt
 import numpy as np
 from scipy import interpolate, integrate
 
 from pahfit import units
-from pahfit.features.util import bounded_is_fixed
+from pahfit.features.util import bounded_is_fixed, bounded_is_missing
 from pahfit.features import Features
-from pahfit.base import PAHFITBase
 from pahfit import instrument
 from pahfit.errors import PAHFITModelError
 from pahfit.component_models import BlackBody1D, S07_attenuation
+from pahfit.fitter import Fitter
+from pahfit.apfitter import APFitter
 
 
 class Model:
@@ -284,9 +284,19 @@ class Model:
         else:
             loop_over_non_fixed("line", "power", lambda row: some_flux)
 
-        # set the fwhms in the features table
+        # Set the fwhms in the features table. Slightly different logic,
+        # as the fwhm for lines are masked by default
         if calc_line_fwhm:
-            loop_over_non_fixed("line", "fwhm", line_fwhm_guess, force=True)
+            for row_index in np.where(self.features["kind"] == "line")[0]:
+                row = self.features[row_index]
+                if np.ma.is_masked(row["fwhm"]):
+                    self.features[row_index]["fwhm"] = (
+                        line_fwhm_guess(row),
+                        np.nan,
+                        np.nan,
+                    )
+                elif not bounded_is_fixed(row["fwhm"]):
+                    self.features[row_index]["fwhm"]["val"] = line_fwhm_guess(row)
 
     @staticmethod
     def _convert_spec_data(spec, z):
@@ -387,30 +397,54 @@ class Model:
         # check if observed spectrum is compatible with instrument model
         instrument.check_range([min(x), max(x)], inst)
 
-        # weigths
-        w = 1.0 / uncz
-
-        # construct model and perform fit
-        astropy_model = self._construct_astropy_model(inst, z, use_instrument_fwhm)
-        fit = LevMarLSQFitter(calc_uncertainties=True)
-        self.astropy_result = fit(
-            astropy_model,
-            xz,
-            yz,
-            weights=w,
-            maxiter=maxiter,
-            epsilon=1e-10,
-            acc=1e-10,
+        self.fitter = self._set_up_fitter(
+            inst, z, x=x, use_instrument_fwhm=use_instrument_fwhm
         )
-        self.fit_info = fit.fit_info
+        self.fitter.fit(xz, yz, uncz, maxiter=maxiter)
+
+        # copy the fit results to the features table
+        self._ingest_fit_result_to_features(self.fitter)
+
         if verbose:
-            print(fit.fit_info["message"])
+            print(self.fitter.message)
 
-        self._parse_astropy_result(self.astropy_result)
+    def _ingest_fit_result_to_features(self, fitter: Fitter):
+        """Copy the results from a Fitter to the features table
 
-    def info(self):
-        """Print out the last fit results."""
-        print(self.astropy_result)
+        This is a utility method, executed only at the end of fit(),
+        where the Fitter is passed after Fitter.fit() has been applied.
+        Passing a different Fitter object could be useful for
+        testing.
+
+        """
+        # iterate over the list stored in fitter, so we only get
+        # components that were set up by _construct_model. Having an
+        # ENABLED/DISABLED flag for every feature would be a nice
+        # alternative (and clear for the user).
+
+        self.features.meta["fitter_message"] = fitter.message
+
+        for name in fitter.components():
+            for column, value in fitter.get_result(name).items():
+                try:
+                    i = np.where(self.features["name"] == name)[0]
+                    # deal with fwhm usually being masked
+                    if not bounded_is_missing(self.features[column][i]):
+                        self.features[column]["val"][i] = value
+                    else:
+                        self.features[column][i] = (value, np.nan, np.nan)
+                    print(f'ingested {name} {column} as {value:6e}')
+                    print('value in table ', self.features[column][i])
+                    if not self.features[column]["val"][i] == value:
+                        print("assigment went wrong")
+                        raise PAHFITModelError
+                except Exception as e:
+                    print(
+                        f"Could not assign to name {name} in features table. Some diagnostic output below"
+                    )
+                    print(f"Index i is {i}")
+                    print("Features table:", self.features)
+                    raise e
 
     def plot(
         self,
@@ -707,25 +741,18 @@ class Model:
             The flux model, evaluated at the given wavelengths, packaged
             as a Spectrum1D object.
         """
-        # apply feature mask, make sub model, and set up functional
-        if feature_mask is not None:
-            features_copy = self.features.copy()
-            features_to_use = features_copy[feature_mask]
-        else:
-            features_to_use = self.features
-        alt_model = Model(features_to_use)
-
-        # Always use the current FWHM here (use_instrument_fwhm would
-        # overwrite the value in the instrument overlap regions!)
-        flux_function = alt_model._construct_astropy_model(
-            instrumentname, redshift, use_instrument_fwhm=False
-        )
+        z = 0 if redshift is None else redshift
 
         # decide which wavelength grid to use
         if wavelengths is None:
             ranges = instrument.wave_range(instrumentname)
-            wmin = min(r[0] for r in ranges)
-            wmax = max(r[1] for r in ranges)
+            if isinstance(ranges[0], float):
+                wmin, wmax = ranges
+            else:
+                # In case of multiple ranges (multiple segments), choose
+                # the min and max instead
+                wmin = min(r[0] for r in ranges)
+                wmax = max(r[1] for r in ranges)
             wfwhm = instrument.fwhm(instrumentname, wmin, as_bounded=True)[0, 0]
             wav = np.arange(wmin, wmax, wfwhm / 2) * u.micron
         elif isinstance(wavelengths, Spectrum1D):
@@ -734,158 +761,171 @@ class Model:
             # any other iterable will be accepted and converted to array
             wav = np.asarray(wavelengths) * u.micron
 
-        # shift the "observed wavelength grid" to "physical wavelength grid"
-        wav /= 1 + redshift
-        flux_values = flux_function(wav.value)
+        # apply feature mask, make sub model, and set up functional
+        if feature_mask is not None:
+            features_copy = self.features.copy()
+            features_to_use = features_copy[feature_mask]
+        else:
+            features_to_use = self.features
+
+        # if nothing is in range, return early with zeros
+        if len(features_to_use) == 0:
+            return Spectrum1D(
+                spectral_axis=wav, flux=np.zeros(wav.shape) * u.dimensionless_unscaled
+            )
+
+        alt_model = Model(features_to_use)
+
+        # Always use the current FWHM here (use_instrument_fwhm would
+        # overwrite the value in the instrument overlap regions!)
+
+        # need to wrap in try block to avoid bug: if all components are
+        # removed (because of wavelength range considerations), it won't work
+        try:
+            fitter = alt_model._set_up_fitter(
+                instrumentname, z, use_instrument_fwhm=False
+            )
+        except PAHFITModelError:
+            return Spectrum1D(
+                spectral_axis=wav, flux=np.zeros(wav.shape) * u.dimensionless_unscaled
+            )
+
+        # shift the "observed wavelength grid" to "physical wavelength grid
+        wav /= 1 + z
+        flux_values = fitter.evaluate_model(wav.value)
 
         # apply unit stored in features table (comes from from last fit
         # or from loading previous result from disk)
         if "flux" not in self.features.meta["user_unit"]:
             flux_quantity = flux_values * u.dimensionless_unscaled
         else:
-            flux_quantity = flux_values * self.features.meta["user_unit"]["flux"]
+            user_unit = self.features.meta["user_unit"]["flux"]
+            flux_quantity = (flux_values * units.internal_flux_unit(user_unit)).to(
+                user_unit
+            )
 
         return Spectrum1D(spectral_axis=wav, flux=flux_quantity)
 
-    def _kludge_param_info(self, instrumentname, redshift, use_instrument_fwhm=True):
-        param_info = PAHFITBase.parse_table(self.features)
-        # edit line widths and drop lines out of range
+    def _excluded_features(self, instrumentname, redshift, x=None):
+        """Determine excluded features Based on instrument wavelength range.
 
-        # h2_info
-        param_info[2] = PAHFITBase.update_dictionary(
-            param_info[2],
-            instrumentname,
-            update_fwhms=use_instrument_fwhm,
-            redshift=redshift,
-        )
-        # ion_info
-        param_info[3] = PAHFITBase.update_dictionary(
-            param_info[3],
-            instrumentname,
-            update_fwhms=use_instrument_fwhm,
-            redshift=redshift,
-        )
-        # abs_info
-        param_info[4] = PAHFITBase.update_dictionary(
-            param_info[4], instrumentname, redshift
+         instrumentname : str
+            Qualified instrument name
+
+         x : array
+            Optional observed wavelength grid. Exclude any lines and
+            dust features outside of this range.
+
+        Returns
+        -------
+        array of bool, same length as self.features, True where features
+        are far outside the wavelength range.
+        """
+        observed_wavs = self.features["wavelength"]["val"] * (1 + redshift)
+
+        # has wavelength and not within instrument range
+        is_outside = ~instrument.within_segment(observed_wavs, instrumentname)
+
+        # also apply observed range if provided
+        if x is not None:
+            is_outside |= (observed_wavs < np.amin(x)) | (observed_wavs > np.amax(x))
+
+        # restriction on the kind of feature that can be excluded
+        excludable = ["line", "dust_feature", "absorption"]
+        is_excludable = np.logical_or.reduce(
+            [kind == self.features["kind"] for kind in excludable]
         )
 
-        return param_info
+        return is_outside & is_excludable
 
-    def _construct_astropy_model(
-        self, instrumentname, redshift, use_instrument_fwhm=True
+    def _set_up_fitter(
+        self, instrumentname, redshift, x=None, use_instrument_fwhm=True
     ):
-        """Convert the features table into a fittable model.
+        """Convert features table to Fitter instance.
 
-        Some nuances in the behavior
-        - If a line has a fwhm set, it will be ignored, and replaced by
-          the calculated fwhm provided by the instrument model.
-        - If a line has been masked by _parse_astropy_result, and this
-          function is called again, those masks will be ignored, as the
-          data range might have changed.
+        For every row of the features table, calls a function of Fitter
+        API to register an appropriate component. Finalizes the Fitter
+        at the end (details of this step depend on the Fitter subclass).
 
-        TODO: Make sure the features outside of the data range are
-        removed. The instrument-based feature check is done in
-        _kludge_param_info(), but the observational data might only
-        cover a part of the instrument range.
+        Any unit conversions and model-specific things need to happen
+        BEFORE giving them to the fitters.
+        - The instrument-derived FWHM is determined here using the
+          instrument model (the Fitter does not need to know about this
+          detail).
+        - Features outside the appropriate wavelength range should not
+          be added to the Fitter: the "trimming" is done here, using the
+          given wavelength range xz (optional).
 
-        """
-        param_info = self._kludge_param_info(
-            instrumentname, redshift, use_instrument_fwhm
-        )
-        return PAHFITBase.model_from_param_info(param_info)
+        TODO: flags to indicate which features were excluded.
 
-    def _parse_astropy_result(self, astropy_model):
-        """Store the result of the astropy fit into the features table.
-
-        Every relevant value inside the astropy model, is written to the
-        right position in the features table.
-
-        For the unresolved lines, the widths are calculated by the
-        instrument model, or fitted when these lines are in a spectral
-        overlap region. The calculated or fitted result is written to
-        the fwhm field of the table. When a new model is constructed
-        from the features table, this fwhm value will be ignored.
-
-        For features that do not correspond to the data range, all
-        parameter values will be masked. Their numerical values remain
-        accessible by '.data' on the masked entity. This way, We still
-        keep their parameter values around (as opposed to removing the
-        rows entirely). When data with a larger range are passed for
-        another fitting call, those features can be unmasked if
-        necessary.
+        Returns
+        -------
+        Fitter
 
         """
-        if len(self.features) < 2:
-            # Plotting and tabulating works fine, but the code below
-            # will not work with only one component. This can be
-            # addressed later, when the internal API is made agnostic of
-            # the fitting backend (astropy vs our own).
-            raise PAHFITModelError("Fit with fewer than 2 components not allowed!")
+        # Fitting implementation can be changed by choosing another
+        # Fitter class. TODO: make this configurable.
+        fitter = APFitter()
 
-        # Some translation rules between astropy model components and
-        # feature table names and values.
+        excluded = self._excluded_features(instrumentname, redshift, x)
 
-        # these have the same value but different (fixed) names
-        param_name_equivalent = {
-            "temperature": "temperature",
-            "fwhm": "fwhm",
-            "x_0": "wavelength",
-            "mean": "wavelength",
-            "tau_sil": "tau",
-        }
+        def array3(features_tuple3):
+            return np.array([x for x in features_tuple3])
 
-        def param_conversion(features_kind, param_name, param_value):
-            # default conversion
-            if param_name in param_name_equivalent:
-                new_name = param_name_equivalent[param_name]
-                new_value = param_value
-            # certain types of features use tau instead of amplitude
-            elif param_name == "amplitude":
-                if features_kind in ["starlight", "dust_continuum", "absorption"]:
-                    new_name = "tau"
-                else:
-                    new_name = "power"
-                new_value = param_value
-            # convert stddev to fwhm
-            elif param_name == "stddev":
-                new_name = "fwhm"
-                new_value = param_value * 2.355
-            else:
-                raise NotImplementedError(
-                    f"no conversion rule for model parameter {param_name}"
-                )
-            return new_name, new_value
-
-        # Go over all features.
-        for row in self.features:
+        for row in self.features[~excluded]:
+            kind = row["kind"]
             name = row["name"]
-            if name in astropy_model.submodel_names:
-                # undo any previous masking that might have occured
-                self.features.unmask_feature(name)
 
-                # copy or translate, and store the parameters
-                component = astropy_model[name]
-                for param_name in component.param_names:
-                    param_value = getattr(component, param_name).value
-                    col_name, col_value = param_conversion(
-                        row["kind"], param_name, param_value
-                    )
-                    row[col_name][0] = col_value
+            if kind == "starlight":
+                fitter.register_starlight(name, row["temperature"], row["tau"])
 
-                # for the unresolved lines, indicate when the line fwhm was made non-fixed
-                if row["kind"] == "line" and col_name == "fwhm":
-                    row["fwhm"].mask[1:] = component.fixed[param_name]
+            elif kind == "dust_continuum":
+                fitter.register_dust_continuum(name, row["temperature"], row["tau"])
+
+            elif kind == "line":
+                if use_instrument_fwhm:
+                    # one caveat here: redshift. Correct way to do it:
+                    # 1. shift to observed wav; 2. evaluate fwhm at
+                    # oberved wav; 3. shift back to rest frame wav
+                    # (width in rest frame will be narrower than
+                    # observed width)
+                    w_obs = row["wavelength"]["val"] * (1.0 + redshift)
+                    # returned value is tuple (value, min, max). And
+                    # min/max are already masked in case of fixed value
+                    # (output of instrument.resolution is designed to be
+                    # very similar to an entry in the features table)
+                    fwhm = instrument.fwhm(instrumentname, w_obs, as_bounded=True)[
+                        0
+                    ] / (1.0 + redshift)
+                    fwhm = np.ma.filled(fwhm, np.nan)
+                else:
+                    fwhm = row["fwhm"]
+                fitter.register_line(name, row["power"], row["wavelength"], fwhm)
+
+            elif kind == "dust_feature":
+                fitter.register_dust_feature(
+                    name, row["power"], row["wavelength"], row["fwhm"]
+                )
+
+            elif kind == "attenuation":
+                fitter.register_attenuation(name, row["tau"])
+
+            elif kind == "absorption":
+                fitter.register_absorption(
+                    name, row["tau"], row["wavelength"], row["fwhm"]
+                )
+
             else:
-                # signal that it was not fit by masking the feature
-                self.features.mask_feature(name)
+                raise PAHFITModelError(
+                    f"Model components of kind {kind} are not implemented!"
+                )
+
+        fitter.finalize_model()
+        return fitter
 
     @staticmethod
     def _parse_instrument_and_redshift(spec, redshift):
-        """Small utility to grab instrument and redshift from either
-        Spectrum1D metadata, or from arguments.
-
-        """
+        """Get instrument redshift from Spectrum1D metadata or arguments."""
         # the rest of the implementation doesn't like Quantity...
         z = spec.redshift.value if redshift is None else redshift
         if z is None:

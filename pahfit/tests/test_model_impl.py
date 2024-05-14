@@ -35,14 +35,17 @@ def test_feature_table_model_conversion():
     # results were then written to model.features. If everything went
     # correct, reconstructing the model from model.features should
     # result in the exact same model.
-    fit_result = model.astropy_result
-    reconstructed_fit_result = model._construct_astropy_model(
+
+    # test only works for the astropy-based implementation at the moment.
+    fit_result = model.fitter
+    reconstructed_fit_result = model._set_up_fitter(
         instrumentname=spec.meta["instrument"], redshift=0, use_instrument_fwhm=False
     )
-    for p in fit_result.param_names:
-        p1 = getattr(fit_result, p)
-        p2 = getattr(reconstructed_fit_result, p)
-        assert p1 == p2
+    for name in fit_result.components():
+        par_dict1 = fit_result.get_result(name)
+        par_dict2 = reconstructed_fit_result.get_result(name)
+        for key in par_dict1:
+            assert par_dict1[key] == par_dict2[key]
 
 
 def test_model_edit():
@@ -63,13 +66,13 @@ def test_model_edit():
     assert model.features.loc[feature][col][0] == originalT
 
     # construct astropy model with dummy instrument
-    astropy_model_edit = model_to_edit._construct_astropy_model(
+    fitter_edit = model_to_edit._construct_model(
         instrumentname="spitzer.irs.*", redshift=0
     )
 
-    # Make sure the change is reflected in this model. Very handy that
-    # we can access the right component by the feature name!
-    assert astropy_model_edit[feature].temperature == newT
+    # Make sure the change is reflected in this astropy model. Very
+    # handy that we can access the right component by the feature name!
+    assert fitter_edit.get_result(feature)["temperature"] == newT
 
 
 def test_model_tabulate():
