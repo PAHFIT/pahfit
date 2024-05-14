@@ -15,7 +15,7 @@ class Fitter(ABC):
        fitting framework are hidden behind the respective subclass.
     2. Fit the model to the spectrum without any additional assumptions.
        The Fitter will fit the given data using the given model without
-       thinking about redshift, units, instrumental effects.)
+       thinking about redshift, units, instrumental effects.
     3. Retrieve the fitted quantities, which are the values that were
        passed during step 1. When fit result uncertainties are
        implemented, they will also need to be retrieved through this
@@ -23,20 +23,26 @@ class Fitter(ABC):
     4. Access to the evaluation of the underlying model (again with no
        assumptions like in step 2.).
 
-    For the model setup, multiple functions are used, so a few notes are
-    provided here. There is one function per type of component supported
-    by PAHFIT, and the arguments of these functions will ask for
-    different "standard" PAHFIT numbers, i.e. those from the Features
-    table. These functions have the same signature between all Fitter
-    implementations, so that the Model class can use a single
-    implementation to set up the Fitter. The Model has access to the
-    Features table and the instrument model, and needs to set up Fitter
-    with the correct initial values, bounds, and "fixed" flags (e.g.
-    setting a fixed FWHM based on the instrument for the lines). After
-    all the components have been added, the finalize_model() function
-    can be called to finish setting up the internal astropy model. After
-    this has finished, fit() can be called to apply the model and the
-    astropy fitter to the data.
+    A few notes on how the above is achieved:
+
+    For the model setup, there is one function per type of component
+    supported by PAHFIT, and the arguments of these functions will ask
+    for certain standard PAHFIT quantities (in practice, these are the
+    values stored in the Features table). The abstract Fitter class
+    ensure that the function signatures are the same between different
+    Fitter implementations, so that only a single logic has to be
+    implemented to up the Fitter (in practice, this is a loop over the
+    Features table implemented in Model).
+
+    During the Fitter setup, the initial values, bounds, and "fixed"
+    flags are passed using one function call for each component, e.g.
+    register_line(). Once all components have been added, the
+    finalize_model() function should be called; some subclasses (e.g.
+    APFitter) need to consolidate the registered components to prepare
+    the model that they manage for fitting. After this, fit() can be
+    called to apply the model and the astropy fitter to the data. The
+    results will then be retrievable for one component at a time, by
+    passing the component name to get_result().
 
     """
 
