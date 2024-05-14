@@ -137,7 +137,7 @@ class Features(Table):
     _group_attrs = set(('bounds', 'features', 'kind'))  # group-level attributes
     _param_attrs = set(('value', 'bounds'))  # Each parameter can have these attributes
     _no_bounds = set(('name', 'group', 'kind', 'geometry', 'model'))  # str attributes (no bounds)
-    _bounds_dtype = np.dtype([("val", float), ("min", float), ("max", float)]) # bounded param type
+    _bounds_dtype = np.dtype([("val", float), ("min", float), ("max", float)])  # bounded param type
 
     @classmethod
     def read(cls, file, *args, **kwargs):
