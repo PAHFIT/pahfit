@@ -7,6 +7,7 @@ import numpy as np
 
 def test_feature_parsing():
     """
+
     Goal
     ----
     Test if the model is built successfully with certain features removed
@@ -21,7 +22,8 @@ def test_feature_parsing():
     Desired behavior
     ----------------
 
-    The PAHFITBase instance is generated correctly, without crashing.
+    The Fitter instance underlying model is generated correctly, without
+    crashing.
 
     Functions that depend on specific model contents (lines, dust
     features, ...) can deal with those feature not being there.

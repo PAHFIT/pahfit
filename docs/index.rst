@@ -92,10 +92,6 @@ contributors page on Github
 Reference API
 =============
 
-Base class for PAHFIT
-
-.. automodapi:: pahfit.base
-
 Component models not provided by astropy.models.
 
 .. automodapi:: pahfit.component_models
