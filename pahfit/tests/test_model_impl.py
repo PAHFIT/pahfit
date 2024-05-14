@@ -10,9 +10,10 @@ def assert_features_table_equality(features1, features2):
     for string_col in ["name", "group", "kind", "model", "geometry"]:
         assert (features1[string_col] == features2[string_col]).all()
     for param_col in ["temperature", "tau", "wavelength", "power", "fwhm"]:
-        np.testing.assert_allclose(
-            features1[param_col], features2[param_col], rtol=1e-6, atol=1e-6
-        )
+        for k in ("val", "min", "max"):
+            np.testing.assert_allclose(
+                features1[param_col][k], features2[param_col][k], rtol=1e-6, atol=1e-6
+            )
 
 
 def default_spec_and_model_fit(fit=True):
@@ -60,13 +61,16 @@ def test_model_edit():
 
     # edit the same parameter in the copy
     newT = 123
-    model_to_edit.features.loc[feature][col][0] = newT
+
+    i = np.where(model_to_edit.features["name"] == feature)[0]
+    model_to_edit.features[col]["val"][i] = newT
 
     # make sure the original value is still the same
-    assert model.features.loc[feature][col][0] == originalT
+    j = np.where(model.features["name"] == feature)[0]
+    assert model.features[col]["val"][j] == originalT
 
     # construct astropy model with dummy instrument
-    fitter_edit = model_to_edit._construct_model(
+    fitter_edit = model_to_edit._set_up_fitter(
         instrumentname="spitzer.irs.*", redshift=0
     )
 
