@@ -45,16 +45,6 @@ class Fitter(ABC):
     passing the component name to get_result().
 
     """
-
-    @abstractmethod
-    def clear(self):
-        """Reset model.
-
-        After reset, register_() and finalize_model() can be used again.
-
-        """
-        pass
-
     @abstractmethod
     def components(self):
         """Return list of features.

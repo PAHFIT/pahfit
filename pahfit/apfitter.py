@@ -64,14 +64,6 @@ class APFitter(Fitter):
         setting up a model, then call finalize_model().
 
         """
-        self.clear()
-
-    def clear(self):
-        """Reset model.
-
-        After reset, register_() and finalize_model() can be used again.
-
-        """
         self.additive_components = []
         self.multiplicative_components = []
         self.component_types = {}
