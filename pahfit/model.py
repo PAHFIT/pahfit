@@ -864,18 +864,28 @@ class Model:
 
         excluded = self._excluded_features(instrumentname, redshift, x)
 
-        def array3(features_tuple3):
-            return np.array([x for x in features_tuple3])
+        def cleaned(features_tuple3):
+            val = features_tuple3[0]
+            if bounded_is_fixed(features_tuple3):
+                return val
+            else:
+                vmin = -np.inf if np.isnan(features_tuple3[1]) else features_tuple3[1]
+                vmax = np.inf if np.isnan(features_tuple3[2]) else features_tuple3[2]
+                return np.array([val, vmin, vmax])
 
         for row in self.features[~excluded]:
             kind = row["kind"]
             name = row["name"]
 
             if kind == "starlight":
-                fitter.register_starlight(name, row["temperature"], row["tau"])
+                fitter.register_starlight(
+                    name, cleaned(row["temperature"]), cleaned(row["tau"])
+                )
 
             elif kind == "dust_continuum":
-                fitter.register_dust_continuum(name, row["temperature"], row["tau"])
+                fitter.register_dust_continuum(
+                    name, cleaned(row["temperature"]), cleaned(row["tau"])
+                )
 
             elif kind == "line":
                 if use_instrument_fwhm:
@@ -892,22 +902,36 @@ class Model:
                     fwhm = instrument.fwhm(instrumentname, w_obs, as_bounded=True)[
                         0
                     ] / (1.0 + redshift)
-                    fwhm = np.ma.filled(fwhm, np.nan)
+
+                    # decide if scalar (fixed) or tuple (fitted fwhm
+                    # between upper and lower fwhm limits, happens in
+                    # case of overlapping instruments)
+                    if np.ma.is_masked(fwhm):
+                        fwhm = fwhm[0]
                 else:
-                    fwhm = row["fwhm"]
-                fitter.register_line(name, row["power"], row["wavelength"], fwhm)
+                    fwhm = cleaned(row["fwhm"])
+
+                fitter.register_line(
+                    name, cleaned(row["power"]), cleaned(row["wavelength"]), fwhm
+                )
 
             elif kind == "dust_feature":
                 fitter.register_dust_feature(
-                    name, row["power"], row["wavelength"], row["fwhm"]
+                    name,
+                    cleaned(row["power"]),
+                    cleaned(row["wavelength"]),
+                    cleaned(row["fwhm"]),
                 )
 
             elif kind == "attenuation":
-                fitter.register_attenuation(name, row["tau"])
+                fitter.register_attenuation(name, cleaned(row["tau"]))
 
             elif kind == "absorption":
                 fitter.register_absorption(
-                    name, row["tau"], row["wavelength"], row["fwhm"]
+                    name,
+                    cleaned(row["tau"]),
+                    cleaned(row["wavelength"]),
+                    cleaned(row["fwhm"]),
                 )
 
             else:

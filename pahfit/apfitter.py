@@ -180,7 +180,7 @@ class APFitter(Fitter):
         kwargs = self._astropy_model_kwargs(
             name,
             ["amplitude", "mean", "stddev"],
-            [power, wavelength, np.array([x for x in fwhm]) / 2.355],
+            [power, wavelength,  fwhm / 2.355],
         )
         self._register_component(Gaussian1D, **kwargs)
 
@@ -357,7 +357,7 @@ class APFitter(Fitter):
             raise PAHFITModelError(f"Unsupported component type: {c_type}")
 
     @staticmethod
-    def _astropy_model_kwargs(component_name, param_names, value_tuples):
+    def _astropy_model_kwargs(component_name, param_names, param_values):
         """Create kwargs for an astropy model constructor.
 
         This is a utility that deduplicates the logic for going from
@@ -389,11 +389,10 @@ class APFitter(Fitter):
             Names of the parameters for the astropy model, e.g.
             ["dust_feature1", "dust_feature2"]
 
-        value_tuples : list of (array of size 3)
+        param_values : list of (array of size 3 OR scalar)
             One for each param name, each in the format of [value,
-            min_bound, max_bound], i.e. in the format as stored in the
-            Features table. This means that [value, masked, masked] will
-            result in a fixed parameter.
+            min_bound, max_bound] for variable parameters, or a scalar
+            (single float) for fixed parameters.
 
         Returns
         -------
@@ -403,18 +402,19 @@ class APFitter(Fitter):
         # basic format of constructor parameters of astropy model
         kwargs = {"name": component_name, "bounds": {}, "fixed": {}}
 
-        for param_name, value_tuple in zip(param_names, value_tuples):
-            kwargs[param_name] = value_tuple[0]
-
-            # astropy does not like numpy bools, so we do this silly
-            # conversion.
-            is_fixed = np.isnan(value_tuple[1]) and np.isnan(value_tuple[2])
-            kwargs["fixed"][param_name] = True if is_fixed else False
+        for param_name, tuple_or_scalar in zip(param_names, param_values):
+            if np.isscalar(tuple_or_scalar):
+                is_fixed = True
+                value, lo_bound, up_bound = tuple_or_scalar, 0, 0
+            else:
+                is_fixed = False
+                value, lo_bound, up_bound = tuple_or_scalar
 
             # For the limits, use 0 if fixed, the raw values if
-            # variable, and None if variable but unbounded.
-            min_max = value_tuple[1], value_tuple[2]
-            limits = [0 if is_fixed else v for v in min_max]
-            kwargs["bounds"][param_name] = [None if np.isinf(x) else x for x in limits]
+            # variable, but None if infinite (this is the convention for
+            # astropy modeling)
+            kwargs[param_name] = value
+            kwargs["fixed"][param_name] = is_fixed
+            kwargs["bounds"][param_name] = [None if np.isinf(x) else x for x in (lo_bound, up_bound)]
 
         return kwargs

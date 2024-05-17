@@ -90,11 +90,10 @@ class Fitter(ABC):
             Unique name. Will be used to allow retrieval of the results
             after the fitting.
 
-        temperature : array of size 3
-            Blackbody temperature, given as [value, lower_bound,
-            upper_bound]. The bounds assume the same system as the
-            features table: if they are masked, the parameter will be
-            fixed, while +inf or -inf mean unbounded.
+        temperature : array of size 3 or scalar
+            Blackbody temperature. Given as [value, lower_bound,
+            upper_bound] if the parameter should be variable (and
+            fitted). Given as scalar if parameter should be fixed.
 
         tau : array of size 3
             Analogously, used as power.
