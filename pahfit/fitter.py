@@ -36,8 +36,8 @@ class Fitter(ABC):
 
     During the Fitter setup, the initial values, bounds, and "fixed"
     flags are passed using one function call for each component, e.g.
-    register_line(). Once all components have been added, the
-    finalize_model() function should be called; some subclasses (e.g.
+    add_feature_line()). Once all components have been added, the
+    finalize() function should be called; some subclasses (e.g.
     APFitter) need to consolidate the registered components to prepare
     the model that they manage for fitting. After this, fit() can be
     called to apply the model and the astropy fitter to the data. The
@@ -45,18 +45,19 @@ class Fitter(ABC):
     passing the component name to get_result().
 
     """
+
     @abstractmethod
     def components(self):
         """Return list of features.
 
-        Only works after finalize_model(). Will return the names passed
+        Only works after finalize(). Will return the names passed
         using the register functions.
 
         """
         pass
 
     @abstractmethod
-    def finalize_model(self):
+    def finalize(self):
         """Process the registered features and prepare for fitting.
 
         The register functions below allow adding individual features.
@@ -68,7 +69,7 @@ class Fitter(ABC):
         pass
 
     @abstractmethod
-    def register_starlight(self, name, temperature, tau):
+    def add_feature_starlight(self, name, temperature, tau):
         """Register a starlight feature.
 
         The exact representation depends on the implementation, but the
@@ -92,12 +93,12 @@ class Fitter(ABC):
         pass
 
     @abstractmethod
-    def register_dust_continuum(self, name, temperature, tau):
+    def add_feature_dust_continuum(self, name, temperature, tau):
         """Register a dust continuum feature."""
         pass
 
     @abstractmethod
-    def register_line(self, name, power, wavelength, fwhm):
+    def add_feature_line(self, name, power, wavelength, fwhm):
         """Register an emission line feature.
 
         Typically a Gaussian profile.
@@ -106,7 +107,7 @@ class Fitter(ABC):
         pass
 
     @abstractmethod
-    def register_dust_feature(self, name, power, wavelength, fwhm):
+    def add_feature_dust_feature(self, name, power, wavelength, fwhm):
         """Register a dust feature.
 
         Typically a Drude profile.
@@ -115,7 +116,7 @@ class Fitter(ABC):
         pass
 
     @abstractmethod
-    def register_attenuation(self, name, tau):
+    def add_feature_attenuation(self, name, tau):
         """Register the S07 attenuation component.
 
         Other types of attenuation might be possible in the future. Is
@@ -125,7 +126,7 @@ class Fitter(ABC):
         pass
 
     @abstractmethod
-    def register_absorption(self, name, tau, wavelength, fwhm):
+    def add_feature_absorption(self, name, tau, wavelength, fwhm):
         """Register an absorption feature.
 
         Typically a Drude profile. Is multiplicative.
@@ -182,7 +183,7 @@ class Fitter(ABC):
         Parameters
         ----------
         component_name : str
-            One of the names provided to any of the register_() calls
+            One of the names provided to any of the add_feature_() calls
             made during setup. See also Fitter.components().
 
         Returns

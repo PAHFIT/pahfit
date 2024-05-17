@@ -878,12 +878,12 @@ class Model:
             name = row["name"]
 
             if kind == "starlight":
-                fitter.register_starlight(
+                fitter.add_feature_starlight(
                     name, cleaned(row["temperature"]), cleaned(row["tau"])
                 )
 
             elif kind == "dust_continuum":
-                fitter.register_dust_continuum(
+                fitter.add_feature_dust_continuum(
                     name, cleaned(row["temperature"]), cleaned(row["tau"])
                 )
 
@@ -911,12 +911,12 @@ class Model:
                 else:
                     fwhm = cleaned(row["fwhm"])
 
-                fitter.register_line(
+                fitter.add_feature_line(
                     name, cleaned(row["power"]), cleaned(row["wavelength"]), fwhm
                 )
 
             elif kind == "dust_feature":
-                fitter.register_dust_feature(
+                fitter.add_feature_dust_feature(
                     name,
                     cleaned(row["power"]),
                     cleaned(row["wavelength"]),
@@ -924,10 +924,10 @@ class Model:
                 )
 
             elif kind == "attenuation":
-                fitter.register_attenuation(name, cleaned(row["tau"]))
+                fitter.add_feature_attenuation(name, cleaned(row["tau"]))
 
             elif kind == "absorption":
-                fitter.register_absorption(
+                fitter.add_feature_absorption(
                     name,
                     cleaned(row["tau"]),
                     cleaned(row["wavelength"]),
@@ -939,7 +939,7 @@ class Model:
                     f"Model components of kind {kind} are not implemented!"
                 )
 
-        fitter.finalize_model()
+        fitter.finalize()
         return fitter
 
     @staticmethod

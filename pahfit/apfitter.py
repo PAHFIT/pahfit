@@ -60,20 +60,20 @@ class APFitter(Fitter):
     def __init__(self):
         """Construct a new fitter.
 
-        After construction, use the register_() functions to start
-        setting up a model, then call finalize_model().
+        After construction, use the add_feature_() functions to start
+        setting up a model, then call finalize().
 
         """
         self.additive_components = []
         self.multiplicative_components = []
-        self.component_types = {}
+        self.feature_types = {}
         self.model = None
         self.message = None
 
     def components(self):
         """Return list of component names.
 
-        Only works after finalize_model().
+        Only works after finalize().
 
         """
         if hasattr(self.model, "submodel_names"):
@@ -82,10 +82,10 @@ class APFitter(Fitter):
             # single-component edge case
             return [self.model.name]
 
-    def finalize_model(self):
+    def finalize(self):
         """Sum the registered components into one CompoundModel.
 
-        To be called after a series of "register_()" calls, and before
+        To be called after a series of "add_feature_()" calls, and before
         using the other functionality (fitting and evaluating).
 
         """
@@ -99,8 +99,10 @@ class APFitter(Fitter):
         for c in self.multiplicative_components:
             self.model *= c
 
-    def _register_component(self, astropy_model_class, multiplicative=False, **kwargs):
-        """Register any component in a generic way.
+    def _add_component(self, astropy_model_class, multiplicative=False, **kwargs):
+        """Generically add any feature as an astropy model component.
+
+        To be finalized with finalize()
 
         Parameters
         ----------
@@ -115,7 +117,7 @@ class APFitter(Fitter):
         kwargs : dict
             Arguments for the astropy model constructor, including a
             unique value for "name". Should be generated with
-            self._astropy_model_kwargs; the register_() functions show how
+            self._astropy_model_kwargs; the add_feature_() functions show how
             to do this for each type of feature.
 
         """
@@ -124,7 +126,7 @@ class APFitter(Fitter):
         else:
             self.additive_components.append(astropy_model_class(**kwargs))
 
-    def register_starlight(self, name, temperature, tau):
+    def add_feature_starlight(self, name, temperature, tau):
         """Register a BlackBody1D.
 
         Parameters
@@ -141,76 +143,76 @@ class APFitter(Fitter):
         tau : analogous. Used as amplitude.
 
         """
-        self.component_types[name] = "starlight"
+        self.feature_types[name] = "starlight"
         kwargs = self._astropy_model_kwargs(
             name, ["temperature", "amplitude"], [temperature, tau]
         )
-        self._register_component(BlackBody1D, **kwargs)
+        self._add_component(BlackBody1D, **kwargs)
 
-    def register_dust_continuum(self, name, temperature, tau):
+    def add_feature_dust_continuum(self, name, temperature, tau):
         """Register a ModifiedBlackBody1D.
 
         Analogous. Temperature and tau are used as temperature and
         amplitude
 
         """
-        self.component_types[name] = "dust_continuum"
+        self.feature_types[name] = "dust_continuum"
         kwargs = self._astropy_model_kwargs(
             name, ["temperature", "amplitude"], [temperature, tau]
         )
-        self._register_component(ModifiedBlackBody1D, **kwargs)
+        self._add_component(ModifiedBlackBody1D, **kwargs)
 
-    def register_line(self, name, power, wavelength, fwhm):
+    def add_feature_line(self, name, power, wavelength, fwhm):
         """Register a PowerGaussian1D
 
         Analogous. Uses an implementation of the Gaussian profile, that
         directly fits the power based on the internal PAHFIT units.
 
         """
-        self.component_types[name] = "line"
+        self.feature_types[name] = "line"
 
         kwargs = self._astropy_model_kwargs(
             name,
             ["amplitude", "mean", "stddev"],
-            [power, wavelength,  fwhm / 2.355],
+            [power, wavelength, fwhm / 2.355],
         )
-        self._register_component(Gaussian1D, **kwargs)
+        self._add_component(Gaussian1D, **kwargs)
 
-    def register_dust_feature(self, name, power, wavelength, fwhm):
+    def add_feature_dust_feature(self, name, power, wavelength, fwhm):
         """Register a PowerDrude1D.
 
         Analogous. Uses an implementation of the Drude profile that
         directly fits the power based on the internal PAHFIT units.
 
         """
-        self.component_types[name] = "dust_feature"
+        self.feature_types[name] = "dust_feature"
         kwargs = self._astropy_model_kwargs(
             name, ["amplitude", "x_0", "fwhm"], [power, wavelength, fwhm]
         )
-        self._register_component(Drude1D, **kwargs)
+        self._add_component(Drude1D, **kwargs)
 
-    def register_attenuation(self, name, tau):
+    def add_feature_attenuation(self, name, tau):
         """Register the S07 attenuation component.
 
         Analogous. Uses tau as tau_sil for S07_attenuation. Is
         multiplicative.
 
         """
-        self.component_types[name] = "attenuation"
+        self.feature_types[name] = "attenuation"
         kwargs = self._astropy_model_kwargs(name, ["tau_sil"], [tau])
-        self._register_component(S07_attenuation, multiplicative=True, **kwargs)
+        self._add_component(S07_attenuation, multiplicative=True, **kwargs)
 
-    def register_absorption(self, name, tau, wavelength, fwhm):
+    def add_feature_absorption(self, name, tau, wavelength, fwhm):
         """Register an absorbing Drude1D component.
 
         Analogous. Is multiplicative.
 
         """
-        self.component_types[name] = "absorption"
+        self.feature_types[name] = "absorption"
         kwargs = self._astropy_model_kwargs(
             name, ["tau", "x_0", "fwhm"], [tau, wavelength, fwhm]
         )
-        self._register_component(att_Drude1D, multiplicative=True, **kwargs)
+        self._add_component(att_Drude1D, multiplicative=True, **kwargs)
 
     def evaluate_model(self, xz):
         """Evaluate internal astropy model with its current parameters.
@@ -298,7 +300,7 @@ class APFitter(Fitter):
         Parameters
         ----------
         component_name : str
-            One of the names provided to any of the register_*() calls
+            One of the names provided to any of the add_feature_*() calls
             made during setup. See also Fitter.components().
 
         Returns
@@ -319,7 +321,7 @@ class APFitter(Fitter):
             # CompoundModel but normal single-component model.
             component = self.model
 
-        c_type = self.component_types[component_name]
+        c_type = self.feature_types[component_name]
         if c_type == "starlight" or c_type == "dust_continuum":
             return {
                 "temperature": component.temperature.value,
@@ -407,6 +409,8 @@ class APFitter(Fitter):
             # astropy modeling)
             kwargs[param_name] = value
             kwargs["fixed"][param_name] = is_fixed
-            kwargs["bounds"][param_name] = [None if np.isinf(x) else x for x in (lo_bound, up_bound)]
+            kwargs["bounds"][param_name] = [
+                None if np.isinf(x) else x for x in (lo_bound, up_bound)
+            ]
 
         return kwargs
