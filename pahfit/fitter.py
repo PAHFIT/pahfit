@@ -135,24 +135,24 @@ class Fitter(ABC):
         pass
 
     @abstractmethod
-    def evaluate_model(self, xz):
-        """Evaluate the model at the given wavelengths.
+    def evaluate(self, lam):
+        """Evaluate the fitting function at the given wavelengths.
 
         Parameters
         ----------
-        xz : array
+        lam : array
             Rest frame wavelengths in micron
 
         Returns
         -------
-        yz : array
+        flux : array
             Rest frame flux in internal units
 
         """
         pass
 
     @abstractmethod
-    def fit(self, xz, yz, uncz, maxiter=1000):
+    def fit(self, lam, flux, unc, maxiter=1000):
         """Perform the fit using the framework of the subclass.
 
         Fitter is unit agnostic, and deals with the numbers the Model
@@ -164,14 +164,14 @@ class Fitter(ABC):
 
         Parameters
         ----------
-        xz : array
+        lam : array
             Rest frame wavelengths in micron
 
-        yz : array
+        flux : array
             Rest frame flux in internal units.
 
-        uncz : array
-            Uncertainty on rest frame flux. Same units as yz.
+        unc : array
+            Uncertainty on rest frame flux. Same units as flux.
 
         """
         pass

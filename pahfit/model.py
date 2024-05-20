@@ -187,12 +187,12 @@ class Model:
 
         # parse spectral data
         self.features.meta["user_unit"]["flux"] = spec.flux.unit
-        _, _, _, xz, yz, _ = self._convert_spec_data(spec, z)
-        wmin = min(xz)
-        wmax = max(xz)
+        _, _, _, lam, flux, _ = self._convert_spec_data(spec, z)
+        wmin = min(lam)
+        wmax = max(lam)
 
         # simple linear interpolation function for spectrum
-        sp = interpolate.interp1d(xz, yz)
+        sp = interpolate.interp1d(lam, flux)
 
         # we will repeat this loop logic several times
         def loop_over_non_fixed(kind, parameter, estimate_function, force=False):
@@ -235,7 +235,7 @@ class Model:
             else:
                 w_ref = wmin
 
-            flux_ref = np.median(yz[(xz > w_ref - 0.2) & (xz < w_ref + 0.2)])
+            flux_ref = np.median(flux[(lam > w_ref - 0.2) & (lam < w_ref + 0.2)])
             amp_guess = flux_ref / bb(w_ref)
             return amp_guess / nbb
 
@@ -257,12 +257,12 @@ class Model:
             factor = 1.5
             wmin = w - factor * fwhm
             wmax = w + factor * fwhm
-            xz_window = (xz > wmin) & (xz < wmax)
-            xpoints = xz[xz_window]
-            ypoints = yz[xz_window]
-            if np.count_nonzero(xz_window) >= 2:
+            lam_window = (lam > wmin) & (lam < wmax)
+            xpoints = lam[lam_window]
+            ypoints = flux[lam_window]
+            if np.count_nonzero(lam_window) >= 2:
                 # difference between flux in window and flux around it
-                power_guess = integrate.trapezoid(yz[xz_window], xz[xz_window])
+                power_guess = integrate.trapezoid(flux[lam_window], lam[lam_window])
                 # subtract continuum estimate, but make sure we don't go negative
                 continuum = (ypoints[0] + ypoints[-1]) / 2 * (xpoints[-1] - xpoints[0])
                 if continuum < power_guess:
@@ -273,7 +273,7 @@ class Model:
 
         # Same logic as in the old function: just use same amp for all
         # dust features.
-        some_flux = 0.5 * np.median(yz)
+        some_flux = 0.5 * np.median(flux)
         loop_over_non_fixed("dust_feature", "power", lambda row: some_flux)
 
         if integrate_line_flux:
@@ -313,7 +313,7 @@ class Model:
         -------
         x, y, unc: wavelength in micron, flux, uncertainty
 
-        xz, yz, uncz: wavelength in micron, flux, uncertainty
+        lam, flux, unc: wavelength in micron, flux, uncertainty
             corrected for redshift
 
         """
@@ -321,15 +321,15 @@ class Model:
             raise PAHFITModelError(
                 "For now, PAHFIT only supports intensity units, i.e. convertible to MJy / sr."
             )
-        y = spec.flux.to(units.intensity).value
-        x = spec.spectral_axis.to(u.micron).value
-        unc = (spec.uncertainty.array * spec.flux.unit).to(units.intensity).value
+        flux_obs = spec.flux.to(units.intensity).value
+        lam_obs = spec.spectral_axis.to(u.micron).value
+        unc_obs = (spec.uncertainty.array * spec.flux.unit).to(units.intensity).value
 
         # transform observed wavelength to "physical" wavelength
-        xz = x / (1 + z)  # wavelength shorter
-        yz = y * (1 + z)  # energy higher
-        uncz = unc * (1 + z)  # uncertainty scales with flux
-        return x, y, unc, xz, yz, uncz
+        lam = lam_obs / (1 + z)  # wavelength shorter
+        flux = flux_obs * (1 + z)  # energy higher
+        unc = unc_obs * (1 + z)  # uncertainty scales with flux
+        return lam_obs, flux_obs, unc_obs, lam, flux, unc
 
     def fit(
         self,
@@ -390,7 +390,7 @@ class Model:
         # parse spectral data
         self.features.meta["user_unit"]["flux"] = spec.flux.unit
         inst, z = self._parse_instrument_and_redshift(spec, redshift)
-        x, _, _, xz, yz, uncz = self._convert_spec_data(spec, z)
+        x, _, _, lam, flux, unc = self._convert_spec_data(spec, z)
 
         # save these as part of the model (will be written to disk too)
         self.features.meta["redshift"] = inst
@@ -402,7 +402,7 @@ class Model:
         self.fitter = self._set_up_fitter(
             inst, z, x=x, use_instrument_fwhm=use_instrument_fwhm
         )
-        self.fitter.fit(xz, yz, uncz, maxiter=maxiter)
+        self.fitter.fit(lam, flux, unc, maxiter=maxiter)
 
         # copy the fit results to the features table
         self._ingest_fit_result_to_features(self.fitter)
@@ -485,9 +485,9 @@ class Model:
 
         """
         inst, z = self._parse_instrument_and_redshift(spec, redshift)
-        _, _, _, xz, yz, uncz = self._convert_spec_data(spec, z)
+        _, _, _, lam, flux, unc = self._convert_spec_data(spec, z)
         enough_samples = max(10000, len(spec.wavelength))
-        x_mod = np.logspace(np.log10(min(xz)), np.log10(max(xz)), enough_samples)
+        lam_mod = np.logspace(np.log10(min(lam)), np.log10(max(lam)), enough_samples)
 
         fig, axs = plt.subplots(
             ncols=1,
@@ -515,7 +515,7 @@ class Model:
         if has_att:
             row = self.features[self.features["kind"] == "attenuation"][0]
             tau = row["tau"][0]
-            ext_model = S07_attenuation(tau_sil=tau)(x_mod)
+            ext_model = S07_attenuation(tau_sil=tau)(lam_mod)
 
         if has_abs:
             raise NotImplementedError(
@@ -527,11 +527,11 @@ class Model:
             ax_att.tick_params(which="minor", direction="in", length=5)
             ax_att.tick_params(which="major", direction="in", length=10)
             ax_att.minorticks_on()
-            ax_att.plot(x_mod, ext_model, "k--", alpha=0.5)
+            ax_att.plot(lam_mod, ext_model, "k--", alpha=0.5)
             ax_att.set_ylabel("Attenuation")
             ax_att.set_ylim(0, 1.1)
         else:
-            ext_model = np.ones(len(x_mod))
+            ext_model = np.ones(len(lam_mod))
 
         # Define legend lines
         Leg_lines = [
@@ -547,32 +547,34 @@ class Model:
         def tabulate_components(kind):
             ss = {}
             for name in self.features[self.features["kind"] == kind]["name"]:
-                ss[name] = self.tabulate(inst, z, x_mod, self.features["name"] == name)
+                ss[name] = self.tabulate(
+                    inst, z, lam_mod, self.features["name"] == name
+                )
             return {name: s.flux.value for name, s in ss.items()}
 
-        cont_y = np.zeros(len(x_mod))
+        cont_y = np.zeros(len(lam_mod))
         if "dust_continuum" in self.features["kind"]:
             # one plot for every component
             for y in tabulate_components("dust_continuum").values():
-                ax.plot(x_mod, y * ext_model, "#FFB000", alpha=0.5)
+                ax.plot(lam_mod, y * ext_model, "#FFB000", alpha=0.5)
                 # keep track of total continuum
                 cont_y += y
 
         if "starlight" in self.features["kind"]:
             star_y = self.tabulate(
-                inst, z, x_mod, self.features["kind"] == "starlight"
+                inst, z, lam_mod, self.features["kind"] == "starlight"
             ).flux.value
-            ax.plot(x_mod, star_y * ext_model, "#ffB000", alpha=0.5)
+            ax.plot(lam_mod, star_y * ext_model, "#ffB000", alpha=0.5)
             cont_y += star_y
 
         # total continuum
-        ax.plot(x_mod, cont_y * ext_model, "#785EF0", alpha=1)
+        ax.plot(lam_mod, cont_y * ext_model, "#785EF0", alpha=1)
 
         # now plot the dust bands and lines
         if "dust_feature" in self.features["kind"]:
             for y in tabulate_components("dust_feature").values():
                 ax.plot(
-                    x_mod,
+                    lam_mod,
                     (cont_y + y) * ext_model,
                     "#648FFF",
                     alpha=0.5,
@@ -581,7 +583,7 @@ class Model:
         if "line" in self.features["kind"]:
             for name, y in tabulate_components("line").items():
                 ax.plot(
-                    x_mod,
+                    lam_mod,
                     (cont_y + y) * ext_model,
                     "#DC267F",
                     alpha=0.5,
@@ -590,7 +592,7 @@ class Model:
                     i = np.argmax(y)
                     # ignore out of range lines
                     if i > 0 and i < len(y) - 1:
-                        w = x_mod[i]
+                        w = lam_mod[i]
                         ax.text(
                             w,
                             y[i],
@@ -601,7 +603,7 @@ class Model:
                             bbox=dict(facecolor="white", alpha=0.75, pad=0),
                         )
 
-        ax.plot(x_mod, self.tabulate(inst, z, x_mod).flux.value, "#FE6100", alpha=1)
+        ax.plot(lam_mod, self.tabulate(inst, z, lam_mod).flux.value, "#FE6100", alpha=1)
 
         # data
         default_kwargs = dict(
@@ -614,7 +616,7 @@ class Model:
             markersize=6,
         )
 
-        ax.errorbar(xz, yz, yerr=uncz, **(default_kwargs | errorbar_kwargs))
+        ax.errorbar(lam, flux, yerr=unc, **(default_kwargs | errorbar_kwargs))
 
         ax.set_ylim(0)
         ax.set_ylabel(r"$\nu F_{\nu}$")
@@ -637,7 +639,7 @@ class Model:
         )
 
         # residuals = data in rest frame - (model evaluated at rest frame wavelengths)
-        res = yz - self.tabulate(inst, 0, xz).flux.value
+        res = flux - self.tabulate(inst, 0, lam).flux.value
         std = np.nanstd(res)
         ax = axs[1]
 
@@ -658,7 +660,7 @@ class Model:
 
         ax.axhline(0, linestyle="--", color="gray", zorder=0)
         ax.plot(
-            xz,
+            lam,
             res,
             "ko",
             fillstyle="none",
@@ -668,7 +670,7 @@ class Model:
             linestyle="none",
         )
         ax.set_ylim(-scalefac_resid * std, scalefac_resid * std)
-        ax.set_xlim(np.floor(np.amin(xz)), np.ceil(np.amax(xz)))
+        ax.set_xlim(np.floor(np.amin(lam)), np.ceil(np.amax(lam)))
         ax.set_xlabel(r"$\lambda$ [$\mu m$]")
         ax.set_ylabel("Residuals [%]")
 
@@ -801,13 +803,13 @@ class Model:
 
         return Spectrum1D(spectral_axis=wav, flux=flux_quantity)
 
-    def _excluded_features(self, instrumentname, redshift, x=None):
+    def _excluded_features(self, instrumentname, redshift, lam_obs=None):
         """Determine excluded features Based on instrument wavelength range.
 
          instrumentname : str
             Qualified instrument name
 
-         x : array
+         lam_obs : array
             Optional observed wavelength grid. Exclude any lines and
             dust features outside of this range.
 
@@ -816,14 +818,16 @@ class Model:
         array of bool, same length as self.features, True where features
         are far outside the wavelength range.
         """
-        observed_wavs = self.features["wavelength"]["val"] * (1 + redshift)
+        lam_feature_obs = self.features["wavelength"]["val"] * (1 + redshift)
 
         # has wavelength and not within instrument range
-        is_outside = ~instrument.within_segment(observed_wavs, instrumentname)
+        is_outside = ~instrument.within_segment(lam_feature_obs, instrumentname)
 
         # also apply observed range if provided
-        if x is not None:
-            is_outside |= (observed_wavs < np.amin(x)) | (observed_wavs > np.amax(x))
+        if lam_obs is not None:
+            is_outside |= (lam_feature_obs < np.amin(lam_obs)) | (
+                lam_feature_obs > np.amax(lam_obs)
+            )
 
         # restriction on the kind of feature that can be excluded
         excludable = ["line", "dust_feature", "absorption"]
@@ -849,7 +853,7 @@ class Model:
           detail).
         - Features outside the appropriate wavelength range should not
           be added to the Fitter: the "trimming" is done here, using the
-          given wavelength range xz (optional).
+          given wavelength range lam (optional).
 
         TODO: flags to indicate which features were excluded.
 

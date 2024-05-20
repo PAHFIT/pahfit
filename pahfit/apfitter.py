@@ -219,22 +219,22 @@ class APFitter(Fitter):
         )
         self._add_component(att_Drude1D, multiplicative=True, **kwargs)
 
-    def evaluate_model(self, xz):
+    def evaluate(self, lam):
         """Evaluate internal astropy model with its current parameters.
 
         Parameters
         ----------
-        xz : array
+        lam : array
             Rest frame wavelengths in micron
 
         Returns
         -------
-        yz : array
+        flux : array
             Rest frame flux in internal units
         """
-        return self.model(xz)
+        return self.model(lam)
 
-    def fit(self, xz, yz, uncz, maxiter=10000):
+    def fit(self, lam, flux, unc, maxiter=10000):
         """Fit the internal model using the astropy fitter.
 
         The fitter class is unit agnostic, and deal with the numbers the
@@ -249,37 +249,37 @@ class APFitter(Fitter):
         Retrieval of uncertainties and fit details is yet to be
         implemented.
 
-        CAVEAT: flux unit (yz) is still ambiguous, since it can be flux
-        density or intensity, according to the options defined in
+        CAVEAT: flux unit (flux) is still ambiguous, since it can be
+        flux density or intensity, according to the options defined in
         pahfit.units. After the fit, the return units of "power" in
         get_results depend on the given spectrum (they will be flux unit
-        times wavelenght unit).
+        times wavelength unit).
 
         Parameters
         ----------
-        xz : array
+        lam : array
             Rest frame wavelengths in micron
 
-        yz : array
+        flux : array
             Rest frame flux in internal units.
 
-        uncz : array
-            Uncertainty on rest frame flux. Same units as yz.
+        unc : array
+            Uncertainty on rest frame flux. Same units as flux.
 
         """
         # clean, because astropy does not like nan
-        w = 1 / uncz
+        w = 1 / unc
 
         # make sure there are no zero uncertainties either
-        mask = np.isfinite(xz) & np.isfinite(yz) & np.isfinite(w)
+        mask = np.isfinite(lam) & np.isfinite(flux) & np.isfinite(w)
 
         self.fit_info = []
 
         fit = LevMarLSQFitter(calc_uncertainties=True)
         astropy_result = fit(
             self.model,
-            xz[mask],
-            yz[mask],
+            lam[mask],
+            flux[mask],
             weights=w[mask],
             maxiter=maxiter,
             epsilon=1e-10,
