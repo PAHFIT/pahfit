@@ -191,18 +191,23 @@ class APFitter(Fitter):
         )
         self._add_component(Drude1D, **kwargs)
 
-    def add_feature_attenuation(self, name, tau):
+    def add_feature_attenuation(self, name, tau, model="S07", geometry="screen"):
         """Register the S07 attenuation component.
 
         Analogous. Uses tau as tau_sil for S07_attenuation. Is
         multiplicative.
+
+        model : string to select attenuation shape. Only 'S07' is supported for now.
+
+        geometry : string to select different geometries. Only 'screen'
+        is available for now.
 
         """
         self.feature_types[name] = "attenuation"
         kwargs = self._astropy_model_kwargs(name, ["tau_sil"], [tau])
         self._add_component(S07_attenuation, multiplicative=True, **kwargs)
 
-    def add_feature_absorption(self, name, tau, wavelength, fwhm):
+    def add_feature_absorption(self, name, tau, wavelength, fwhm, geometry='screen'):
         """Register an absorbing Drude1D component.
 
         Analogous. Is multiplicative.

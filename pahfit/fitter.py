@@ -116,7 +116,7 @@ class Fitter(ABC):
         pass
 
     @abstractmethod
-    def add_feature_attenuation(self, name, tau):
+    def add_feature_attenuation(self, name, tau, model='S07', geometry='screen'):
         """Register the S07 attenuation component.
 
         Other types of attenuation might be possible in the future. Is
@@ -126,10 +126,10 @@ class Fitter(ABC):
         pass
 
     @abstractmethod
-    def add_feature_absorption(self, name, tau, wavelength, fwhm):
+    def add_feature_absorption(self, name, tau, wavelength, fwhm, geometry='screen'):
         """Register an absorption feature.
 
-        Typically a Drude profile. Is multiplicative.
+        Modeled by a Drude profile. Is multiplicative.
 
         """
         pass
