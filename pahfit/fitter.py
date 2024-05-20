@@ -116,7 +116,7 @@ class Fitter(ABC):
         pass
 
     @abstractmethod
-    def add_feature_attenuation(self, name, tau, model='S07', geometry='screen'):
+    def add_feature_attenuation(self, name, tau, model="S07", geometry="screen"):
         """Register the S07 attenuation component.
 
         Other types of attenuation might be possible in the future. Is
@@ -126,7 +126,7 @@ class Fitter(ABC):
         pass
 
     @abstractmethod
-    def add_feature_absorption(self, name, tau, wavelength, fwhm, geometry='screen'):
+    def add_feature_absorption(self, name, tau, wavelength, fwhm, geometry="screen"):
         """Register an absorption feature.
 
         Modeled by a Drude profile. Is multiplicative.
@@ -193,7 +193,7 @@ class Fitter(ABC):
         function. Values are in the same format as Features, and can
         therefore be directly filled in.
 
-        e.g. {'name': 'line0', 'power': value, 'fwhm': value, 'wavelength'}
+        e.g. {'name': 'line0', 'power': value, 'fwhm': value, 'wavelength': value}
 
         """
         pass
