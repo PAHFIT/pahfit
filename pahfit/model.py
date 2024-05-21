@@ -403,24 +403,20 @@ class Model:
         # check if observed spectrum is compatible with instrument model
         instrument.check_range([min(x), max(x)], inst)
 
-        self.fitter = self._set_up_fitter(
-            inst, z, x=x, use_instrument_fwhm=use_instrument_fwhm
-        )
+        self._set_up_fitter(inst, z, x=x, use_instrument_fwhm=use_instrument_fwhm)
         self.fitter.fit(lam, flux, unc, maxiter=maxiter)
 
         # copy the fit results to the features table
-        self._ingest_fit_result_to_features(self.fitter)
+        self._ingest_fit_result_to_features()
 
         if verbose:
             print(self.fitter.message)
 
-    def _ingest_fit_result_to_features(self, fitter: Fitter):
-        """Copy the results from a Fitter to the features table
+    def _ingest_fit_result_to_features(self):
+        """Copy the results from the Fitter to the features table
 
         This is a utility method, executed only at the end of fit(),
-        where the Fitter is passed after Fitter.fit() has been applied.
-        Passing a different Fitter object could be useful for
-        testing.
+        where Fitter.fit() has been applied.
 
         """
         # iterate over the list stored in fitter, so we only get
@@ -428,10 +424,10 @@ class Model:
         # ENABLED/DISABLED flag for every feature would be a nice
         # alternative (and clear for the user).
 
-        self.features.meta["fitter_message"] = fitter.message
+        self.features.meta["fitter_message"] = self.fitter.message
 
-        for name in fitter.components():
-            for column, value in fitter.get_result(name).items():
+        for name in self.fitter.components():
+            for column, value in self.fitter.get_result(name).items():
                 try:
                     i = np.where(self.features["name"] == name)[0]
                     # deal with fwhm usually being masked
@@ -844,7 +840,7 @@ class Model:
     def _set_up_fitter(
         self, instrumentname, redshift, x=None, use_instrument_fwhm=True
     ):
-        """Convert features table to Fitter instance.
+        """Convert features table to Fitter instance, set self.fitter.
 
         For every row of the features table, calls a function of Fitter
         API to register an appropriate component. Finalizes the Fitter
@@ -861,14 +857,10 @@ class Model:
 
         TODO: flags to indicate which features were excluded.
 
-        Returns
-        -------
-        Fitter
-
         """
         # Fitting implementation can be changed by choosing another
         # Fitter class. TODO: make this configurable.
-        fitter = APFitter()
+        self.fitter = APFitter()
 
         excluded = self._excluded_features(instrumentname, redshift, x)
 
@@ -886,12 +878,12 @@ class Model:
             name = row["name"]
 
             if kind == "starlight":
-                fitter.add_feature_starlight(
+                self.fitter.add_feature_starlight(
                     name, cleaned(row["temperature"]), cleaned(row["tau"])
                 )
 
             elif kind == "dust_continuum":
-                fitter.add_feature_dust_continuum(
+                self.fitter.add_feature_dust_continuum(
                     name, cleaned(row["temperature"]), cleaned(row["tau"])
                 )
 
@@ -919,12 +911,12 @@ class Model:
                 else:
                     fwhm = cleaned(row["fwhm"])
 
-                fitter.add_feature_line(
+                self.fitter.add_feature_line(
                     name, cleaned(row["power"]), cleaned(row["wavelength"]), fwhm
                 )
 
             elif kind == "dust_feature":
-                fitter.add_feature_dust_feature(
+                self.fitter.add_feature_dust_feature(
                     name,
                     cleaned(row["power"]),
                     cleaned(row["wavelength"]),
@@ -932,10 +924,10 @@ class Model:
                 )
 
             elif kind == "attenuation":
-                fitter.add_feature_attenuation(name, cleaned(row["tau"]))
+                self.fitter.add_feature_attenuation(name, cleaned(row["tau"]))
 
             elif kind == "absorption":
-                fitter.add_feature_absorption(
+                self.fitter.add_feature_absorption(
                     name,
                     cleaned(row["tau"]),
                     cleaned(row["wavelength"]),
@@ -947,8 +939,7 @@ class Model:
                     f"Model components of kind {kind} are not implemented!"
                 )
 
-        fitter.finalize()
-        return fitter
+        self.fitter.finalize()
 
     @staticmethod
     def _parse_instrument_and_redshift(spec, redshift):

@@ -40,8 +40,8 @@ def test_feature_parsing():
 
     def test_parsing(features_edit):
         m = Model(features_edit)
-        fitter = m._set_up_fitter(instrumentname, 0)
-        m._ingest_fit_result_to_features(fitter)
+        m._set_up_fitter(instrumentname, 0)
+        m._ingest_fit_result_to_features()
 
     # Case 0: the whole table
     test_parsing(features)
