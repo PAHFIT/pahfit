@@ -285,7 +285,11 @@ class Model:
             loop_over_non_fixed("line", "power", lambda row: some_flux)
 
         # Set the fwhms in the features table. Slightly different logic,
-        # as the fwhm for lines are masked by default
+        # as the fwhm for lines are masked by default. TODO: leave FWHM
+        # masked for lines, and instead have a sigma_v option. Any
+        # requirements to guess and fit the line width, should be
+        # encapsulated in sigma_v (the "broadening" of the line), as
+        # opposed to fwhm which is the normal instrumental width.
         if calc_line_fwhm:
             for row_index in np.where(self.features["kind"] == "line")[0]:
                 row = self.features[row_index]
