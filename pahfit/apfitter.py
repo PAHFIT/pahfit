@@ -70,18 +70,6 @@ class APFitter(Fitter):
         self.model = None
         self.message = None
 
-    def components(self):
-        """Return list of component names.
-
-        Only works after finalize().
-
-        """
-        if hasattr(self.model, "submodel_names"):
-            return self.model.submodel_names
-        else:
-            # single-component edge case
-            return [self.model.name]
-
     def finalize(self):
         """Sum the registered components into one CompoundModel.
 
@@ -207,7 +195,7 @@ class APFitter(Fitter):
         kwargs = self._astropy_model_kwargs(name, ["tau_sil"], [tau])
         self._add_component(S07_attenuation, multiplicative=True, **kwargs)
 
-    def add_feature_absorption(self, name, tau, wavelength, fwhm, geometry='screen'):
+    def add_feature_absorption(self, name, tau, wavelength, fwhm, geometry="screen"):
         """Register an absorbing Drude1D component.
 
         Analogous. Is multiplicative.
@@ -306,7 +294,7 @@ class APFitter(Fitter):
         ----------
         component_name : str
             One of the names provided to any of the add_feature_*() calls
-            made during setup. See also Fitter.components().
+            made during setup.
 
         Returns
         -------

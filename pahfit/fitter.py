@@ -47,16 +47,6 @@ class Fitter(ABC):
     """
 
     @abstractmethod
-    def components(self):
-        """Return list of features.
-
-        Only works after finalize(). Will return the names passed
-        using the register functions.
-
-        """
-        pass
-
-    @abstractmethod
     def finalize(self):
         """Process the registered features and prepare for fitting.
 
@@ -184,7 +174,7 @@ class Fitter(ABC):
         ----------
         component_name : str
             One of the names provided to any of the add_feature_() calls
-            made during setup. See also Fitter.components().
+            made during setup.
 
         Returns
         -------

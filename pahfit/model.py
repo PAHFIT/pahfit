@@ -12,7 +12,6 @@ from pahfit.features import Features
 from pahfit import instrument
 from pahfit.errors import PAHFITModelError
 from pahfit.component_models import BlackBody1D, S07_attenuation
-from pahfit.fitter import Fitter
 from pahfit.apfitter import APFitter
 
 
@@ -426,7 +425,7 @@ class Model:
 
         self.features.meta["fitter_message"] = self.fitter.message
 
-        for name in self.fitter.components():
+        for name in self.enabled_features:
             for column, value in self.fitter.get_result(name).items():
                 try:
                     i = np.where(self.features["name"] == name)[0]
@@ -781,9 +780,8 @@ class Model:
         # need to wrap in try block to avoid bug: if all components are
         # removed (because of wavelength range considerations), it won't work
         try:
-            fitter = alt_model._set_up_fitter(
-                instrumentname, z, use_instrument_fwhm=False
-            )
+            alt_model._set_up_fitter(instrumentname, z, use_instrument_fwhm=False)
+            fitter = alt_model.fitter
         except PAHFITModelError:
             return Spectrum1D(
                 spectral_axis=wav, flux=np.zeros(wav.shape) * u.dimensionless_unscaled
@@ -791,7 +789,7 @@ class Model:
 
         # shift the "observed wavelength grid" to "physical wavelength grid
         wav /= 1 + z
-        flux_values = fitter.evaluate_model(wav.value)
+        flux_values = fitter.evaluate(wav.value)
 
         # apply unit stored in features table (comes from from last fit
         # or from loading previous result from disk)
@@ -863,6 +861,7 @@ class Model:
         self.fitter = APFitter()
 
         excluded = self._excluded_features(instrumentname, redshift, x)
+        self.enabled_features = self.features["name"][~excluded]
 
         def cleaned(features_tuple3):
             val = features_tuple3[0]
