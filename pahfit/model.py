@@ -181,8 +181,8 @@ class Model:
         """
         inst, z = self._parse_instrument_and_redshift(spec, redshift)
         # save these as part of the model (will be written to disk too)
-        self.features.meta["redshift"] = inst
-        self.features.meta["instrument"] = z
+        self.features.meta["redshift"] = z
+        self.features.meta["instrument"] = inst
 
         # parse spectral data
         self.features.meta["user_unit"]["flux"] = spec.flux.unit
