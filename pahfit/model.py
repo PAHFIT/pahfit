@@ -761,8 +761,7 @@ class Model:
 
         # apply feature mask, make sub model, and set up functional
         if feature_mask is not None:
-            features_copy = self.features.copy()
-            features_to_use = features_copy[feature_mask]
+            features_to_use = self.features[feature_mask]
         else:
             features_to_use = self.features
 
