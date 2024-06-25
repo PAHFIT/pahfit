@@ -402,7 +402,7 @@ class Model:
         # check if observed spectrum is compatible with instrument model
         instrument.check_range([min(x), max(x)], inst)
 
-        self._set_up_fitter(inst, z, x=x, use_instrument_fwhm=use_instrument_fwhm)
+        self._set_up_fitter(inst, z, lam=x, use_instrument_fwhm=use_instrument_fwhm)
         self.fitter.fit(lam, flux, unc, maxiter=maxiter)
 
         # copy the fit results to the features table
@@ -834,8 +834,8 @@ class Model:
 
         return is_outside & is_excludable
 
-    def _set_up_fitter(
-        self, instrumentname, redshift, x=None, use_instrument_fwhm=True
+    def  _set_up_fitter(
+        self, instrumentname, redshift, lam=None, use_instrument_fwhm=True
     ):
         """Convert features table to Fitter instance, set self.fitter.
 
@@ -854,12 +854,29 @@ class Model:
 
         TODO: flags to indicate which features were excluded.
 
+        Parameters
+        ----------
+
+        instrumentname and redshift : needed to apply the instrument
+        model and to determine which feature to exclude
+
+        lam : array of observed wavelengths
+            Used to exclude features from the model based on the actual
+            observed data given.
+
+        use_instrument_fwhm : bool
+            When set to False, the instrument model is not used and the
+            FWHM values are taken from the features table as-is. This is
+            the current workaround to fit the widths of lines, until the
+            "physical" and "instrumental" widths are conceptually
+            separated (see issue #293).
+
         """
         # Fitting implementation can be changed by choosing another
         # Fitter class. TODO: make this configurable.
         self.fitter = APFitter()
 
-        excluded = self._excluded_features(instrumentname, redshift, x)
+        excluded = self._excluded_features(instrumentname, redshift, lam)
         self.enabled_features = self.features["name"][~excluded]
 
         def cleaned(features_tuple3):
