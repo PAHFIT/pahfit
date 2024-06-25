@@ -834,7 +834,7 @@ class Model:
 
         return is_outside & is_excludable
 
-    def  _set_up_fitter(
+    def _set_up_fitter(
         self, instrumentname, redshift, lam=None, use_instrument_fwhm=True
     ):
         """Convert features table to Fitter instance, set self.fitter.
