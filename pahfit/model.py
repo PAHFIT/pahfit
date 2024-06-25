@@ -228,14 +228,14 @@ class Model:
             fmax_lam = 2898.0 / temp
             bb = BlackBody1D(1, temp)
             if fmax_lam >= wmin and fmax_lam <= wmax:
-                w_ref = fmax_lam
+                lam_ref = fmax_lam
             elif fmax_lam > wmax:
-                w_ref = wmax
+                lam_ref = wmax
             else:
-                w_ref = wmin
+                lam_ref = wmin
 
-            flux_ref = np.median(flux[(lam > w_ref - 0.2) & (lam < w_ref + 0.2)])
-            amp_guess = flux_ref / bb(w_ref)
+            flux_ref = np.median(flux[(lam > lam_ref - 0.2) & (lam < lam_ref + 0.2)])
+            amp_guess = flux_ref / bb(lam_ref)
             return amp_guess / nbb
 
         loop_over_non_fixed("dust_continuum", "tau", dust_continuum_guess)
@@ -909,12 +909,12 @@ class Model:
                     # oberved wav; 3. shift back to rest frame wav
                     # (width in rest frame will be narrower than
                     # observed width)
-                    w_obs = row["wavelength"]["val"] * (1.0 + redshift)
+                    lam_obs = row["wavelength"]["val"] * (1.0 + redshift)
                     # returned value is tuple (value, min, max). And
                     # min/max are already masked in case of fixed value
                     # (output of instrument.resolution is designed to be
                     # very similar to an entry in the features table)
-                    fwhm = instrument.fwhm(instrumentname, w_obs, as_bounded=True)[
+                    fwhm = instrument.fwhm(instrumentname, lam_obs, as_bounded=True)[
                         0
                     ] / (1.0 + redshift)
 
