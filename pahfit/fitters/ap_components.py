@@ -3,6 +3,8 @@ from scipy import interpolate
 from astropy.modeling.physical_models import Drude1D
 from astropy.modeling import Fittable1DModel
 from astropy.modeling import Parameter
+from astropy import constants
+from pahfit import units
 
 __all__ = ["BlackBody1D", "ModifiedBlackBody1D", "S07_attenuation", "att_Drude1D"]
 
@@ -134,3 +136,146 @@ class att_Drude1D(Fittable1DModel):
             profile = Drude1D(amplitude=1.0, fwhm=fwhm, x_0=x_0)
             tau_x = tau * profile(x)
             return (1.0 - np.exp(-1.0 * tau_x)) / tau_x
+
+
+class PowerDrude1D(Fittable1DModel):
+    """Drude profile with amplitude determined by power.
+
+    Special attention is needed for the units. An implementation for
+    this is 'unitful' because 'power' is defined as integral over
+    frequency, while the profile is formulated as a function of
+    wavelength. If we assume the output has unit(flux), then without
+    additional conversions the power unit will be unit(flux) * frequency
+    = unit(flux) * unit(c) / unit(lam).
+
+    Example: if x_0 and fwhm are in micron, and the flux is in MJy / sr,
+    then the unit of the fitted power will be MJy sr-1 * unit(c) /
+    micron, which differs by a constant factor from MJy sr-1 Hz,
+    depending on the chosen unit of c.
+
+    For efficiency and to prevent ambiguity, we assume that all units
+    are the internal pahfit units defined in pahfit.units, and
+    precalculate a conversion factor.
+
+    TODO: We need to check if the flux is 'intensity' or 'flux_density',
+    and assume the power parameter has 'intensity_power' or
+    'flux_density_power' units respectively. For now, only intensity is
+    supported.
+
+    """
+
+    power = Parameter(min=0.0)
+    x_0 = Parameter(min=0.0)
+    fwhm = Parameter(default=1, min=0.0)
+
+    # constant factors in the equation to convert power to amplitude of
+    # the profile.
+    intensity_amplitude_factor = (
+        (2 * units.intensity_power * units.wavelength / (constants.c * np.pi))
+        .to(units.intensity)
+        .value
+    )
+
+    @staticmethod
+    def evaluate(x, power, x_0, fwhm):
+        """Smith, et al. (2007) dust features model. Calculation is for
+        a Drude profile (equation in section 4.1.4).
+
+        The intensity profile as a function of
+        wavelength is
+
+        Inu(lambda) = (b * g**2) / ((lambda / x0 - x0 / lambda)**2 + g**2)
+
+        With
+        b = amplitude (has same unit as flux)
+        g = fwhm / x0
+        x0 = central wavelength
+
+        The integrated power (Fnu dnu) of the profile is
+
+        P = (pi * c / 2) * (b * g / x0)
+
+        Which can be solved for the amplitude b.
+
+        b = (P * 2 * x0) / (pi * c * g) = 2P / (pi nu0 g).
+
+        According to the above equations, without additional
+        conversions, the resulting amplitude unit will be unit(P) *
+        Hz-1. This will result in very small values for for Inu(lambda),
+        or very large values for P. To avoid numerical problems with the
+        fitting algorithm, we apply conversions so that Inu(lambda) and
+        P are in the internal units.
+
+        Parameters
+        ----------
+        power : float
+        fwhm : float
+        central intensity (x_0) : float
+
+        """
+        # The equation and unit conversion for the amplitude:
+        # b = (2 * P * x_0 / (pi * c * g)).to(output_unit).value
+
+        # Use predetermined factor that deals with units and constants.
+        # factor = (2 * unit(power) * unit(wavelength) / (pi * c)).to(unit(intensity))
+
+        g = fwhm / x_0
+        b = power * x_0 / g * PowerDrude1D.intensity_amplitude_factor
+        return b * g**2 / ((x / x_0 - x_0 / x) ** 2 + g**2)
+
+
+class PowerGaussian1D(Fittable1DModel):
+    """Gaussian profile with amplitude derived from power.
+
+    Implementation analogous to PowerDrude1D.
+
+    The amplitude of a gaussian profile given its power P, is P /
+    (stddev sqrt(2 pi)). Since stddev is given in wavelength units, this
+    equation gives the peak density per wavelength interval, Alambda.
+    The profile Flambda is then
+
+    Flambda(lambda) = Alambda * G(lambda; mean, stddev)
+
+    where G is a gaussian profile with amplitude 1.Converting this to
+    Fnu units yields
+
+    Fnu(lambda) = lambda**2 / c * Flambda(lambda)
+
+    Approximating the lambda**2 factor as a constant (the central
+    wavelength = 'mean'), then yields
+
+    Fnu(lambda) = mean**2 / c * Alambda * G(lambda; mean, stddev)
+
+    In other words, for narrow lines, the per-frequency profile is
+    approximately a gaussian with amplitude
+
+    Anu = P * mean**2 / (c * stddev sqrt(2 pi)).
+
+    So the constant factor we can set is
+    (unit(power) * unit(wavelength)**2 / (c * unit(wavelength) * sqrt(2 pi))).to(intensity)
+
+    """
+
+    power = Parameter(min=0.0)
+    mean = Parameter()
+    stddev = Parameter(default=1, min=0.0)
+
+    intensity_amplitude_factor = (
+        (
+            units.intensity_power
+            * (units.wavelength) ** 2
+            / (constants.c * units.wavelength * np.sqrt(2 * np.pi))
+        )
+        .to(units.intensity)
+        .value
+    )
+
+    @staticmethod
+    def evaluate(x, power, mean, stddev):
+        """Evaluate F_nu(lambda) given the power.
+
+        See class description for equations and unit notes."""
+
+        # amplitude in intensity units
+        Anu = power * mean**2 / stddev * PowerGaussian1D.intensity_amplitude_factor
+        return Anu * np.exp(-0.5 * np.square((x - mean) / stddev))
