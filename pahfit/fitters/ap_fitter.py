@@ -1,6 +1,6 @@
-from pahfit.fitter import Fitter
+from pahfit.fitters.fitter import Fitter
 from pahfit.errors import PAHFITModelError
-from pahfit.component_models import (
+from pahfit.fitters.ap_components import (
     BlackBody1D,
     ModifiedBlackBody1D,
     S07_attenuation,

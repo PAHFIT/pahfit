@@ -1,5 +1,5 @@
 from astropy.modeling.functional_models import Gaussian1D
-from pahfit.component_models import BlackBody1D
+from pahfit.fitters.ap_components import BlackBody1D
 
 import numpy as np
 

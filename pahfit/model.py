@@ -11,8 +11,8 @@ from pahfit.features.util import bounded_is_fixed, bounded_is_missing
 from pahfit.features import Features
 from pahfit import instrument
 from pahfit.errors import PAHFITModelError
-from pahfit.component_models import BlackBody1D, S07_attenuation
-from pahfit.apfitter import APFitter
+from pahfit.fitters.ap_components import BlackBody1D, S07_attenuation
+from pahfit.fitters.ap_fitter import APFitter
 
 
 class Model:

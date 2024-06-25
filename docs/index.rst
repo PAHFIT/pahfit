@@ -94,4 +94,4 @@ Reference API
 
 Component models not provided by astropy.models.
 
-.. automodapi:: pahfit.component_models
+.. automodapi:: pahfit.fitters.ap_components
