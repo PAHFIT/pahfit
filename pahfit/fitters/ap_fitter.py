@@ -5,9 +5,9 @@ from pahfit.fitters.ap_components import (
     ModifiedBlackBody1D,
     S07_attenuation,
     att_Drude1D,
-    Drude1D,
+    PowerDrude1D,
+    PowerGaussian1D
 )
-from astropy.modeling.functional_models import Gaussian1D
 from astropy.modeling.fitting import LevMarLSQFitter
 import numpy as np
 
@@ -161,10 +161,10 @@ class APFitter(Fitter):
 
         kwargs = self._astropy_model_kwargs(
             name,
-            ["amplitude", "mean", "stddev"],
+            ["power", "mean", "stddev"],
             [power, wavelength, fwhm / 2.355],
         )
-        self._add_component(Gaussian1D, **kwargs)
+        self._add_component(PowerGaussian1D, **kwargs)
 
     def add_feature_dust_feature(self, name, power, wavelength, fwhm):
         """Register a PowerDrude1D.
@@ -175,9 +175,9 @@ class APFitter(Fitter):
         """
         self.feature_types[name] = "dust_feature"
         kwargs = self._astropy_model_kwargs(
-            name, ["amplitude", "x_0", "fwhm"], [power, wavelength, fwhm]
+            name, ["power", "x_0", "fwhm"], [power, wavelength, fwhm]
         )
-        self._add_component(Drude1D, **kwargs)
+        self._add_component(PowerDrude1D, **kwargs)
 
     def add_feature_attenuation(self, name, tau, model="S07", geometry="screen"):
         """Register the S07 attenuation component.
@@ -286,10 +286,6 @@ class APFitter(Fitter):
         (generally the inverse conversions of what was done in the
         register function).
 
-        NOTE: for now, the return units for "power" are (flux unit) x
-        (micron). Still ambiguous, because the flux unit could be flux
-        density or intensity.
-
         Parameters
         ----------
         component_name : str
@@ -300,7 +296,8 @@ class APFitter(Fitter):
         -------
         dict with Parameters according to the PAHFIT definitions.
 
-        e.g. {'power': converted from amplitude, 'fwhm': converted from
+        e.g., for a feature with amplitude, stddev, and mean parameters:
+        {'power': converted from amplitude, 'fwhm': converted from
         stddev, 'mean': wavelength}
 
         """
@@ -322,13 +319,13 @@ class APFitter(Fitter):
             }
         elif c_type == "line":
             return {
-                "power": component.amplitude.value,
+                "power": component.power.value,
                 "wavelength": component.mean.value,
                 "fwhm": component.stddev.value * 2.355,
             }
         elif c_type == "dust_feature":
             return {
-                "power": component.amplitude.value,
+                "power": component.power.value,
                 "wavelength": component.x_0.value,
                 "fwhm": component.fwhm.value,
             }
