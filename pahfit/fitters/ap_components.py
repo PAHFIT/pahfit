@@ -197,14 +197,14 @@ class PowerDrude1D(Fittable1DModel):
 
         Which can be solved for the amplitude b.
 
-        b = (P * 2 * x0) / (pi * c * g) = 2P / (pi nu0 g).
+        b = (P * 2 * x0) / (pi * c * g)
 
         According to the above equations, without additional
         conversions, the resulting amplitude unit will be unit(P) *
-        Hz-1. This will result in very small values for for Inu(lambda),
-        or very large values for P. To avoid numerical problems with the
-        fitting algorithm, we apply conversions so that Inu(lambda) and
-        P are in the internal units.
+        Hz-1. The factor x0 / c = nu0 (Hz-1) will result in very small
+        values for for Inu(lambda), or very large values for P. To avoid
+        numerical problems, we apply a conversion that ensures
+        Inu(lambda) and P are in internal units.
 
         Parameters
         ----------
