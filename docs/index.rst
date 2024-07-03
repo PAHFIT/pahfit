@@ -14,7 +14,7 @@ and a more flexible modeling framework suitable for modeling a wider range
 of astrophysical sources.
 
 For details for the IDL version of PAHFIT see
-`Smith, J.D.T., Draine B.T., et al., 2007, ApJ, 656, 770 <http://tir.astro.utoledo.edu/jdsmith/research/pahfit.php>`_.
+`Smith, J.D.T., Draine B.T., et al., 2007, ApJ, 656, 770 <https://github.com/PAHFIT/pahfit_classic>`_.
 
 This package is potentially an
 `astropy affiliated package <http://www.astropy.org/affiliated/>`_
