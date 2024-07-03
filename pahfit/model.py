@@ -903,20 +903,23 @@ class Model:
                 )
 
             elif kind == "line":
-                if use_instrument_fwhm:
-                    # one caveat here: redshift. Correct way to do it:
-                    # 1. shift to observed wav; 2. evaluate fwhm at
-                    # oberved wav; 3. shift back to rest frame wav
-                    # (width in rest frame will be narrower than
-                    # observed width)
+                # be careful with lines that have masked FWHM values here
+                fwhm_masked = row['fwhm'].ndim == 0
+                if use_instrument_fwhm or fwhm_masked:
+                    # One caveat here: redshift. We do the necessary
+                    # adjustment as follows : 1. shift to observed wav;
+                    # 2. evaluate fwhm at oberved wav; 3. shift back to
+                    # rest frame wav (width in rest frame will be
+                    # narrower than observed width)
+
                     lam_obs = row["wavelength"]["val"] * (1.0 + redshift)
                     # returned value is tuple (value, min, max). And
                     # min/max are already masked in case of fixed value
                     # (output of instrument.resolution is designed to be
                     # very similar to an entry in the features table)
-                    fwhm = instrument.fwhm(instrumentname, lam_obs, as_bounded=True)[
-                        0
-                    ] / (1.0 + redshift)
+                    calculated_fwhm = instrument.fwhm(
+                        instrumentname, lam_obs, as_bounded=True
+                    )[0] / (1.0 + redshift)
 
                     # decide if scalar (fixed) or tuple (fitted fwhm
                     # between upper and lower fwhm limits, happens in
