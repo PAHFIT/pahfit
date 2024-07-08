@@ -752,12 +752,12 @@ class Model:
                 wmin = min(r[0] for r in ranges)
                 wmax = max(r[1] for r in ranges)
             wfwhm = instrument.fwhm(instrumentname, wmin, as_bounded=True)[0, 0]
-            wav = np.arange(wmin, wmax, wfwhm / 2) * u.micron
+            lam = np.arange(wmin, wmax, wfwhm / 2) * u.micron
         elif isinstance(wavelengths, Spectrum1D):
-            wav = wavelengths.spectral_axis.to(u.micron)
+            lam = wavelengths.spectral_axis.to(u.micron) / (1 + z)
         else:
             # any other iterable will be accepted and converted to array
-            wav = np.asarray(wavelengths) * u.micron
+            lam = np.asarray(wavelengths) * u.micron
 
         # apply feature mask, make sub model, and set up functional
         if feature_mask is not None:
@@ -768,7 +768,7 @@ class Model:
         # if nothing is in range, return early with zeros
         if len(features_to_use) == 0:
             return Spectrum1D(
-                spectral_axis=wav, flux=np.zeros(wav.shape) * u.dimensionless_unscaled
+                spectral_axis=lam, flux=np.zeros(lam.shape) * u.dimensionless_unscaled
             )
 
         alt_model = Model(features_to_use)
@@ -783,12 +783,10 @@ class Model:
             fitter = alt_model.fitter
         except PAHFITModelError:
             return Spectrum1D(
-                spectral_axis=wav, flux=np.zeros(wav.shape) * u.dimensionless_unscaled
+                spectral_axis=lam, flux=np.zeros(lam.shape) * u.dimensionless_unscaled
             )
 
-        # shift the "observed wavelength grid" to "physical wavelength grid
-        wav /= 1 + z
-        flux_values = fitter.evaluate(wav.value)
+        flux_values = fitter.evaluate(lam.value)
 
         # apply unit stored in features table (comes from from last fit
         # or from loading previous result from disk)
@@ -798,7 +796,7 @@ class Model:
             user_unit = self.features.meta["user_unit"]["flux"]
             flux_quantity = (flux_values * units.intensity).to(user_unit)
 
-        return Spectrum1D(spectral_axis=wav, flux=flux_quantity)
+        return Spectrum1D(spectral_axis=lam, flux=flux_quantity)
 
     def _excluded_features(self, instrumentname, redshift, lam_obs=None):
         """Determine excluded features Based on instrument wavelength range.
