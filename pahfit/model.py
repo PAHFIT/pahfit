@@ -194,7 +194,7 @@ class Model:
         # Some useful quantities for guessing
         median_flux = np.median(flux)
         Flambda = flux * units.intensity * (lam * units.wavelength) ** -2 * constants.c
-        total_power = np.trapz(Flambda, lam * units.wavelength)
+        total_power = np.trapezoid(Flambda, lam * units.wavelength)
 
         # simple linear interpolation function for spectrum
         sp = interpolate.interp1d(lam, flux)
