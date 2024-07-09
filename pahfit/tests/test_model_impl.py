@@ -10,9 +10,10 @@ def assert_features_table_equality(features1, features2):
     for string_col in ["name", "group", "kind", "model", "geometry"]:
         assert (features1[string_col] == features2[string_col]).all()
     for param_col in ["temperature", "tau", "wavelength", "power", "fwhm"]:
-        np.testing.assert_allclose(
-            features1[param_col], features2[param_col], rtol=1e-6, atol=1e-6
-        )
+        for k in ("val", "min", "max"):
+            np.testing.assert_allclose(
+                features1[param_col][k], features2[param_col][k], rtol=1e-6, atol=1e-6
+            )
 
 
 def default_spec_and_model_fit(fit=True):
@@ -35,14 +36,17 @@ def test_feature_table_model_conversion():
     # results were then written to model.features. If everything went
     # correct, reconstructing the model from model.features should
     # result in the exact same model.
-    fit_result = model.astropy_result
-    reconstructed_fit_result = model._construct_astropy_model(
+
+    fit_result = model.fitter
+    model._set_up_fitter(
         instrumentname=spec.meta["instrument"], redshift=0, use_instrument_fwhm=False
     )
-    for p in fit_result.param_names:
-        p1 = getattr(fit_result, p)
-        p2 = getattr(reconstructed_fit_result, p)
-        assert p1 == p2
+    reconstructed_fit_result = model.fitter
+    for name in model.enabled_features:
+        par_dict1 = fit_result.get_result(name)
+        par_dict2 = reconstructed_fit_result.get_result(name)
+        for key in par_dict1:
+            assert par_dict1[key] == par_dict2[key]
 
 
 def test_model_edit():
@@ -57,19 +61,23 @@ def test_model_edit():
 
     # edit the same parameter in the copy
     newT = 123
-    model_to_edit.features.loc[feature][col][0] = newT
+
+    i = np.where(model_to_edit.features["name"] == feature)[0]
+    model_to_edit.features[col]["val"][i] = newT
 
     # make sure the original value is still the same
-    assert model.features.loc[feature][col][0] == originalT
+    j = np.where(model.features["name"] == feature)[0]
+    assert model.features[col]["val"][j] == originalT
 
     # construct astropy model with dummy instrument
-    astropy_model_edit = model_to_edit._construct_astropy_model(
+    model_to_edit._set_up_fitter(
         instrumentname="spitzer.irs.*", redshift=0
     )
+    fitter_edit = model_to_edit.fitter
 
     # Make sure the change is reflected in this model. Very handy that
     # we can access the right component by the feature name!
-    assert astropy_model_edit[feature].temperature == newT
+    assert fitter_edit.get_result(feature)["temperature"] == newT
 
 
 def test_model_tabulate():

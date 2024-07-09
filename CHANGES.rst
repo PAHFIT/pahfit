@@ -12,4 +12,4 @@
 ==================
 
 - IDL versions
-- http://tir.astro.utoledo.edu/jdsmith/research/pahfit.php
+- https://github.com/PAHFIT/pahfit_classic
