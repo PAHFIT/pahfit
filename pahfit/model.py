@@ -292,7 +292,7 @@ class Model:
         if calc_line_fwhm:
             for row_index in np.where(self.features["kind"] == "line")[0]:
                 row = self.features[row_index]
-                if np.ma.is_masked(row["fwhm"]):
+                if row["fwhm"] is np.ma.masked:
                     self.features[row_index]["fwhm"] = (
                         line_fwhm_guess(row),
                         np.nan,
@@ -902,8 +902,7 @@ class Model:
 
             elif kind == "line":
                 # be careful with lines that have masked FWHM values here
-                fwhm_masked = row['fwhm'].ndim == 0
-                if use_instrument_fwhm or fwhm_masked:
+                if use_instrument_fwhm or row['fwhm'] is np.ma.masked:
                     # One caveat here: redshift. We do the necessary
                     # adjustment as follows : 1. shift to observed wav;
                     # 2. evaluate fwhm at oberved wav; 3. shift back to
@@ -922,9 +921,14 @@ class Model:
                     # decide if scalar (fixed) or tuple (fitted fwhm
                     # between upper and lower fwhm limits, happens in
                     # case of overlapping instruments)
-                    if np.ma.is_masked(fwhm):
-                        fwhm = fwhm[0]
+                    if calculated_fwhm[1] is np.ma.masked:
+                        fwhm = calculated_fwhm[0]
+                    else:
+                        fwhm = calculated_fwhm
+
                 else:
+                    # if instrument model is not to be used, just take
+                    # the value as is specified in the Features table
                     fwhm = cleaned(row["fwhm"])
 
                 self.fitter.add_feature_line(
