@@ -6,7 +6,7 @@ from pahfit.fitters.ap_components import (
     S07_attenuation,
     att_Drude1D,
     PowerDrude1D,
-    PowerGaussian1D
+    PowerGaussian1D,
 )
 from astropy.modeling.fitting import LevMarLSQFitter
 import numpy as np

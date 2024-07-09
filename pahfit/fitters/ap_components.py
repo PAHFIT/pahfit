@@ -22,12 +22,11 @@ class BlackBody1D(Fittable1DModel):
 
     @staticmethod
     def evaluate(x, amplitude, temperature):
-        """
-        """
+        """ """
         return (
             amplitude
             * 3.97289e13
-            / x ** 3
+            / x**3
             / (np.exp(1.4387752e4 / x / temperature) - 1.0)
         )
 
@@ -84,7 +83,9 @@ class S07_attenuation(Fittable1DModel):
         # Extend kvt profile to shorter wavelengths
         if min(in_x) < min(kvt_wav):
             kvt_wav_short = in_x[in_x < min(kvt_wav)]
-            kvt_int_short_tmp = min(kvt_int) * np.exp(2.03 * (kvt_wav_short - min(kvt_wav)))
+            kvt_int_short_tmp = min(kvt_int) * np.exp(
+                2.03 * (kvt_wav_short - min(kvt_wav))
+            )
             # Since kvt_int_shoft_tmp does not reach min(kvt_int),
             # we scale it to stitch it.
             kvt_int_short = kvt_int_short_tmp * (kvt_int[0] / max(kvt_int_short_tmp))
