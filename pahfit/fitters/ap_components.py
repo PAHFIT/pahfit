@@ -202,7 +202,7 @@ class PowerDrude1D(Fittable1DModel):
 
         According to the above equations, without additional
         conversions, the resulting amplitude unit will be unit(P) *
-        Hz-1. The factor x0 / c = nu0 (Hz-1) will result in very small
+        Hz-1. The factor x0 / c = 1 / nu0 (Hz-1) will result in very small
         values for for Inu(lambda), or very large values for P. To avoid
         numerical problems, we apply a conversion that ensures
         Inu(lambda) and P are in internal units.
