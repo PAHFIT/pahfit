@@ -177,8 +177,7 @@ class PowerDrude1D(Fittable1DModel):
         .value
     )
 
-    @staticmethod
-    def evaluate(x, power, x_0, fwhm):
+    def evaluate(self, x, power, x_0, fwhm):
         """Smith, et al. (2007) dust features model. Calculation is for
         a Drude profile (equation in section 4.1.4).
 
@@ -221,7 +220,7 @@ class PowerDrude1D(Fittable1DModel):
         # factor = (2 * unit(power) * unit(wavelength) / (pi * c)).to(unit(intensity))
 
         g = fwhm / x_0
-        b = power * x_0 / g * PowerDrude1D.intensity_amplitude_factor
+        b = power * x_0 / g * self.intensity_amplitude_factor
         return b * g**2 / ((x / x_0 - x_0 / x) ** 2 + g**2)
 
 
@@ -271,12 +270,11 @@ class PowerGaussian1D(Fittable1DModel):
         .value
     )
 
-    @staticmethod
-    def evaluate(x, power, mean, stddev):
+    def evaluate(self, x, power, mean, stddev):
         """Evaluate F_nu(lambda) given the power.
 
         See class description for equations and unit notes."""
 
         # amplitude in intensity units
-        Anu = power * mean**2 / stddev * PowerGaussian1D.intensity_amplitude_factor
+        Anu = power * mean**2 / stddev * self.intensity_amplitude_factor
         return Anu * np.exp(-0.5 * np.square((x - mean) / stddev))
