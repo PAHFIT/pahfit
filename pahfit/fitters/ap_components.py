@@ -140,7 +140,8 @@ class att_Drude1D(Fittable1DModel):
 
 
 class PowerDrude1D(Fittable1DModel):
-    """Drude profile with amplitude determined by power.
+    """
+    Drude profile with amplitude determined by power.
 
     Special attention is needed for the units. An implementation for
     this is 'unitful' because 'power' is defined as integral over
@@ -178,11 +179,11 @@ class PowerDrude1D(Fittable1DModel):
     )
 
     def evaluate(self, x, power, x_0, fwhm):
-        """Smith, et al. (2007) dust features model. Calculation is for
-        a Drude profile (equation in section 4.1.4).
+        """
+        Smith, et al. (2007) dust features model. Calculation is for a
+        Drude profile (equation in section 4.1.4).
 
-        The intensity profile as a function of
-        wavelength is
+        The intensity profile as a function of wavelength is
 
         Inu(lambda) = (b * g**2) / ((lambda / x0 - x0 / lambda)**2 + g**2)
 
@@ -201,9 +202,9 @@ class PowerDrude1D(Fittable1DModel):
 
         According to the above equations, without additional
         conversions, the resulting amplitude unit will be unit(P) *
-        Hz-1. The factor x0 / c = 1 / nu0 (Hz-1) will result in very small
-        values for for Inu(lambda), or very large values for P. To avoid
-        numerical problems, we apply a conversion that ensures
+        Hz-1. The factor x0 / c = 1 / nu0 (Hz-1) will result in very
+        small values for for Inu(lambda), or very large values for P. To
+        avoid numerical problems, we apply a conversion that ensures
         Inu(lambda) and P are in internal units.
 
         Parameters
@@ -225,7 +226,8 @@ class PowerDrude1D(Fittable1DModel):
 
 
 class PowerGaussian1D(Fittable1DModel):
-    """Gaussian profile with amplitude derived from power.
+    """
+    Gaussian profile with amplitude derived from power.
 
     Implementation analogous to PowerDrude1D.
 
@@ -236,7 +238,7 @@ class PowerGaussian1D(Fittable1DModel):
 
     Flambda(lambda) = Alambda * G(lambda; mean, stddev)
 
-    where G is a gaussian profile with amplitude 1.Converting this to
+    where G is a gaussian profile with amplitude 1. Converting this to
     Fnu units yields
 
     Fnu(lambda) = lambda**2 / c * Flambda(lambda)
@@ -271,7 +273,8 @@ class PowerGaussian1D(Fittable1DModel):
     )
 
     def evaluate(self, x, power, mean, stddev):
-        """Evaluate F_nu(lambda) given the power.
+        """
+        Evaluate F_nu(lambda) given the power.
 
         See class description for equations and unit notes."""
 
