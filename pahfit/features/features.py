@@ -41,7 +41,7 @@ KIND_PARAMS = {'starlight': {'temperature', 'tau'},
 PARAM_UNITS = {'temperature': pahfit.units.temperature,
                'wavelength': pahfit.units.wavelength,
                'fwhm': pahfit.units.wavelength,
-               'power': pahfit.units.intensity}
+               'power': pahfit.units.intensity_power}
 
 
 class UniqueKeyLoader(yaml.SafeLoader):

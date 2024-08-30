@@ -1,5 +1,6 @@
 from specutils import Spectrum1D
 from astropy import units as u
+from astropy import constants
 import copy
 import matplotlib as mpl
 from matplotlib import pyplot as plt
@@ -187,8 +188,13 @@ class Model:
         # parse spectral data
         self.features.meta["user_unit"]["flux"] = spec.flux.unit
         _, _, _, lam, flux, _ = self._convert_spec_data(spec, z)
-        wmin = min(lam)
-        wmax = max(lam)
+        lam_min = min(lam)
+        lam_max = max(lam)
+
+        # Some useful quantities for guessing
+        median_flux = np.median(flux)
+        Flambda = flux * units.intensity * (lam * units.wavelength) ** -2 * constants.c
+        total_power = integrate.trapezoid(Flambda, lam * units.wavelength)
 
         # simple linear interpolation function for spectrum
         sp = interpolate.interp1d(lam, flux)
@@ -205,7 +211,7 @@ class Model:
         # guess starting point of bb
         def starlight_guess(row):
             bb = BlackBody1D(1, row["temperature"][0])
-            w = wmin + 0.1  # the wavelength used to compare
+            w = lam_min + 0.1  # the wavelength used to compare
             if w < 5:
                 # wavelength is short enough to not have numerical
                 # issues. Evaluate both at w.
@@ -227,12 +233,12 @@ class Model:
             temp = row["temperature"][0]
             fmax_lam = 2898.0 / temp
             bb = BlackBody1D(1, temp)
-            if fmax_lam >= wmin and fmax_lam <= wmax:
+            if fmax_lam >= lam_min and fmax_lam <= lam_max:
                 lam_ref = fmax_lam
-            elif fmax_lam > wmax:
-                lam_ref = wmax
+            elif fmax_lam > lam_max:
+                lam_ref = lam_max
             else:
-                lam_ref = wmin
+                lam_ref = lam_min
 
             flux_ref = np.median(flux[(lam > lam_ref - 0.2) & (lam < lam_ref + 0.2)])
             amp_guess = flux_ref / bb(lam_ref)
@@ -241,47 +247,59 @@ class Model:
         loop_over_non_fixed("dust_continuum", "tau", dust_continuum_guess)
 
         def line_fwhm_guess(row):
-            w = row["wavelength"][0]
-            if not instrument.within_segment(w, inst):
+            lam_line = row["wavelength"][0]
+            if not instrument.within_segment(lam_line, inst):
                 return 0
 
-            fwhm = instrument.fwhm(inst, w, as_bounded=True)[0][0]
+            fwhm = instrument.fwhm(inst, lam_line, as_bounded=True)[0][0]
             return fwhm
 
-        def amp_guess(row, fwhm):
-            w = row["wavelength"][0]
-            if not instrument.within_segment(w, inst):
+        def power_guess(row, fwhm):
+            # local integration for the lines
+            lam_line = row["wavelength"][0]
+            if not instrument.within_segment(lam_line, inst):
                 return 0
 
             factor = 1.5
-            wmin = w - factor * fwhm
-            wmax = w + factor * fwhm
-            lam_window = (lam > wmin) & (lam < wmax)
+            lam_min = lam_line - factor * fwhm
+            lam_max = lam_line + factor * fwhm
+            lam_window = (lam > lam_min) & (lam < lam_max)
             xpoints = lam[lam_window]
             ypoints = flux[lam_window]
             if np.count_nonzero(lam_window) >= 2:
                 # difference between flux in window and flux around it
-                power_guess = integrate.trapezoid(flux[lam_window], lam[lam_window])
+                Fnu_dlambda = integrate.trapezoid(flux[lam_window], lam[lam_window])
                 # subtract continuum estimate, but make sure we don't go negative
                 continuum = (ypoints[0] + ypoints[-1]) / 2 * (xpoints[-1] - xpoints[0])
-                if continuum < power_guess:
-                    power_guess -= continuum
+                if continuum < Fnu_dlambda:
+                    Fnu_dlambda -= continuum
             else:
-                power_guess = 0
-            return power_guess / fwhm
+                Fnu_dlambda = 0
 
-        # Same logic as in the old function: just use same amp for all
-        # dust features.
-        some_flux = 0.5 * np.median(flux)
-        loop_over_non_fixed("dust_feature", "power", lambda row: some_flux)
+            # this is an unphysical power (Fnu * dlambda), but we
+            # convert to Fnu dnu = Fnu dnu/dlambda dlambda = Fnu c /
+            # lambda **2 dlambda
+            Fnu_dlambda *= units.intensity * units.wavelength
+            Fnu_dnu = Fnu_dlambda * constants.c / (lam_line * units.wavelength) ** 2
+            return Fnu_dnu.to(units.intensity_power).value
+
+        def drude_power_guess(row):
+            # multiply total power by some fraction to guess Drude power
+            fwhm = row["fwhm"][0] * units.wavelength
+            delta_w = spec.spectral_axis[-1] - spec.spectral_axis[0]
+            return (total_power * fwhm / delta_w).to(units.intensity_power).value
+
+        loop_over_non_fixed("dust_feature", "power", drude_power_guess)
 
         if integrate_line_flux:
-            # calc line amplitude using instrumental fwhm and integral over data
+            # calc line power using instrumental fwhm and integral over data
             loop_over_non_fixed(
-                "line", "power", lambda row: amp_guess(row, line_fwhm_guess(row))
+                "line", "power", lambda row: power_guess(row, line_fwhm_guess(row))
             )
         else:
-            loop_over_non_fixed("line", "power", lambda row: some_flux)
+            loop_over_non_fixed(
+                "line", "power", lambda row: median_flux * line_fwhm_guess(row)
+            )
 
         # Set the fwhms in the features table. Slightly different logic,
         # as the fwhm for lines are masked by default. TODO: leave FWHM
@@ -745,14 +763,16 @@ class Model:
         if wavelengths is None:
             ranges = instrument.wave_range(instrumentname)
             if isinstance(ranges[0], float):
-                wmin, wmax = ranges
+                lam_min, lam_max = ranges
             else:
                 # In case of multiple ranges (multiple segments), choose
                 # the min and max instead
-                wmin = min(r[0] for r in ranges)
-                wmax = max(r[1] for r in ranges)
-            wfwhm = instrument.fwhm(instrumentname, wmin, as_bounded=True)[0, 0]
-            lam = np.arange(wmin, wmax, wfwhm / 2) * u.micron
+                lam_min = min(r[0] for r in ranges)
+                lam_max = max(r[1] for r in ranges)
+
+            wfwhm = instrument.fwhm(instrumentname, lam_min, as_bounded=True)[0, 0]
+            lam = np.arange(lam_min, lam_max, wfwhm / 2) * u.micron
+
         elif isinstance(wavelengths, Spectrum1D):
             lam = wavelengths.spectral_axis.to(u.micron) / (1 + z)
         else:
@@ -902,13 +922,12 @@ class Model:
 
             elif kind == "line":
                 # be careful with lines that have masked FWHM values here
-                if use_instrument_fwhm or row['fwhm'] is np.ma.masked:
+                if use_instrument_fwhm or row["fwhm"] is np.ma.masked:
                     # One caveat here: redshift. We do the necessary
                     # adjustment as follows : 1. shift to observed wav;
                     # 2. evaluate fwhm at oberved wav; 3. shift back to
                     # rest frame wav (width in rest frame will be
                     # narrower than observed width)
-
                     lam_obs = row["wavelength"]["val"] * (1.0 + redshift)
                     # returned value is tuple (value, min, max). And
                     # min/max are already masked in case of fixed value
