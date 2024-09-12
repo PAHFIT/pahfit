@@ -3,6 +3,7 @@ from pahfit.errors import PAHFITModelError
 from .ap_components import (
     BlackBody1D,
     ModifiedBlackBody1D,
+    SpecialModifiedBlackBody1D,
     S07_attenuation,
     att_Drude1D,
     PowerDrude1D,
@@ -137,18 +138,30 @@ class APFitter(Fitter):
         )
         self._add_component(BlackBody1D, **kwargs)
 
-    def add_feature_dust_continuum(self, name, temperature, tau):
+    def add_feature_dust_continuum(self, name, temperature, tau, model="default"):
         """Register a ModifiedBlackBody1D.
 
         Analogous. Temperature and tau are used as temperature and
         amplitude
+
+        Parameters
+        ----------
+        model : str (available values: 'default' and 'special')
+            Keyword to activate alternate continuum shapes. 'default' is
+            a modified blackbody with a lambda**-2 factor. With
+            model='special', the modification factor is the MW average
+            extinction law for Rv=5.5.
 
         """
         self.feature_types[name] = "dust_continuum"
         kwargs = self._astropy_model_kwargs(
             name, ["temperature", "amplitude"], [temperature, tau]
         )
-        self._add_component(ModifiedBlackBody1D, **kwargs)
+        if model == "special":
+            ap_class = SpecialModifiedBlackBody1D
+        else:
+            ap_class = ModifiedBlackBody1D
+        self._add_component(ap_class, **kwargs)
 
     def add_feature_line(self, name, power, wavelength, fwhm):
         """Register a PowerGaussian1D
