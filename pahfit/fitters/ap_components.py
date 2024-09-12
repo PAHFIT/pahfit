@@ -5,6 +5,9 @@ from astropy.modeling import Fittable1DModel
 from astropy.modeling import Parameter
 from astropy import constants
 from pahfit import units
+from dust_extinction.parameter_averages import G23
+from astropy import units as u
+
 
 __all__ = ["BlackBody1D", "ModifiedBlackBody1D", "S07_attenuation", "att_Drude1D"]
 
@@ -39,6 +42,29 @@ class ModifiedBlackBody1D(BlackBody1D):
     @staticmethod
     def evaluate(x, amplitude, temperature):
         return BlackBody1D.evaluate(x, amplitude, temperature) * ((9.7 / x) ** 2)
+
+
+class SpecialModifiedBlackBody1D(BlackBody1D):
+    """Modified blackbody with an emissivity multiplied by an extinction curve.
+
+    Since the extinction curve used has the 20 micron silicate feature,
+    the emissivity curve will have a steepening just past 15 micron.
+    This is just what is needed to reproduce the continuum of the Orion
+    Bar spectra. Note that a regular modified blackbody will typically
+    overestimate the 15 micron region in spectra with a very steep
+    continuum, i.e. those where it ramps up before the 16-18 micron
+    complex.
+
+    """
+
+    absorption_curve = G23()
+    Rv = 5.5
+
+    @classmethod
+    def evaluate(cls, x, amplitude, temperature):
+        return BlackBody1D.evaluate(
+            x, amplitude, temperature
+        ) * cls.absorption_curve.evaluate(x * u.micron, Rv=cls.Rv)
 
 
 class S07_attenuation(Fittable1DModel):
