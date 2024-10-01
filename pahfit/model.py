@@ -888,7 +888,10 @@ class Model:
 
             elif kind == "dust_continuum":
                 self.fitter.add_feature_dust_continuum(
-                    name, cleaned(row["temperature"]), cleaned(row["tau"])
+                    name,
+                    cleaned(row["temperature"]),
+                    cleaned(row["tau"]),
+                    model="special",
                 )
 
             elif kind == "line":

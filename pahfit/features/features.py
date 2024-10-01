@@ -32,7 +32,7 @@ import pahfit.units
 
 # Feature kinds and associated parameters
 KIND_PARAMS = {'starlight': {'temperature', 'tau'},
-               'dust_continuum': {'temperature', 'tau'},
+               'dust_continuum': {'model', 'temperature', 'tau'},
                'line': {'wavelength', 'power'},  # 'fwhm', Instrument Pack detail!
                'dust_feature': {'wavelength', 'fwhm', 'power'},
                'attenuation': {'model', 'tau', 'geometry'},
