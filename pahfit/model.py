@@ -891,7 +891,7 @@ class Model:
                     name,
                     cleaned(row["temperature"]),
                     cleaned(row["tau"]),
-                    model="special",
+                    model=row["model"],
                 )
 
             elif kind == "line":

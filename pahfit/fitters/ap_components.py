@@ -41,7 +41,9 @@ class ModifiedBlackBody1D(BlackBody1D):
 
     @staticmethod
     def evaluate(x, amplitude, temperature):
-        return BlackBody1D.evaluate(x, amplitude, temperature) * ((9.7 / x) ** 2)
+        bb = BlackBody1D.evaluate(x, 1, temperature) * ((9.7 / x) ** 2)
+        bb_ref = BlackBody1D.evaluate(17, 1, temperature) * ((9.7 / 17) ** 2)
+        return amplitude * bb / bb_ref
 
 
 class SpecialModifiedBlackBody1D(BlackBody1D):
@@ -59,12 +61,19 @@ class SpecialModifiedBlackBody1D(BlackBody1D):
 
     absorption_curve = G23()
     Rv = 5.5
+    wref = 17
+
+    @classmethod
+    def evaluate_not_normalized(cls, x, temperature):
+        return BlackBody1D.evaluate(x, 1, temperature) * cls.absorption_curve.evaluate(
+            x * u.micron, Rv=cls.Rv
+        )
 
     @classmethod
     def evaluate(cls, x, amplitude, temperature):
-        return BlackBody1D.evaluate(
-            x, amplitude, temperature
-        ) * cls.absorption_curve.evaluate(x * u.micron, Rv=cls.Rv)
+        bb = cls.evaluate_not_normalized(x, temperature)
+        bb_ref = cls.evaluate_not_normalized(cls.wref, temperature)
+        return amplitude * bb / bb_ref
 
 
 class S07_attenuation(Fittable1DModel):
