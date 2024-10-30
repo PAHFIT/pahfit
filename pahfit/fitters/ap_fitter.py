@@ -276,23 +276,23 @@ class APFitter(Fitter):
 
         self.fit_info = []
 
-        fit = LevMarLSQFitter(calc_uncertainties=True)
-        astropy_result = fit(
-            self.model,
-            lam[mask],
-            flux[mask],
-            weights=w[mask],
-            maxiter=maxiter,
-            epsilon=1e-10,
-            acc=1e-10,
-        )
-        # let's see what running this after lev mar does. Maybe it
-        # improves the continuum fitting somewhat (less "sticky" to the
-        # tau = 0 bound?)
-        print("LevMarLSQ fit done, continuing with TRFLSQ")
+        # fit = LevMarLSQFitter(calc_uncertainties=True)
+        # astropy_result = fit(
+        #     self.model,
+        #     lam[mask],
+        #     flux[mask],
+        #     weights=w[mask],
+        #     maxiter=maxiter,
+        #     epsilon=1e-10,
+        #     acc=1e-10,
+        # )
+        # # let's see what running this after lev mar does. Maybe it
+        # # improves the continuum fitting somewhat (less "sticky" to the
+        # # tau = 0 bound?)
+        # print("LevMarLSQ fit done, continuing with TRFLSQ")
         fit = TRFLSQFitter(calc_uncertainties=True)
         astropy_result = fit(
-            astropy_result,
+            self.model,
             lam[mask],
             flux[mask],
             weights=w[mask],

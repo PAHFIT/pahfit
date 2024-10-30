@@ -8,7 +8,6 @@ from pahfit import units
 from dust_extinction.parameter_averages import G23
 from astropy import units as u
 
-
 __all__ = ["BlackBody1D", "ModifiedBlackBody1D", "S07_attenuation", "att_Drude1D"]
 
 
@@ -61,13 +60,38 @@ class SpecialModifiedBlackBody1D(BlackBody1D):
 
     absorption_curve = G23()
     Rv = 5.5
+
+    # a spline interpolation of a log-grid sampling with 14 points is
+    # already accurate up to 3%. Let's see if evaluating this way will
+    # give us extra speed. The following values are optimal to sample
+    # the Rv 5.5 extinction curve (and that function only)
+    _interp_grid = np.array(
+        [
+            2.90447963,
+            3.4699101,
+            4.15219317,
+            4.9752758,
+            5.96774624,
+            7.34165116,
+            8.97727221,
+            9.74637847,
+            10.44168469,
+            14.25551077,
+            17.50407977,
+            20.94021486,
+            25.06515997,
+            29.99954211,
+        ]
+    )
+    _interp_y = absorption_curve.evaluate(_interp_grid * u.micron, Rv=5.5)
+    _interp = interpolate.CubicSpline(_interp_grid, _interp_y)
+    print("prepared cubic spline for special continuum")
+
     wref = 17
 
     @classmethod
     def evaluate_not_normalized(cls, x, temperature):
-        return BlackBody1D.evaluate(x, 1, temperature) * cls.absorption_curve.evaluate(
-            x * u.micron, Rv=cls.Rv
-        )
+        return BlackBody1D.evaluate(x, 1, temperature) * cls._interp(x)
 
     @classmethod
     def evaluate(cls, x, amplitude, temperature):
