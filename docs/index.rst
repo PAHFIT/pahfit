@@ -14,7 +14,7 @@ and a more flexible modeling framework suitable for modeling a wider range
 of astrophysical sources.
 
 For details for the IDL version of PAHFIT see
-`Smith, J.D.T., Draine B.T., et al., 2007, ApJ, 656, 770 <http://tir.astro.utoledo.edu/jdsmith/research/pahfit.php>`_.
+`Smith, J.D.T., Draine B.T., et al., 2007, ApJ, 656, 770 <https://github.com/PAHFIT/pahfit_classic>`_.
 
 This package is potentially an
 `astropy affiliated package <http://www.astropy.org/affiliated/>`_
@@ -77,7 +77,7 @@ contributors who will abide by the `Python Software Foundation Code of Conduct
 `Astropy`_.  The following pages will help you get started with contributing
 fixes, code, or documentation (no git or GitHub experience necessary):
 
-* `How to make a code contribution <https://docs.astropy.org/en/latest/development/workflow/development_workflow.html>`_
+* `How to make a code contribution <https://docs.astropy.org/en/latest/index_dev.html#developer-docs>`_
 
 * `Coding Guidelines <https://docs.astropy.org/en/latest/development/codeguide.html>`_
 
@@ -92,10 +92,6 @@ contributors page on Github
 Reference API
 =============
 
-Base class for PAHFIT
-
-.. automodapi:: pahfit.base
-
 Component models not provided by astropy.models.
 
-.. automodapi:: pahfit.component_models
+.. automodapi:: pahfit.fitters.ap_components

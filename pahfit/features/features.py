@@ -21,16 +21,33 @@ import os
 import numpy as np
 from astropy.table import vstack, Table, TableAttribute
 from astropy.io.misc.yaml import yaml
-import astropy.units as u
-from pkg_resources import resource_filename
+from importlib import resources
 from pahfit.errors import PAHFITFeatureError
-from pahfit.features.features_format import BoundedMaskedColumn, BoundedParTableFormatter
+from pahfit.features.features_format import BoundedParTableFormatter
+import pahfit.units
+
+# Feature kinds and associated parameters
+KIND_PARAMS = {'starlight': {'temperature', 'tau'},
+               'dust_continuum': {'temperature', 'tau'},
+               'line': {'wavelength', 'power'},  # 'fwhm', Instrument Pack detail!
+               'dust_feature': {'wavelength', 'fwhm', 'power'},
+               'attenuation': {'model', 'tau', 'geometry'},
+               'absorption': {'wavelength', 'fwhm', 'tau', 'geometry'}}
+
+# Parameter default units: flux density/intensity/power (other units determined on fit)
+# Note: power is actually amplitude for now. Change this to
+# intensity_power when the power features are implemented.
+
+PARAM_UNITS = {'temperature': pahfit.units.temperature,
+               'wavelength': pahfit.units.wavelength,
+               'fwhm': pahfit.units.wavelength,
+               'power': pahfit.units.intensity_power}
 
 
 class UniqueKeyLoader(yaml.SafeLoader):
     def construct_mapping(self, node, deep=False):
         mapping = set()
-        for key_node, value_node in node.value:
+        for key_node, _ in node.value:
             key = self.construct_object(key_node, deep=deep)
             if key in mapping:
                 raise PAHFITFeatureError(f"Duplicate {key!r} key found in YAML.")
@@ -69,8 +86,8 @@ def value_bounds(val, bounds):
     Returns:
     -------
 
-      The value, if unbounded, or a 3 element tuple (value, min, max).
-        Any missing bound is replaced with the numpy `masked' value.
+      A 3 element tuple (value, min, max).
+        Any missing bound is replaced with the numpy.nan value.
 
     Raises:
     -------
@@ -82,7 +99,7 @@ def value_bounds(val, bounds):
     if val is None:
         val = np.ma.masked
     if not bounds:
-        return (val,) + 2 * (np.ma.masked,)  # Fixed
+        return (val,) + 2 * (np.nan,)  # (val,nan,nan) indicates fixed
     ret = [val]
     for i, b in enumerate(bounds):
         if isinstance(b, str):
@@ -102,27 +119,25 @@ def value_bounds(val, bounds):
 
 
 class Features(Table):
-    """A class for holding PAHFIT features and their associated
-    parameter information.  Note that each parameter has an associated
-    `kind', and that each kind has an associated set of allowable
-    parameters (see _kind_params, below).
+    """A class for holding a table of PAHFIT features and associated
+    parameter information.
+
+    Note that each parameter has an associated `kind', and that each
+    kind has an associated set of allowable parameters (see
+    `KIND_PARAMS`).
+
+    See Also
+    --------
+    `~astropy.table.Table`: The parent table class.
     """
 
     TableFormatter = BoundedParTableFormatter
-    MaskedColumn = BoundedMaskedColumn
 
     param_covar = TableAttribute(default=[])
-    _kind_params = {'starlight': {'temperature', 'tau'},
-                    'dust_continuum': {'temperature', 'tau'},
-                    'line': {'wavelength', 'power'},  # 'fwhm', Instrument Pack detail!
-                    'dust_feature': {'wavelength', 'fwhm', 'power'},
-                    'attenuation': {'model', 'tau', 'geometry'},
-                    'absorption': {'wavelength', 'fwhm', 'tau', 'geometry'}}
-
-    _units = {'temperature': u.K, 'wavelength': u.um, 'fwhm': u.um}
     _group_attrs = set(('bounds', 'features', 'kind'))  # group-level attributes
     _param_attrs = set(('value', 'bounds'))  # Each parameter can have these attributes
-    _no_bounds = set(('name', 'group', 'geometry', 'model'))  # String attributes (no bounds)
+    _no_bounds = set(('name', 'group', 'kind', 'geometry', 'model'))  # str attributes (no bounds)
+    _bounds_dtype = np.dtype([("val", float), ("min", float), ("max", float)])  # bounded param type
 
     @classmethod
     def read(cls, file, *args, **kwargs):
@@ -158,8 +173,7 @@ class Features(Table):
         feat_tables = dict()
 
         if not os.path.isfile(file):
-            pack_path = resource_filename("pahfit", "packs/science")
-            file = os.path.join(pack_path, file)
+            file = resources.files("pahfit") / "packs/science" / file
         try:
             with open(file) as fd:
                 scipack = yaml.load(fd, Loader=UniqueKeyLoader)
@@ -179,7 +193,7 @@ class Features(Table):
                 raise PAHFITFeatureError(f"No kind found for {name}\n\t{file}")
 
             try:
-                valid_params = cls._kind_params[kind]
+                valid_params = KIND_PARAMS[kind]
             except KeyError:
                 raise PAHFITFeatureError(f"Unknown kind {kind} for {name}\n\t{file}")
             unknown_params = [x for x in keys
@@ -264,7 +278,7 @@ class Features(Table):
         t[kind][name]['group'] = group
         t[kind][name]['kind'] = kind
         for (param, val) in pars.items():
-            if param not in cls._kind_params[kind]:
+            if param not in KIND_PARAMS[kind]:
                 continue
             if isinstance(val, dict):  # A param attribute dictionary
                 unknown_attrs = [x for x in val.keys() if x not in cls._param_attrs]
@@ -307,27 +321,35 @@ class Features(Table):
         """
         tables = []
         for (kind, features) in inp.items():
-            kind_params = cls._kind_params[kind]  # All params for this kind
+            if kind == "_ratios":
+                continue
+            kp = KIND_PARAMS[kind]  # All params for this kind
             rows = []
             for (name, params) in features.items():
-                for missing in kind_params - params.keys():
+                for missing in kp - params.keys():
                     if missing in cls._no_bounds:
                         params[missing] = 0.0
                     else:
                         params[missing] = value_bounds(0.0, bounds=(0.0, None))
                 rows.append(dict(name=name, **params))
-            table_columns = rows[0].keys()
-            t = cls(rows, names=table_columns)
-            for p in cls._kind_params[kind]:
-                if p not in cls._no_bounds:
-                    t[p].info.format = "0.4g"  # Nice format (customized by Formatter)
+            param_names = rows[0].keys()
+            dtypes = [str if x in cls._no_bounds else cls._bounds_dtype for x in param_names]
+            t = cls(rows, names=param_names, dtype=dtypes)
             tables.append(t)
         tables = vstack(tables)
         for cn, col in tables.columns.items():
-            if cn in cls._units:
-                col.unit = cls._units[cn]
-        tables.add_index('name')
+            if cn in PARAM_UNITS:
+                col.unit = PARAM_UNITS[cn]
+        cls._index_table(tables)
+
+        if '_ratios' in inp:
+            tables.meta['_ratios'] = inp['_ratios']
         return tables
+
+    @staticmethod
+    def _index_table(tbl):
+        for indx in ('name', 'group'):
+            tbl.add_index(indx)
 
     def mask_feature(self, name, mask_value=True):
         """Mask all the parameters of a feature.
@@ -345,15 +367,19 @@ class Features(Table):
 
         """
         row = self.loc[name]
-        relevant_params = self._kind_params[row['kind']]
+        relevant_params = KIND_PARAMS[row['kind']]
         for col_name in relevant_params:
             if col_name in self._no_bounds:
                 # these are all strings, so can't mask
                 pass
             else:
                 # mask only the value, not the bounds
-                row[col_name].mask[0] = mask_value
+                row[col_name].mask['val'] = mask_value
 
     def unmask_feature(self, name):
         """Remove the mask for all parameters of a feature."""
         self.mask_feature(name, mask_value=False)
+
+    def _base_repr_(self, *args, **kwargs):
+        """Omit dtype on self-print."""
+        return super()._base_repr_(*args, ** kwargs | dict(show_dtype=False))

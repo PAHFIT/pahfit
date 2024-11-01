@@ -5,7 +5,7 @@ Version Description
 v1.0 - v1.4
 ------------
 
-The original IDL version of PAHFIT can be found in: `http://tir.astro.utoledo.edu/jdsmith/research/pahfit.php <http://tir.astro.utoledo.edu/jdsmith/research/pahfit.php>`_. For more details and background of ``PAHFIT``, see the `background <https://pahfit.readthedocs.io/en/latest/background.html>`_ page.
+The original IDL version of PAHFIT can be found in: `https://github.com/PAHFIT/pahfit_classic <https://github.com/PAHFIT/pahfit_classic>`_. For more details and background of ``PAHFIT``, see the `background <https://pahfit.readthedocs.io/en/latest/background.html>`_ page.
 
 v2.0
 ------------

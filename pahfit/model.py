@@ -1,17 +1,19 @@
 from specutils import Spectrum1D
 from astropy import units as u
+from astropy import constants
 import copy
-from astropy.modeling.fitting import LevMarLSQFitter
+import matplotlib as mpl
 from matplotlib import pyplot as plt
 import numpy as np
 from scipy import interpolate, integrate
 
-from pahfit.features.util import bounded_is_fixed
+from pahfit import units
+from pahfit.features.util import bounded_is_fixed, bounded_is_missing
 from pahfit.features import Features
-from pahfit.base import PAHFITBase
 from pahfit import instrument
 from pahfit.errors import PAHFITModelError
-from pahfit.component_models import BlackBody1D
+from pahfit.fitters.ap_components import BlackBody1D, S07_attenuation
+from pahfit.fitters.ap_fitter import APFitter
 
 
 class Model:
@@ -180,17 +182,22 @@ class Model:
         """
         inst, z = self._parse_instrument_and_redshift(spec, redshift)
         # save these as part of the model (will be written to disk too)
-        self.features.meta["redshift"] = inst
-        self.features.meta["instrument"] = z
+        self.features.meta["redshift"] = z
+        self.features.meta["instrument"] = inst
 
         # parse spectral data
         self.features.meta["user_unit"]["flux"] = spec.flux.unit
-        _, _, _, xz, yz, _ = self._convert_spec_data(spec, z)
-        wmin = min(xz)
-        wmax = max(xz)
+        _, _, _, lam, flux, _ = self._convert_spec_data(spec, z)
+        lam_min = min(lam)
+        lam_max = max(lam)
+
+        # Some useful quantities for guessing
+        median_flux = np.median(flux)
+        Flambda = flux * units.intensity * (lam * units.wavelength) ** -2 * constants.c
+        total_power = integrate.trapezoid(Flambda, lam * units.wavelength)
 
         # simple linear interpolation function for spectrum
-        sp = interpolate.interp1d(xz, yz)
+        sp = interpolate.interp1d(lam, flux)
 
         # we will repeat this loop logic several times
         def loop_over_non_fixed(kind, parameter, estimate_function, force=False):
@@ -204,7 +211,7 @@ class Model:
         # guess starting point of bb
         def starlight_guess(row):
             bb = BlackBody1D(1, row["temperature"][0])
-            w = wmin + 0.1  # the wavelength used to compare
+            w = lam_min + 0.1  # the wavelength used to compare
             if w < 5:
                 # wavelength is short enough to not have numerical
                 # issues. Evaluate both at w.
@@ -226,71 +233,100 @@ class Model:
             temp = row["temperature"][0]
             fmax_lam = 2898.0 / temp
             bb = BlackBody1D(1, temp)
-            if fmax_lam >= wmin and fmax_lam <= wmax:
-                w_ref = fmax_lam
-            elif fmax_lam > wmax:
-                w_ref = wmax
+            if fmax_lam >= lam_min and fmax_lam <= lam_max:
+                lam_ref = fmax_lam
+            elif fmax_lam > lam_max:
+                lam_ref = lam_max
             else:
-                w_ref = wmin
+                lam_ref = lam_min
 
-            flux_ref = np.median(yz[(xz > w_ref - 0.2) & (xz < w_ref + 0.2)])
-            amp_guess = flux_ref / bb(w_ref)
+            flux_ref = np.median(flux[(lam > lam_ref - 0.2) & (lam < lam_ref + 0.2)])
+            amp_guess = flux_ref / bb(lam_ref)
             return amp_guess / nbb
 
         loop_over_non_fixed("dust_continuum", "tau", dust_continuum_guess)
 
         def line_fwhm_guess(row):
-            w = row["wavelength"][0]
-            if not instrument.within_segment(w, inst):
+            lam_line = row["wavelength"][0]
+            if not instrument.within_segment(lam_line, inst):
                 return 0
 
-            fwhm = instrument.fwhm(inst, w, as_bounded=True)[0][0]
+            fwhm = instrument.fwhm(inst, lam_line, as_bounded=True)[0][0]
             return fwhm
 
-        def amp_guess(row, fwhm):
-            w = row["wavelength"][0]
-            if not instrument.within_segment(w, inst):
+        def power_guess(row, fwhm):
+            # local integration for the lines
+            lam_line = row["wavelength"][0]
+            if not instrument.within_segment(lam_line, inst):
                 return 0
 
             factor = 1.5
-            wmin = w - factor * fwhm
-            wmax = w + factor * fwhm
-            xz_window = (xz > wmin) & (xz < wmax)
-            xpoints = xz[xz_window]
-            ypoints = yz[xz_window]
-            if np.count_nonzero(xz_window) >= 2:
+            lam_min = lam_line - factor * fwhm
+            lam_max = lam_line + factor * fwhm
+            lam_window = (lam > lam_min) & (lam < lam_max)
+            xpoints = lam[lam_window]
+            ypoints = flux[lam_window]
+            if np.count_nonzero(lam_window) >= 2:
                 # difference between flux in window and flux around it
-                power_guess = integrate.trapezoid(yz[xz_window], xz[xz_window])
+                Fnu_dlambda = integrate.trapezoid(flux[lam_window], lam[lam_window])
                 # subtract continuum estimate, but make sure we don't go negative
                 continuum = (ypoints[0] + ypoints[-1]) / 2 * (xpoints[-1] - xpoints[0])
-                if continuum < power_guess:
-                    power_guess -= continuum
+                if continuum < Fnu_dlambda:
+                    Fnu_dlambda -= continuum
             else:
-                power_guess = 0
-            return power_guess / fwhm
+                Fnu_dlambda = 0
 
-        # Same logic as in the old function: just use same amp for all
-        # dust features.
-        some_flux = 0.5 * np.median(yz)
-        loop_over_non_fixed("dust_feature", "power", lambda row: some_flux)
+            # this is an unphysical power (Fnu * dlambda), but we
+            # convert to Fnu dnu = Fnu dnu/dlambda dlambda = Fnu c /
+            # lambda **2 dlambda
+            Fnu_dlambda *= units.intensity * units.wavelength
+            Fnu_dnu = Fnu_dlambda * constants.c / (lam_line * units.wavelength) ** 2
+            return Fnu_dnu.to(units.intensity_power).value
+
+        def drude_power_guess(row):
+            # multiply total power by some fraction to guess Drude power
+            fwhm = row["fwhm"][0] * units.wavelength
+            delta_w = spec.spectral_axis[-1] - spec.spectral_axis[0]
+            return (total_power * fwhm / delta_w).to(units.intensity_power).value
+
+        loop_over_non_fixed("dust_feature", "power", drude_power_guess)
 
         if integrate_line_flux:
-            # calc line amplitude using instrumental fwhm and integral over data
+            # calc line power using instrumental fwhm and integral over data
             loop_over_non_fixed(
-                "line", "power", lambda row: amp_guess(row, line_fwhm_guess(row))
+                "line", "power", lambda row: power_guess(row, line_fwhm_guess(row))
             )
         else:
-            loop_over_non_fixed("line", "power", lambda row: some_flux)
+            loop_over_non_fixed(
+                "line", "power", lambda row: median_flux * line_fwhm_guess(row)
+            )
 
-        # set the fwhms in the features table
+        # Set the fwhms in the features table. Slightly different logic,
+        # as the fwhm for lines are masked by default. TODO: leave FWHM
+        # masked for lines, and instead have a sigma_v option. Any
+        # requirements to guess and fit the line width, should be
+        # encapsulated in sigma_v (the "broadening" of the line), as
+        # opposed to fwhm which is the normal instrumental width.
         if calc_line_fwhm:
-            loop_over_non_fixed("line", "fwhm", line_fwhm_guess, force=True)
+            for row_index in np.where(self.features["kind"] == "line")[0]:
+                row = self.features[row_index]
+                if row["fwhm"] is np.ma.masked:
+                    self.features[row_index]["fwhm"] = (
+                        line_fwhm_guess(row),
+                        np.nan,
+                        np.nan,
+                    )
+                elif not bounded_is_fixed(row["fwhm"]):
+                    self.features[row_index]["fwhm"]["val"] = line_fwhm_guess(row)
 
     @staticmethod
     def _convert_spec_data(spec, z):
-        """
-        Turn astropy quantities stored in Spectrum1D into fittable
-        numbers.
+        """Convert Spectrum1D Quantities to fittable numbers.
+
+        The unit of the input spectrum has to be a multiple of MJy / sr,
+        the internal intensity unit. The output of this function
+        consists of simple unitless arrays (the numbers in these arrays
+        are assumed to be consistent with the internal units).
 
         Also corrects for redshift.
 
@@ -298,18 +334,23 @@ class Model:
         -------
         x, y, unc: wavelength in micron, flux, uncertainty
 
-        xz, yz, uncz: wavelength in micron, flux, uncertainty
+        lam, flux, unc: wavelength in micron, flux, uncertainty
             corrected for redshift
+
         """
-        x = spec.spectral_axis.to(u.micron).value
-        y = spec.flux.value
-        unc = spec.uncertainty.array
+        if not spec.flux.unit.is_equivalent(units.intensity):
+            raise PAHFITModelError(
+                "For now, PAHFIT only supports intensity units, i.e. convertible to MJy / sr."
+            )
+        flux_obs = spec.flux.to(units.intensity).value
+        lam_obs = spec.spectral_axis.to(u.micron).value
+        unc_obs = (spec.uncertainty.array * spec.flux.unit).to(units.intensity).value
 
         # transform observed wavelength to "physical" wavelength
-        xz = x / (1 + z)  # wavelength shorter
-        yz = y * (1 + z)  # energy higher
-        uncz = unc * (1 + z)  # uncertainty scales with flux
-        return x, y, unc, xz, yz, uncz
+        lam = lam_obs / (1 + z)  # wavelength shorter
+        flux = flux_obs * (1 + z)  # energy higher
+        unc = unc_obs * (1 + z)  # uncertainty scales with flux
+        return lam_obs, flux_obs, unc_obs, lam, flux, unc
 
     def fit(
         self,
@@ -370,7 +411,7 @@ class Model:
         # parse spectral data
         self.features.meta["user_unit"]["flux"] = spec.flux.unit
         inst, z = self._parse_instrument_and_redshift(spec, redshift)
-        x, _, _, xz, yz, uncz = self._convert_spec_data(spec, z)
+        x, _, _, lam, flux, unc = self._convert_spec_data(spec, z)
 
         # save these as part of the model (will be written to disk too)
         self.features.meta["redshift"] = inst
@@ -379,66 +420,281 @@ class Model:
         # check if observed spectrum is compatible with instrument model
         instrument.check_range([min(x), max(x)], inst)
 
-        # weigths
-        w = 1.0 / uncz
+        self._set_up_fitter(inst, z, lam=x, use_instrument_fwhm=use_instrument_fwhm)
+        self.fitter.fit(lam, flux, unc, maxiter=maxiter)
 
-        # construct model and perform fit
-        astropy_model = self._construct_astropy_model(inst, z, use_instrument_fwhm)
-        fit = LevMarLSQFitter(calc_uncertainties=True)
-        self.astropy_result = fit(
-            astropy_model,
-            xz,
-            yz,
-            weights=w,
-            maxiter=maxiter,
-            epsilon=1e-10,
-            acc=1e-10,
-        )
-        self.fit_info = fit.fit_info
+        # copy the fit results to the features table
+        self._ingest_fit_result_to_features()
+
         if verbose:
-            print(fit.fit_info["message"])
+            print(self.fitter.message)
 
-        self._parse_astropy_result(self.astropy_result)
+    def _ingest_fit_result_to_features(self):
+        """Copy the results from the Fitter to the features table
 
-    def info(self):
-        """Print out the last fit results."""
-        print(self.astropy_result)
+        This is a utility method, executed only at the end of fit(),
+        where Fitter.fit() has been applied.
 
-    def plot(self, spec=None, redshift=None):
+        """
+        # iterate over the list stored in fitter, so we only get
+        # components that were set up by _set_up_fitter. Having an
+        # ENABLED/DISABLED flag for every feature would be a nice
+        # alternative (and clear for the user).
+
+        self.features.meta["fitter_message"] = self.fitter.message
+
+        for name in self.enabled_features:
+            for column, value in self.fitter.get_result(name).items():
+                try:
+                    i = np.where(self.features["name"] == name)[0]
+                    # deal with fwhm usually being masked
+                    if not bounded_is_missing(self.features[column][i]):
+                        self.features[column]["val"][i] = value
+                    else:
+                        self.features[column][i] = (value, np.nan, np.nan)
+                except Exception as e:
+                    print(
+                        f"Could not assign to name {name} in features table. Some diagnostic output below"
+                    )
+                    print(f"Index i is {i}")
+                    print("Features table:", self.features)
+                    raise e
+
+    def plot(
+        self,
+        spec=None,
+        redshift=None,
+        use_instrument_fwhm=False,
+        label_lines=False,
+        scalefac_resid=2,
+        **errorbar_kwargs,
+    ):
         """Plot model, and optionally compare to observational data.
 
         Parameters
         ----------
         spec : Spectrum1D
-            Observational data. Does not have to be the same data that
-            was used for guessing or fitting.
+            Observational data. The units should be compatible with the
+            data that were used for the fit, but it does not have to be
+            the exact same spectrum. The spectrum will be converted to
+            internal units before plotting.
 
         redshift : float
             Redshift used to shift from the physical model, to the
-            observed model.
+            observed model. If None, it will be taken from spec.redshift
 
-            If None, will be taken from spec.redshift
+        use_instrument_fwhm : bool
+            For the lines, the default is to use the fwhm values
+            contained in the Features table. When set to True, the fwhm
+            will be determined by the instrument model instead.
+
+        label_lines : bool
+            Add labels with the names of the lines, at the position of
+            each line.
+
+        scalefac_resid : float
+            Factor multiplying the standard deviation of the residuals
+            to adjust plot limits.
+
+        errorbar_kwargs : dict
+            Customize the data points plot by passing the given keyword
+            arguments to matplotlib.pyplot.errorbar.
 
         """
         inst, z = self._parse_instrument_and_redshift(spec, redshift)
-        _, _, _, xz, yz, uncz = self._convert_spec_data(spec, z)
-        # Always use the current FWHM here (use_instrument_fwhm would
-        # overwrite the fitted value in the instrument overlap regions!)
-        astropy_model = self._construct_astropy_model(
-            inst, z, use_instrument_fwhm=False
-        )
-
-        enough_samples = max(1000, len(spec.wavelength))
+        _, _, _, lam, flux, unc = self._convert_spec_data(spec, z)
+        enough_samples = max(10000, len(spec.wavelength))
+        lam_mod = np.logspace(np.log10(min(lam)), np.log10(max(lam)), enough_samples)
 
         fig, axs = plt.subplots(
             ncols=1,
             nrows=2,
-            figsize=(15, 10),
+            figsize=(10, 10),
             gridspec_kw={"height_ratios": [3, 1]},
             sharex=True,
         )
-        PAHFITBase.plot(axs, xz, yz, uncz, astropy_model, model_samples=enough_samples)
+
+        # spectrum and best fit model
+        ax = axs[0]
+        ax.set_yscale("linear")
+        ax.set_xscale("log")
+        ax.minorticks_on()
+        ax.tick_params(
+            axis="both", which="major", top="on", right="on", direction="in", length=10
+        )
+        ax.tick_params(
+            axis="both", which="minor", top="on", right="on", direction="in", length=5
+        )
+
+        ext_model = None
+        has_att = "attenuation" in self.features["kind"]
+        has_abs = "absorption" in self.features["kind"]
+        if has_att:
+            row = self.features[self.features["kind"] == "attenuation"][0]
+            tau = row["tau"][0]
+            ext_model = S07_attenuation(tau_sil=tau)(lam_mod)
+
+        if has_abs:
+            raise NotImplementedError(
+                "plotting absorption features not implemented yet"
+            )
+
+        if has_att or has_abs:
+            ax_att = ax.twinx()  # axis for plotting the extinction curve
+            ax_att.tick_params(which="minor", direction="in", length=5)
+            ax_att.tick_params(which="major", direction="in", length=10)
+            ax_att.minorticks_on()
+            ax_att.plot(lam_mod, ext_model, "k--", alpha=0.5)
+            ax_att.set_ylabel("Attenuation")
+            ax_att.set_ylim(0, 1.1)
+        else:
+            ext_model = np.ones(len(lam_mod))
+
+        # Define legend lines
+        Leg_lines = [
+            mpl.lines.Line2D([0], [0], color="k", linestyle="--", lw=2),
+            mpl.lines.Line2D([0], [0], color="#FE6100", lw=2),
+            mpl.lines.Line2D([0], [0], color="#648FFF", lw=2, alpha=0.5),
+            mpl.lines.Line2D([0], [0], color="#DC267F", lw=2, alpha=0.5),
+            mpl.lines.Line2D([0], [0], color="#785EF0", lw=2, alpha=1),
+            mpl.lines.Line2D([0], [0], color="#FFB000", lw=2, alpha=0.5),
+        ]
+
+        # local utility
+        def tabulate_components(kind):
+            ss = {}
+            for name in self.features[self.features["kind"] == kind]["name"]:
+                ss[name] = self.tabulate(
+                    inst, z, lam_mod, self.features["name"] == name
+                )
+            return {name: s.flux.value for name, s in ss.items()}
+
+        cont_y = np.zeros(len(lam_mod))
+        if "dust_continuum" in self.features["kind"]:
+            # one plot for every component
+            for y in tabulate_components("dust_continuum").values():
+                ax.plot(lam_mod, y * ext_model, "#FFB000", alpha=0.5)
+                # keep track of total continuum
+                cont_y += y
+
+        if "starlight" in self.features["kind"]:
+            star_y = self.tabulate(
+                inst, z, lam_mod, self.features["kind"] == "starlight"
+            ).flux.value
+            ax.plot(lam_mod, star_y * ext_model, "#ffB000", alpha=0.5)
+            cont_y += star_y
+
+        # total continuum
+        ax.plot(lam_mod, cont_y * ext_model, "#785EF0", alpha=1)
+
+        # now plot the dust bands and lines
+        if "dust_feature" in self.features["kind"]:
+            for y in tabulate_components("dust_feature").values():
+                ax.plot(
+                    lam_mod,
+                    (cont_y + y) * ext_model,
+                    "#648FFF",
+                    alpha=0.5,
+                )
+
+        if "line" in self.features["kind"]:
+            for name, y in tabulate_components("line").items():
+                ax.plot(
+                    lam_mod,
+                    (cont_y + y) * ext_model,
+                    "#DC267F",
+                    alpha=0.5,
+                )
+                if label_lines:
+                    i = np.argmax(y)
+                    # ignore out of range lines
+                    if i > 0 and i < len(y) - 1:
+                        w = lam_mod[i]
+                        ax.text(
+                            w,
+                            y[i],
+                            name,
+                            va="center",
+                            ha="center",
+                            rotation="vertical",
+                            bbox=dict(facecolor="white", alpha=0.75, pad=0),
+                        )
+
+        ax.plot(lam_mod, self.tabulate(inst, z, lam_mod).flux.value, "#FE6100", alpha=1)
+
+        # data
+        default_kwargs = dict(
+            fmt="o",
+            markeredgecolor="k",
+            markerfacecolor="none",
+            ecolor="k",
+            elinewidth=0.2,
+            capsize=0.5,
+            markersize=6,
+        )
+
+        ax.errorbar(lam, flux, yerr=unc, **(default_kwargs | errorbar_kwargs))
+
+        ax.set_ylim(0)
+        ax.set_ylabel(r"$\nu F_{\nu}$")
+
+        ax.legend(
+            Leg_lines,
+            [
+                "S07_attenuation",
+                "Spectrum Fit",
+                "Dust Features",
+                r"Atomic and $H_2$ Lines",
+                "Total Continuum Emissions",
+                "Continuum Components",
+            ],
+            prop={"size": 10},
+            loc="best",
+            facecolor="white",
+            framealpha=1,
+            ncol=3,
+        )
+
+        # residuals = data in rest frame - (model evaluated at rest frame wavelengths)
+        res = flux - self.tabulate(inst, 0, lam).flux.value
+        std = np.nanstd(res)
+        ax = axs[1]
+
+        ax.set_yscale("linear")
+        ax.set_xscale("log")
+        ax.tick_params(
+            axis="both", which="major", top="on", right="on", direction="in", length=10
+        )
+        ax.tick_params(
+            axis="both", which="minor", top="on", right="on", direction="in", length=5
+        )
+        ax.minorticks_on()
+
+        # Custom X axis ticks
+        ax.xaxis.set_ticks(
+            [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 14, 16, 20, 25, 30, 40]
+        )
+
+        ax.axhline(0, linestyle="--", color="gray", zorder=0)
+        ax.plot(
+            lam,
+            res,
+            "ko",
+            fillstyle="none",
+            zorder=1,
+            markersize=errorbar_kwargs.get("markersize", None),
+            alpha=errorbar_kwargs.get("alpha", None),
+            linestyle="none",
+        )
+        ax.set_ylim(-scalefac_resid * std, scalefac_resid * std)
+        ax.set_xlim(np.floor(np.amin(lam)), np.ceil(np.amax(lam)))
+        ax.set_xlabel(r"$\lambda$ [$\mu m$]")
+        ax.set_ylabel("Residuals [%]")
+
+        # scalar x-axis marks
+        ax.xaxis.set_major_formatter(mpl.ticker.ScalarFormatter())
         fig.subplots_adjust(hspace=0)
+        return fig
 
     def copy(self):
         """Copy the model.
@@ -501,185 +757,232 @@ class Model:
             The flux model, evaluated at the given wavelengths, packaged
             as a Spectrum1D object.
         """
-        # apply feature mask, make sub model, and set up functional
-        if feature_mask is not None:
-            features_copy = self.features.copy()
-            features_to_use = features_copy[feature_mask]
-        else:
-            features_to_use = self.features
-        alt_model = Model(features_to_use)
-
-        # Always use the current FWHM here (use_instrument_fwhm would
-        # overwrite the value in the instrument overlap regions!)
-        flux_function = alt_model._construct_astropy_model(
-            instrumentname, redshift, use_instrument_fwhm=False
-        )
+        z = 0 if redshift is None else redshift
 
         # decide which wavelength grid to use
         if wavelengths is None:
             ranges = instrument.wave_range(instrumentname)
-            wmin = min(r[0] for r in ranges)
-            wmax = max(r[1] for r in ranges)
-            wfwhm = instrument.fwhm(instrumentname, wmin, as_bounded=True)[0, 0]
-            wav = np.arange(wmin, wmax, wfwhm / 2) * u.micron
+            if isinstance(ranges[0], float):
+                lam_min, lam_max = ranges
+            else:
+                # In case of multiple ranges (multiple segments), choose
+                # the min and max instead
+                lam_min = min(r[0] for r in ranges)
+                lam_max = max(r[1] for r in ranges)
+
+            wfwhm = instrument.fwhm(instrumentname, lam_min, as_bounded=True)[0, 0]
+            lam = np.arange(lam_min, lam_max, wfwhm / 2) * u.micron
+
         elif isinstance(wavelengths, Spectrum1D):
-            wav = wavelengths.spectral_axis.to(u.micron)
+            lam = wavelengths.spectral_axis.to(u.micron) / (1 + z)
         else:
             # any other iterable will be accepted and converted to array
-            wav = np.asarray(wavelengths) * u.micron
+            lam = np.asarray(wavelengths) * u.micron
 
-        # shift the "observed wavelength grid" to "physical wavelength grid"
-        wav /= 1 + redshift
-        flux_values = flux_function(wav.value)
+        # apply feature mask, make sub model, and set up functional
+        if feature_mask is not None:
+            features_to_use = self.features[feature_mask]
+        else:
+            features_to_use = self.features
+
+        # if nothing is in range, return early with zeros
+        if len(features_to_use) == 0:
+            return Spectrum1D(
+                spectral_axis=lam, flux=np.zeros(lam.shape) * u.dimensionless_unscaled
+            )
+
+        alt_model = Model(features_to_use)
+
+        # Always use the current FWHM here (use_instrument_fwhm would
+        # overwrite the value in the instrument overlap regions!)
+
+        # need to wrap in try block to avoid bug: if all components are
+        # removed (because of wavelength range considerations), it won't work
+        try:
+            alt_model._set_up_fitter(instrumentname, z, use_instrument_fwhm=False)
+            fitter = alt_model.fitter
+        except PAHFITModelError:
+            return Spectrum1D(
+                spectral_axis=lam, flux=np.zeros(lam.shape) * u.dimensionless_unscaled
+            )
+
+        flux_values = fitter.evaluate(lam.value)
 
         # apply unit stored in features table (comes from from last fit
         # or from loading previous result from disk)
         if "flux" not in self.features.meta["user_unit"]:
             flux_quantity = flux_values * u.dimensionless_unscaled
         else:
-            flux_quantity = flux_values * self.features.meta["user_unit"]["flux"]
+            user_unit = self.features.meta["user_unit"]["flux"]
+            flux_quantity = (flux_values * units.intensity).to(user_unit)
 
-        return Spectrum1D(spectral_axis=wav, flux=flux_quantity)
+        return Spectrum1D(spectral_axis=lam, flux=flux_quantity)
 
-    def _kludge_param_info(self, instrumentname, redshift, use_instrument_fwhm=True):
-        param_info = PAHFITBase.parse_table(self.features)
-        # edit line widths and drop lines out of range
+    def _excluded_features(self, instrumentname, redshift, lam_obs=None):
+        """Determine excluded features Based on instrument wavelength range.
 
-        # h2_info
-        param_info[2] = PAHFITBase.update_dictionary(
-            param_info[2],
-            instrumentname,
-            update_fwhms=use_instrument_fwhm,
-            redshift=redshift,
+         instrumentname : str
+            Qualified instrument name
+
+         lam_obs : array
+            Optional observed wavelength grid. Exclude any lines and
+            dust features outside of this range.
+
+        Returns
+        -------
+        array of bool, same length as self.features, True where features
+        are far outside the wavelength range.
+        """
+        lam_feature_obs = self.features["wavelength"]["val"] * (1 + redshift)
+
+        # has wavelength and not within instrument range
+        is_outside = ~instrument.within_segment(lam_feature_obs, instrumentname)
+
+        # also apply observed range if provided
+        if lam_obs is not None:
+            is_outside |= (lam_feature_obs < np.amin(lam_obs)) | (
+                lam_feature_obs > np.amax(lam_obs)
+            )
+
+        # restriction on the kind of feature that can be excluded
+        excludable = ["line", "dust_feature", "absorption"]
+        is_excludable = np.logical_or.reduce(
+            [kind == self.features["kind"] for kind in excludable]
         )
-        # ion_info
-        param_info[3] = PAHFITBase.update_dictionary(
-            param_info[3],
-            instrumentname,
-            update_fwhms=use_instrument_fwhm,
-            redshift=redshift,
-        )
-        # abs_info
-        param_info[4] = PAHFITBase.update_dictionary(
-            param_info[4], instrumentname, redshift
-        )
 
-        return param_info
+        return is_outside & is_excludable
 
-    def _construct_astropy_model(
-        self, instrumentname, redshift, use_instrument_fwhm=True
+    def _set_up_fitter(
+        self, instrumentname, redshift, lam=None, use_instrument_fwhm=True
     ):
-        """Convert the features table into a fittable model.
+        """Convert features table to Fitter instance, set self.fitter.
 
-        Some nuances in the behavior
-        - If a line has a fwhm set, it will be ignored, and replaced by
-          the calculated fwhm provided by the instrument model.
-        - If a line has been masked by _parse_astropy_result, and this
-          function is called again, those masks will be ignored, as the
-          data range might have changed.
+        For every row of the features table, calls a function of Fitter
+        API to register an appropriate component. Finalizes the Fitter
+        at the end (details of this step depend on the Fitter subclass).
 
-        TODO: Make sure the features outside of the data range are
-        removed. The instrument-based feature check is done in
-        _kludge_param_info(), but the observational data might only
-        cover a part of the instrument range.
+        Any unit conversions and model-specific things need to happen
+        BEFORE giving them to the fitters.
+        - The instrument-derived FWHM is determined here using the
+          instrument model (the Fitter does not need to know about this
+          detail).
+        - Features outside the appropriate wavelength range should not
+          be added to the Fitter: the "trimming" is done here, using the
+          given wavelength range lam (optional).
 
-        """
-        param_info = self._kludge_param_info(
-            instrumentname, redshift, use_instrument_fwhm
-        )
-        return PAHFITBase.model_from_param_info(param_info)
+        TODO: flags to indicate which features were excluded.
 
-    def _parse_astropy_result(self, astropy_model):
-        """Store the result of the astropy fit into the features table.
+        Parameters
+        ----------
 
-        Every relevant value inside the astropy model, is written to the
-        right position in the features table.
+        instrumentname and redshift : needed to apply the instrument
+        model and to determine which feature to exclude
 
-        For the unresolved lines, the widths are calculated by the
-        instrument model, or fitted when these lines are in a spectral
-        overlap region. The calculated or fitted result is written to
-        the fwhm field of the table. When a new model is constructed
-        from the features table, this fwhm value will be ignored.
+        lam : array of observed wavelengths
+            Used to exclude features from the model based on the actual
+            observed data given.
 
-        For features that do not correspond to the data range, all
-        parameter values will be masked. Their numerical values remain
-        accessible by '.data' on the masked entity. This way, We still
-        keep their parameter values around (as opposed to removing the
-        rows entirely). When data with a larger range are passed for
-        another fitting call, those features can be unmasked if
-        necessary.
+        use_instrument_fwhm : bool
+            When set to False, the instrument model is not used and the
+            FWHM values are taken from the features table as-is. This is
+            the current workaround to fit the widths of lines, until the
+            "physical" and "instrumental" widths are conceptually
+            separated (see issue #293).
 
         """
-        if len(self.features) < 2:
-            # Plotting and tabulating works fine, but the code below
-            # will not work with only one component. This can be
-            # addressed later, when the internal API is made agnostic of
-            # the fitting backend (astropy vs our own).
-            raise PAHFITModelError("Fit with fewer than 2 components not allowed!")
+        # Fitting implementation can be changed by choosing another
+        # Fitter class. TODO: make this configurable.
+        self.fitter = APFitter()
 
-        # Some translation rules between astropy model components and
-        # feature table names and values.
+        excluded = self._excluded_features(instrumentname, redshift, lam)
+        self.enabled_features = self.features["name"][~excluded]
 
-        # these have the same value but different (fixed) names
-        param_name_equivalent = {
-            "temperature": "temperature",
-            "fwhm": "fwhm",
-            "x_0": "wavelength",
-            "mean": "wavelength",
-            "tau_sil": "tau",
-        }
-
-        def param_conversion(features_kind, param_name, param_value):
-            # default conversion
-            if param_name in param_name_equivalent:
-                new_name = param_name_equivalent[param_name]
-                new_value = param_value
-            # certain types of features use tau instead of amplitude
-            elif param_name == "amplitude":
-                if features_kind in ["starlight", "dust_continuum", "absorption"]:
-                    new_name = "tau"
-                else:
-                    new_name = "power"
-                new_value = param_value
-            # convert stddev to fwhm
-            elif param_name == "stddev":
-                new_name = "fwhm"
-                new_value = param_value * 2.355
+        def cleaned(features_tuple3):
+            val = features_tuple3[0]
+            if bounded_is_fixed(features_tuple3):
+                return val
             else:
-                raise NotImplementedError(
-                    f"no conversion rule for model parameter {param_name}"
-                )
-            return new_name, new_value
+                vmin = -np.inf if np.isnan(features_tuple3[1]) else features_tuple3[1]
+                vmax = np.inf if np.isnan(features_tuple3[2]) else features_tuple3[2]
+                return np.array([val, vmin, vmax])
 
-        # Go over all features.
-        for row in self.features:
+        for row in self.features[~excluded]:
+            kind = row["kind"]
             name = row["name"]
-            if name in astropy_model.submodel_names:
-                # undo any previous masking that might have occured
-                self.features.unmask_feature(name)
 
-                # copy or translate, and store the parameters
-                component = astropy_model[name]
-                for param_name in component.param_names:
-                    param_value = getattr(component, param_name).value
-                    col_name, col_value = param_conversion(
-                        row["kind"], param_name, param_value
-                    )
-                    row[col_name][0] = col_value
+            if kind == "starlight":
+                self.fitter.add_feature_starlight(
+                    name, cleaned(row["temperature"]), cleaned(row["tau"])
+                )
 
-                # for the unresolved lines, indicate when the line fwhm was made non-fixed
-                if row["kind"] == "line" and col_name == "fwhm":
-                    row["fwhm"].mask[1:] = component.fixed[param_name]
+            elif kind == "dust_continuum":
+                self.fitter.add_feature_dust_continuum(
+                    name, cleaned(row["temperature"]), cleaned(row["tau"])
+                )
+
+            elif kind == "line":
+                # be careful with lines that have masked FWHM values here
+                if use_instrument_fwhm or row["fwhm"] is np.ma.masked:
+                    # One caveat here: redshift. We do the necessary
+                    # adjustment as follows : 1. shift to observed wav;
+                    # 2. evaluate fwhm at oberved wav; 3. shift back to
+                    # rest frame wav (width in rest frame will be
+                    # narrower than observed width)
+                    lam_obs = row["wavelength"]["val"] * (1.0 + redshift)
+                    # returned value is tuple (value, min, max). And
+                    # min/max are already masked in case of fixed value
+                    # (output of instrument.resolution is designed to be
+                    # very similar to an entry in the features table)
+                    calculated_fwhm = instrument.fwhm(
+                        instrumentname, lam_obs, as_bounded=True
+                    )[0] / (1.0 + redshift)
+
+                    # decide if scalar (fixed) or tuple (fitted fwhm
+                    # between upper and lower fwhm limits, happens in
+                    # case of overlapping instruments)
+                    if calculated_fwhm[1] is np.ma.masked:
+                        fwhm = calculated_fwhm[0]
+                    else:
+                        fwhm = calculated_fwhm
+
+                else:
+                    # if instrument model is not to be used, just take
+                    # the value as is specified in the Features table
+                    fwhm = cleaned(row["fwhm"])
+
+                self.fitter.add_feature_line(
+                    name, cleaned(row["power"]), cleaned(row["wavelength"]), fwhm
+                )
+
+            elif kind == "dust_feature":
+                self.fitter.add_feature_dust_feature(
+                    name,
+                    cleaned(row["power"]),
+                    cleaned(row["wavelength"]),
+                    cleaned(row["fwhm"]),
+                )
+
+            elif kind == "attenuation":
+                self.fitter.add_feature_attenuation(name, cleaned(row["tau"]))
+
+            elif kind == "absorption":
+                self.fitter.add_feature_absorption(
+                    name,
+                    cleaned(row["tau"]),
+                    cleaned(row["wavelength"]),
+                    cleaned(row["fwhm"]),
+                )
+
             else:
-                # signal that it was not fit by masking the feature
-                self.features.mask_feature(name)
+                raise PAHFITModelError(
+                    f"Model components of kind {kind} are not implemented!"
+                )
+
+        self.fitter.finalize()
 
     @staticmethod
     def _parse_instrument_and_redshift(spec, redshift):
-        """Small utility to grab instrument and redshift from either
-        Spectrum1D metadata, or from arguments.
-
-        """
+        """Get instrument redshift from Spectrum1D metadata or arguments."""
         # the rest of the implementation doesn't like Quantity...
         z = spec.redshift.value if redshift is None else redshift
         if z is None:
