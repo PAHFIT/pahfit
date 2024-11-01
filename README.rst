@@ -53,15 +53,14 @@ Contributions welcome (see below).
 
 Contributors
 ------------
-* Dries van De Putte
 * J.D. Smith
+* Dries van De Putte
 * Karl Gordon
 * Thomas Lai
 * Alexandros Maragkoudakis
 * Els Peeters
 * Jan Cami
 * Ameek Sidhu
-* Dries Van De Putte
 
 License
 -------
