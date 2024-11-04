@@ -134,11 +134,14 @@ class Features(Table):
     TableFormatter = BoundedParTableFormatter
 
     param_covar = TableAttribute(default=[])
-    _group_attrs = set(('bounds', 'features', 'kind'))  # group-level attributes
-    _param_attrs = set(('value', 'bounds'))  # Each parameter can have these attributes
-    _no_bounds = set(('name', 'group', 'kind', 'geometry', 'model'))  # str attributes (no bounds)
+    _group_attrs = {'bounds', 'features', 'kind'}  # group-level attributes
+    _param_attrs = {'value', 'bounds'}  # Each parameter can have these attributes
+    _no_bounds = {'name', 'group', 'kind', 'geometry', 'model'}  # str attributes (no bounds)
     _bounds_dtype = np.dtype([("val", float), ("min", float), ("max", float)])  # bounded param type
+    _param_defaults = dict(geometry='mixed')
+    
 
+    
     @classmethod
     def read(cls, file, *args, **kwargs):
         """Read a table from file.
@@ -328,7 +331,10 @@ class Features(Table):
             for (name, params) in features.items():
                 for missing in kp - params.keys():
                     if missing in cls._no_bounds:
-                        params[missing] = 0.0
+                        if missing in cls._param_defaults:
+                            params[missing] = cls._param_defaults[missing]
+                        else:
+                            params[missing] = 0.0
                     else:
                         params[missing] = value_bounds(0.0, bounds=(0.0, None))
                 rows.append(dict(name=name, **params))
