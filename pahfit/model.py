@@ -501,15 +501,17 @@ class Model:
         inst, z = self._parse_instrument_and_redshift(spec, redshift)
         _, _, _, lam, flux, unc = self._convert_spec_data(spec, z)
         enough_samples = max(10000, len(spec.wavelength))
-        lam_mod = np.logspace(np.log10(min(lam)), np.log10(max(lam)), enough_samples)
+        mnlam, mxlam = min(lam), max(lam)
+        lam_mod = np.logspace(np.log10(mnlam), np.log10(mxlam), enough_samples)
 
-        fig, axs = plt.subplots(ncols=1, nrows=2, figsize=(10, 10),
+        fig, axs = plt.subplots(ncols=1, nrows=2, figsize=(10, 7),
                                 gridspec_kw={"height_ratios": [3, 1]}, sharex=True, **kwargs)
 
         # spectrum and best fit model
         ax = axs[0]
         ax.set_yscale("linear")
         ax.set_xscale("log")
+        ax.get_xaxis().set_major_formatter(mpl.ticker.ScalarFormatter())
         ax.minorticks_on()
         ax.tick_params(axis="both", which="major", top="on", right="on",
                        direction="in", length=10)
@@ -656,12 +658,6 @@ class Model:
         ax.tick_params(axis="both", which="minor", top="on", right="on",
                        direction="in", length=5)
         ax.minorticks_on()
-
-        # Custom X axis ticks
-        ax.xaxis.set_ticks(
-            [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 14, 16, 20, 25, 30, 40]
-        )
-
         ax.axhline(0, linestyle="--", color="gray", zorder=0)
         ax.plot(
             lam,
@@ -674,13 +670,14 @@ class Model:
             linestyle="none",
         )
         ax.set_ylim(-scalefac_resid * std, scalefac_resid * std)
-        ax.set_xlim(np.floor(np.amin(lam)), np.ceil(np.amax(lam)))
         ax.set_xlabel(r"$\lambda$ [$\mu m$]")
         ax.set_ylabel("Residuals [%]")
 
-        # scalar x-axis marks
-        ax.xaxis.set_major_formatter(mpl.ticker.ScalarFormatter())
+        # Refine x-axis
+        ax.set_xlim(mnlam, mxlam)
+        ax.xaxis.set_minor_formatter(mpl.ticker.ScalarFormatter())
         fig.subplots_adjust(hspace=0)
+        fig.tight_layout()
         return fig
 
     def copy(self):
