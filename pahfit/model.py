@@ -454,15 +454,9 @@ class Model:
                     print("Features table:", self.features)
                     raise e
 
-    def plot(
-        self,
-        spec=None,
-        redshift=None,
-        use_instrument_fwhm=False,
-        label_lines=False,
-        scalefac_resid=2,
-        **errorbar_kwargs,
-    ):
+    def plot(self, spec, redshift=None, use_instrument_fwhm=False,
+             label_lines=False, scalefac_resid=2, errorbar_kwargs=None,
+             plot_kwargs=None, **kwargs):
         """Plot model, and optionally compare to observational data.
 
         Parameters
@@ -491,54 +485,66 @@ class Model:
             to adjust plot limits.
 
         errorbar_kwargs : dict
-            Customize the data points plot by passing the given keyword
-            arguments to matplotlib.pyplot.errorbar.
+            Customize the data points plot by passing a dictionary to
+            be used as keyword arguments to
+            :func:`matplotlib.pyplot.errorbar`.
 
+        plot_kwargs : dict
+            Additional keyword arguments to pass to
+            :func:`matplotlib.pyplot.plot`.
+
+        kwargs: dict
+            Any additional keyword arguments are passed to
+            :func:`matplotlib.pyplot.subplots` and must be valid
+            keywords for this function.
         """
         inst, z = self._parse_instrument_and_redshift(spec, redshift)
         _, _, _, lam, flux, unc = self._convert_spec_data(spec, z)
         enough_samples = max(10000, len(spec.wavelength))
         lam_mod = np.logspace(np.log10(min(lam)), np.log10(max(lam)), enough_samples)
 
-        fig, axs = plt.subplots(
-            ncols=1,
-            nrows=2,
-            figsize=(10, 10),
-            gridspec_kw={"height_ratios": [3, 1]},
-            sharex=True,
-        )
+        fig, axs = plt.subplots(ncols=1, nrows=2, figsize=(10, 10),
+                                gridspec_kw={"height_ratios": [3, 1]}, sharex=True, **kwargs)
 
         # spectrum and best fit model
         ax = axs[0]
         ax.set_yscale("linear")
         ax.set_xscale("log")
         ax.minorticks_on()
-        ax.tick_params(
-            axis="both", which="major", top="on", right="on", direction="in", length=10
-        )
-        ax.tick_params(
-            axis="both", which="minor", top="on", right="on", direction="in", length=5
-        )
+        ax.tick_params(axis="both", which="major", top="on", right="on",
+                       direction="in", length=10)
+        ax.tick_params(axis="both", which="minor", top="on", right="on",
+                       direction="in", length=5)
+
+        plot_kwargs = plot_kwargs or {}
+        errorbar_kwargs = errorbar_kwargs or {}
 
         ext_model = None
         has_att = "attenuation" in self.features["kind"]
-        has_abs = "absorption" in self.features["kind"]
         if has_att:
             row = self.features[self.features["kind"] == "attenuation"][0]
-            tau = row["tau"][0]
+            tau = row["tau"]['val']
             ext_model = S07_attenuation(tau_sil=tau)(lam_mod)
 
+        has_abs = "absorption" in self.features["kind"]
         if has_abs:
-            raise NotImplementedError(
-                "plotting absorption features not implemented yet"
-            )
+            abs_model = np.ones_like(lam_mod)
+            for fa in self.features[self.features['kind'] == "absorption"]:
+                abs_func = att_Drude1D(tau=fa['tau']['val'],
+                                       x_0=fa['wavelength']['val'],
+                                       fwhm=fa['fwhm']['val'])
+                abs_model *= abs_func(lam_mod)
+            if ext_model is not None:
+                ext_model *= abs_model
+            else:
+                ext_model = abs_model
 
-        if has_att or has_abs:
-            ax_att = ax.twinx()  # axis for plotting the extinction curve
+        if ext_model is not None:
+            ax_att = ax.twinx()  # y-axis for plotting the extinction curve
             ax_att.tick_params(which="minor", direction="in", length=5)
             ax_att.tick_params(which="major", direction="in", length=10)
             ax_att.minorticks_on()
-            ax_att.plot(lam_mod, ext_model, "k--", alpha=0.5)
+            ax_att.plot(lam_mod, ext_model, "k--", alpha=0.5, **plot_kwargs)
             ax_att.set_ylabel("Attenuation")
             ax_att.set_ylim(0, 1.1)
         else:
@@ -558,16 +564,15 @@ class Model:
         def tabulate_components(kind):
             ss = {}
             for name in self.features[self.features["kind"] == kind]["name"]:
-                ss[name] = self.tabulate(
-                    inst, z, lam_mod, self.features["name"] == name
-                )
+                ss[name] = self.tabulate(inst, z, lam_mod,
+                                         self.features["name"] == name)
             return {name: s.flux.value for name, s in ss.items()}
 
         cont_y = np.zeros(len(lam_mod))
         if "dust_continuum" in self.features["kind"]:
             # one plot for every component
             for y in tabulate_components("dust_continuum").values():
-                ax.plot(lam_mod, y * ext_model, "#FFB000", alpha=0.5)
+                ax.plot(lam_mod, y * ext_model, "#FFB000", alpha=0.5, **plot_kwargs)
                 # keep track of total continuum
                 cont_y += y
 
@@ -575,11 +580,11 @@ class Model:
             star_y = self.tabulate(
                 inst, z, lam_mod, self.features["kind"] == "starlight"
             ).flux.value
-            ax.plot(lam_mod, star_y * ext_model, "#ffB000", alpha=0.5)
+            ax.plot(lam_mod, star_y * ext_model, "#ffB000", alpha=0.5, **plot_kwargs)
             cont_y += star_y
 
         # total continuum
-        ax.plot(lam_mod, cont_y * ext_model, "#785EF0", alpha=1)
+        ax.plot(lam_mod, cont_y * ext_model, "#785EF0", alpha=1, **plot_kwargs)
 
         # now plot the dust bands and lines
         if "dust_feature" in self.features["kind"]:
@@ -588,31 +593,21 @@ class Model:
                     lam_mod,
                     (cont_y + y) * ext_model,
                     "#648FFF",
-                    alpha=0.5,
+                    alpha=0.5, **plot_kwargs
                 )
 
         if "line" in self.features["kind"]:
             for name, y in tabulate_components("line").items():
-                ax.plot(
-                    lam_mod,
-                    (cont_y + y) * ext_model,
-                    "#DC267F",
-                    alpha=0.5,
-                )
+                ax.plot(lam_mod, (cont_y + y) * ext_model, "#DC267F",
+                        alpha=0.5, **plot_kwargs)
                 if label_lines:
                     i = np.argmax(y)
                     # ignore out of range lines
                     if i > 0 and i < len(y) - 1:
                         w = lam_mod[i]
-                        ax.text(
-                            w,
-                            y[i],
-                            name,
-                            va="center",
-                            ha="center",
-                            rotation="vertical",
-                            bbox=dict(facecolor="white", alpha=0.75, pad=0),
-                        )
+                        ax.text(w, y[i], name, va="center", ha="center",
+                                rotation="vertical",
+                                bbox=dict(facecolor="white", alpha=0.75, pad=0))
 
         ax.plot(lam_mod, self.tabulate(inst, z, lam_mod).flux.value, "#FE6100", alpha=1)
 
@@ -635,11 +630,11 @@ class Model:
         ax.legend(
             Leg_lines,
             [
-                "S07_attenuation",
-                "Spectrum Fit",
+                "Attenuation/Absorption",
+                "Spectrum",
                 "Dust Features",
-                r"Atomic and $H_2$ Lines",
-                "Total Continuum Emissions",
+                r"Lines",
+                "Total Continuum",
                 "Continuum Components",
             ],
             prop={"size": 10},
@@ -656,12 +651,10 @@ class Model:
 
         ax.set_yscale("linear")
         ax.set_xscale("log")
-        ax.tick_params(
-            axis="both", which="major", top="on", right="on", direction="in", length=10
-        )
-        ax.tick_params(
-            axis="both", which="minor", top="on", right="on", direction="in", length=5
-        )
+        ax.tick_params(axis="both", which="major", top="on", right="on",
+                       direction="in", length=10)
+        ax.tick_params(axis="both", which="minor", top="on", right="on",
+                       direction="in", length=5)
         ax.minorticks_on()
 
         # Custom X axis ticks
