@@ -13,7 +13,8 @@ import numpy as np
 
 
 class APFitter(Fitter):
-    """Astropy fitting implementation using Fitter API.
+    """Astropy fitting implementation using
+    :class:`pahfit.fitters.Fitter` API.
 
     Fitter API is still subject to change. This draft was written with
     what is needed, and the Fitter class was set up based on this draft.
@@ -54,7 +55,6 @@ class APFitter(Fitter):
     - Use the 'tied' option for parameters that should be equivalent
       (e.g. starlight in segment 1 should have same temperature as
       starlight in segment 2).
-
     """
 
     def __init__(self):
