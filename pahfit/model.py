@@ -12,7 +12,8 @@ from pahfit.features.util import bounded_is_fixed, bounded_is_missing
 from pahfit.features import Features
 from pahfit import instrument
 from pahfit.errors import PAHFITModelError
-from pahfit.fitters.ap_components import BlackBody1D, S07_attenuation
+from pahfit.fitters.ap_components import (BlackBody1D, ModifiedBlackBody1D,
+                                          S07_attenuation, att_Drude1D)
 from pahfit.fitters.ap_fitter import APFitter
 
 
@@ -231,18 +232,11 @@ class Model:
 
         def dust_continuum_guess(row):
             temp = row["temperature"][0]
-            fmax_lam = 2898.0 / temp
-            bb = BlackBody1D(1, temp)
-            if fmax_lam >= lam_min and fmax_lam <= lam_max:
-                lam_ref = fmax_lam
-            elif fmax_lam > lam_max:
-                lam_ref = lam_max
-            else:
-                lam_ref = lam_min
-
+            lam_ref = np.clip(2898.0 / temp, lam_min, lam_max)
+            bb = ModifiedBlackBody1D(1, temp)
             flux_ref = np.median(flux[(lam > lam_ref - 0.2) & (lam < lam_ref + 0.2)])
             amp_guess = flux_ref / bb(lam_ref)
-            return amp_guess / nbb
+            return np.clip(amp_guess / nbb, 0, 1.)
 
         loop_over_non_fixed("dust_continuum", "tau", dust_continuum_guess)
 
