@@ -25,9 +25,9 @@ class BlackBody1D(Fittable1DModel):
         """ """
         return (
             amplitude
-            * 3.97289e13
-            / x**3
-            / (np.exp(1.4387752e4 / x / temperature) - 1.0)
+            * 3.9728917e13 # 2 h c/µm^3 -> MJy
+            / x**3 
+            / (np.exp(1.4387752e4 / x / temperature) - 1.0)  # h c/micron k K
         )
 
 
