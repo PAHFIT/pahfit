@@ -511,15 +511,29 @@ class Model:
         ax = axs[0]
         ax.set_yscale("linear")
         ax.set_xscale("log")
+
+        plot_kwargs = plot_kwargs or {}
+        errorbar_kwargs = errorbar_kwargs or {}
+        default_kwargs = dict(
+            fmt="o",
+            markeredgecolor="k",
+            markerfacecolor="none",
+            ecolor="k",
+            elinewidth=0.2,
+            capsize=0.5,
+            markersize=4,
+        )
+
+        ax.errorbar(lam, flux, yerr=unc, **(default_kwargs | errorbar_kwargs))
+        ax.set_ylim(0)
+        ax.set_ylabel(r"$F_{\nu}$")
+
         ax.get_xaxis().set_major_formatter(mpl.ticker.ScalarFormatter())
         ax.minorticks_on()
         ax.tick_params(axis="both", which="major", top="on", right="on",
                        direction="in", length=10)
         ax.tick_params(axis="both", which="minor", top="on", right="on",
                        direction="in", length=5)
-
-        plot_kwargs = plot_kwargs or {}
-        errorbar_kwargs = errorbar_kwargs or {}
 
         ext_model = None
         has_att = "attenuation" in self.features["kind"]
@@ -546,7 +560,7 @@ class Model:
             ax_att.tick_params(which="minor", direction="in", length=5)
             ax_att.tick_params(which="major", direction="in", length=10)
             ax_att.minorticks_on()
-            ax_att.plot(lam_mod, ext_model, "k--", alpha=0.5, **plot_kwargs)
+            ax_att.plot(lam_mod, ext_model, "k--", alpha=0.7, **plot_kwargs)
             ax_att.set_ylabel("Attenuation")
             ax_att.set_ylim(0, 1.1)
         else:
@@ -556,10 +570,10 @@ class Model:
         Leg_lines = [
             mpl.lines.Line2D([0], [0], color="k", linestyle="--", lw=2),
             mpl.lines.Line2D([0], [0], color="#FE6100", lw=2),
-            mpl.lines.Line2D([0], [0], color="#648FFF", lw=2, alpha=0.5),
-            mpl.lines.Line2D([0], [0], color="#DC267F", lw=2, alpha=0.5),
+            mpl.lines.Line2D([0], [0], color="#648FFF", lw=2, alpha=0.7),
+            mpl.lines.Line2D([0], [0], color="#DC267F", lw=2, alpha=0.7),
             mpl.lines.Line2D([0], [0], color="#785EF0", lw=2, alpha=1),
-            mpl.lines.Line2D([0], [0], color="#FFB000", lw=2, alpha=0.5),
+            mpl.lines.Line2D([0], [0], color="#FFB000", lw=2, alpha=0.7),
         ]
 
         # local utility
@@ -574,7 +588,7 @@ class Model:
         if "dust_continuum" in self.features["kind"]:
             # one plot for every component
             for y in tabulate_components("dust_continuum").values():
-                ax.plot(lam_mod, y * ext_model, "#FFB000", alpha=0.5, **plot_kwargs)
+                ax.plot(lam_mod, y * ext_model, "#FFB000", alpha=0.7, **plot_kwargs)
                 # keep track of total continuum
                 cont_y += y
 
@@ -582,7 +596,7 @@ class Model:
             star_y = self.tabulate(
                 inst, z, lam_mod, self.features["kind"] == "starlight"
             ).flux.value
-            ax.plot(lam_mod, star_y * ext_model, "#ffB000", alpha=0.5, **plot_kwargs)
+            ax.plot(lam_mod, star_y * ext_model, "#ffB000", alpha=0.7, **plot_kwargs)
             cont_y += star_y
 
         # total continuum
@@ -595,13 +609,13 @@ class Model:
                     lam_mod,
                     (cont_y + y) * ext_model,
                     "#648FFF",
-                    alpha=0.5, **plot_kwargs
+                    alpha=0.7, **plot_kwargs
                 )
 
         if "line" in self.features["kind"]:
             for name, y in tabulate_components("line").items():
                 ax.plot(lam_mod, (cont_y + y) * ext_model, "#DC267F",
-                        alpha=0.5, **plot_kwargs)
+                        alpha=0.7, **plot_kwargs)
                 if label_lines:
                     i = np.argmax(y)
                     # ignore out of range lines
@@ -612,22 +626,6 @@ class Model:
                                 bbox=dict(facecolor="white", alpha=0.75, pad=0))
 
         ax.plot(lam_mod, self.tabulate(inst, z, lam_mod).flux.value, "#FE6100", alpha=1)
-
-        # data
-        default_kwargs = dict(
-            fmt="o",
-            markeredgecolor="k",
-            markerfacecolor="none",
-            ecolor="k",
-            elinewidth=0.2,
-            capsize=0.5,
-            markersize=6,
-        )
-
-        ax.errorbar(lam, flux, yerr=unc, **(default_kwargs | errorbar_kwargs))
-
-        ax.set_ylim(0)
-        ax.set_ylabel(r"$\nu F_{\nu}$")
 
         ax.legend(
             Leg_lines,
