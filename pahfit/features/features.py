@@ -301,7 +301,7 @@ class Features(Table):
 
     @staticmethod
     def _index_table(tbl):
-        for indx in ('name', 'group'):
+        for indx in ('name', 'group', 'kind'):
             tbl.add_index(indx)
 
     def mask_feature(self, name, mask_value=True):
