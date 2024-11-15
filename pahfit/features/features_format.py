@@ -41,6 +41,6 @@ class BoundedParTableFormatter(TableFormatter):
             for col, fmt in bpcols:
                 col.info.format = fmt
 
-    def _name_and_structure(self, name, *args):
+    def _name_and_structure(self, name, *args, **kwargs):
         "Simplified column name: no val, min, max needed."
         return name
