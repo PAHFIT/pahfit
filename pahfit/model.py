@@ -8,7 +8,7 @@ import numpy as np
 from scipy import interpolate, integrate
 
 from pahfit import units
-from pahfit.features.util import bounded_is_fixed, bounded_is_missing
+from pahfit.features.util import bounded_is_fixed, bounded_is_disabled
 from pahfit.features import Features
 from pahfit import instrument
 from pahfit.errors import PAHFITModelError
@@ -441,8 +441,8 @@ class Model:
             for column, value in self.fitter.get_result(name).items():
                 try:
                     i = np.where(self.features["name"] == name)[0]
-                    # deal with fwhm usually being masked
-                    if not bounded_is_missing(self.features[column][i]):
+                    # do not update disabled attributes (e.g. line fwhm is usually masked)
+                    if not bounded_is_disabled(self.features[column][i]):
                         self.features[column]["val"][i] = value
                     else:
                         self.features[column][i] = (value, np.nan, np.nan)

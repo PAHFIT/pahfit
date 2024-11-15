@@ -66,10 +66,10 @@ def value_bounds(val, bounds):
     return tuple(ret)
 
 
-def bounded_is_missing(val):
+def bounded_is_disabled(vals):
     """Return a mask array indicating which of the bounded values
-    are missing.  A missing bounded value has a masked value."""
-    return getattr(val['val'], 'mask', None) or np.zeros_like(val['val'], dtype=bool)
+    are disabled.  A disabled bounded value has a masked value."""
+    return vals['val'].mask
 
 
 def bounded_is_fixed(vals):
