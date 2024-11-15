@@ -1,5 +1,6 @@
 import numpy as np
 from astropy.table.pprint import TableFormatter
+from pahfit.features.util import bounded_is_fixed
 
 
 # * Special table formatting for bounded (val, min, max) values
@@ -9,9 +10,9 @@ def fmt_func(fmt: str):
         fmt = fmt[1:]
 
     def _fmt(x):
-        ret = f"{x['val']:{fmt}}"
-        if np.isnan(x['min']) and np.isnan(x['max']):
-            return ret + " (fixed)"
+        ret = f'{x["val"]:{fmt}}'
+        if bounded_is_fixed(x):
+            return f"{ret} ({'frz' if x['frozen'] else 'fxd'})"
         else:
             mn = ("-∞" if np.isnan(x['min']) or x['min'] == -np.inf
                   else f"{x['min']:{fmt}}")

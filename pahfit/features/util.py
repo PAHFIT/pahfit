@@ -72,10 +72,20 @@ def bounded_is_missing(val):
     return getattr(val['val'], 'mask', None) or np.zeros_like(val['val'], dtype=bool)
 
 
-def bounded_is_fixed(val):
-    """Return a mask array indicating which of the bounded values
-    are fixed.  A fixed bounded value has masked bounds."""
-    return np.isnan(val['min']) & np.isnan(val['max'])
+def bounded_is_fixed(vals):
+    """Return a boolean or boolean array indicating which of the
+    bounded values are fixed.  A fixed bounded value has both its
+    bounds either set to nan.
+
+    Note that masked values in `vals` are considered disabled, not
+    fixed.  If the provided `vals` have no bounds fields, a False
+    array is returned.
+    """
+    if (names := vals.dtype.names) and 'max' in names:
+        return (vals['frozen'] |
+                (np.isnan(vals['min'].data) & np.isnan(vals['max'].data)))
+    else:
+        return np.zeros(vals.shape, dtype=np.bool)
 
 
 def bounded_min(val):

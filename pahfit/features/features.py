@@ -76,13 +76,12 @@ class Features(Table):
     _group_attrs = {'bounds', 'features', 'kind'}  # group-level attributes
     _param_attrs = {'value', 'bounds'}  # Each parameter can have these attributes
     _no_bounds = {'name', 'group', 'kind', 'geometry', 'model'}  # str attributes (no bounds)
-    _bounds_dtype = np.dtype([("val", float), ("min", float), ("max", float)])  # bounded param type
     _always_masked = {'tau', 'power', 'temperature',  # always mask these columns
                       'wavelength', 'fwhm', 'geometry', 'model'}
+    _bounds_dtype = np.dtype([("val", float), ("min", float),  # bounded param type
+                              ("max", float), ("frozen", bool)])
     _param_defaults = dict(geometry='mixed')
-    
 
-    
     @classmethod
     def read(cls, file, *args, **kwargs):
         """Read a table from file.
@@ -250,7 +249,7 @@ class Features(Table):
                 b = bounds
             try:
                 t[kind][name][param] = (value if param in cls._no_bounds
-                                        else value_bounds(value, b))
+                                        else (*value_bounds(value, b), False))
             except ValueError as e:
                 raise PAHFITFeatureError("Error initializing value and bounds for"
                                          f" {name} ({kind}, {group}):\n\t{e}")
@@ -277,7 +276,7 @@ class Features(Table):
                         else:
                             params[missing] = 0.0
                     else:
-                        params[missing] = value_bounds(0.0, bounds=(0.0, None))
+                        params[missing] = (*value_bounds(0.0, bounds=(0.0, None)), False)
                 rows.append(dict(name=name, **params))
             param_names = rows[0].keys()
             dtypes = [str if x in cls._no_bounds else cls._bounds_dtype for x in param_names]
@@ -329,6 +328,42 @@ class Features(Table):
     def unmask_feature(self, name):
         """Remove the mask for all parameters of a feature."""
         self.mask_feature(name, mask_value=False)
+
+    def freeze(self, param: str, where=None, thaw=False, **keys):
+        """Freeze `param` in all rows of the table where `where` (a
+        boolean array) is True.  `where` should have as many entries
+        as the number of table rows.  If `thaw` is True, un-freeze
+        instead.
+
+        If any keywords are passed, they are used to select rows in
+        which to freeze `param`, by testing values of the table column
+        named by the key with the provided value, e.g.:
+
+            features.freeze('fwhm', kind='absorption')
+        """
+        if param not in self.colnames:
+            warn(f'{param} column not found in table', PAHFITWarning, stacklevel=1)
+            return
+        if where is None:
+            if keys:
+                where = np.zeros_like(self.colnames, dtype=np.bool)
+                for k, v in keys.items():
+                    if k in self.colnames:
+                        col = self[k]
+                        if hasattr(col, 'mask'):
+                            val = col['val']
+                        else:
+                            val = col
+                            where |= (val == v)
+        if where is not None:
+            self[param]['frozen'][where] = not thaw
+        else:
+            self[param]['frozen'] = not thaw
+
+
+    def thaw(self, param, where=None, **keys):
+        self.freeze(param, where, thaw=True, **keys)
+
 
     def _base_repr_(self, *args, **kwargs):
         """Omit dtype on self-print."""
