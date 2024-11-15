@@ -32,7 +32,7 @@ class BoundedParTableFormatter(TableFormatter):
         tlfmt = table.meta.get('pahfit_format')
         try:
             for col in table.columns.values():
-                if len(col.dtype) == 3:  # bounded!
+                if len(col.dtype) > 1:  # bounds!
                     bpcols.append((col, col.info.format))
                     fmt = col.meta.get('pahfit_format') or tlfmt or "g"
                     col.info.format = fmt_func(fmt)
