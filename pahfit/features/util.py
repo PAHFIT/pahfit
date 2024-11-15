@@ -1,6 +1,6 @@
 """pahfit.util General pahfit.features utility functions."""
 import numpy as np
-from pahfit.errors import PAHFITFeatureError
+from pahfit.errors import PAHFITFeatureError, PAHFITModelError, PAHFITWarning
 
 
 def value_bounds(val, bounds):

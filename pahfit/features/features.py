@@ -18,12 +18,14 @@ tables are therefore also available for pahfit.features.Features.
 """
 
 import os
+from warnings import warn
 from astropy.table.table import MaskedColumn
 import numpy as np
 from astropy.table import vstack, Table, TableAttribute
 from astropy.io.misc.yaml import yaml
 from importlib import resources
-from pahfit.errors import PAHFITFeatureError
+
+from pahfit.errors import PAHFITFeatureError, PAHFITWarning
 from pahfit.features.features_format import BoundedParTableFormatter
 from pahfit.features.util import value_bounds
 import pahfit.units
@@ -252,8 +254,9 @@ class Features(Table):
                                         else (*value_bounds(value, b), False))
             except ValueError as e:
                 raise PAHFITFeatureError("Error initializing value and bounds for"
-                                         f" {name} ({kind}, {group}):\n\t{e}")
+                                         f" {name} ({kind}, {group}):\n\t{e}") from e
 
+            
     @classmethod
     def _construct_table(cls, inp: dict):
         """Construct a masked table with units from input dictionary

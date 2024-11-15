@@ -447,10 +447,8 @@ class Model:
                     else:
                         self.features[column][i] = (value, np.nan, np.nan)
                 except Exception as e:
-                    print(
-                        f"Could not assign to name {name} in features table. Some diagnostic output below"
-                    )
-                    print(f"Index i is {i}")
+                    print(f"Could not assign to attribute {name} in features table.")
+                    print(f"Index {i=}")
                     print("Features table:", self.features)
                     raise e
 
