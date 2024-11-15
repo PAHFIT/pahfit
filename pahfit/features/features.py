@@ -18,6 +18,7 @@ tables are therefore also available for pahfit.features.Features.
 """
 
 import os
+from astropy.table.table import MaskedColumn
 import numpy as np
 from astropy.table import vstack, Table, TableAttribute
 from astropy.io.misc.yaml import yaml
@@ -76,6 +77,8 @@ class Features(Table):
     _param_attrs = {'value', 'bounds'}  # Each parameter can have these attributes
     _no_bounds = {'name', 'group', 'kind', 'geometry', 'model'}  # str attributes (no bounds)
     _bounds_dtype = np.dtype([("val", float), ("min", float), ("max", float)])  # bounded param type
+    _always_masked = {'tau', 'power', 'temperature',  # always mask these columns
+                      'wavelength', 'fwhm', 'geometry', 'model'}
     _param_defaults = dict(geometry='mixed')
     
 
@@ -282,8 +285,12 @@ class Features(Table):
             tables.append(t)
         tables = vstack(tables)
         for cn, col in tables.columns.items():
+            if cn in cls._always_masked and not isinstance(col, MaskedColumn):
+                col = MaskedColumn(data=col.data, name=cn, dtype=col.dtype)
+                tables[cn] = col  # replace with masked column equivalent
             if cn in PARAM_UNITS:
                 col.unit = PARAM_UNITS[cn]
+
         cls._index_table(tables)
 
         if '_ratios' in inp:
@@ -306,7 +313,7 @@ class Features(Table):
         parameter values are meaningless.
 
         mask_value : bool
-            Set this to False to undo the mask
+            Set this to False to undo the value masking
 
         """
         row = self.loc[name]
