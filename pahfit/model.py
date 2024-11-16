@@ -877,13 +877,13 @@ class Model:
         excluded = self._excluded_features(instrumentname, redshift, lam)
         self.enabled_features = self.features["name"][~excluded]
 
-        def cleaned(features_tuple3):
-            val = features_tuple3[0]
-            if bounded_is_fixed(features_tuple3):
+        def cleaned(value):
+            val = value['val']
+            if bounded_is_fixed(value):
                 return val
             else:
-                vmin = -np.inf if np.isnan(features_tuple3[1]) else features_tuple3[1]
-                vmax = np.inf if np.isnan(features_tuple3[2]) else features_tuple3[2]
+                vmin = -np.inf if np.isnan(value['min']) else value['min']
+                vmax = np.inf if np.isnan(value['max']) else value['max']
                 return np.array([val, vmin, vmax])
 
         for row in self.features[~excluded]:
