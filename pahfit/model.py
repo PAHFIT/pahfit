@@ -532,8 +532,7 @@ class Model:
 
         ax.errorbar(lam, flux, yerr=unc, **(default_kwargs | errorbar_kwargs))
         ax.set_ylim(0)
-        ax.set_ylabel(r"$F_{\nu}$")
-
+        ax.set_ylabel(r"$I_{\nu}$ " + f"({sp_unit})")
         ax.get_xaxis().set_major_formatter(mpl.ticker.ScalarFormatter())
         ax.minorticks_on()
         ax.tick_params(axis="both", which="major", top="on", right="on",
@@ -664,7 +663,7 @@ class Model:
                 linestyle="none")
         ax.set_ylim(-scalefac_resid * std, scalefac_resid * std)
         ax.set_xlabel(r"$\lambda$ [$\mu m$]")
-        ax.set_ylabel("Residuals [%]")
+        ax.set_ylabel(f"Residuals ({sp_unit})")
 
         # Refine x-axis
         ax.set_xlim(mnlam, mxlam)
