@@ -453,8 +453,8 @@ class Model:
                     raise e
 
     def plot(self, spec, redshift=None, use_instrument_fwhm=False,
-             label_lines=False, scalefac_resid=2, errorbar_kwargs=None,
-             plot_kwargs=None, **kwargs):
+             label_lines=False, scalefac_resid=2, update_fig=None,
+             errorbar_kwargs=None, plot_kwargs=None, **kwargs):
         """Plot model, and optionally compare to observational data.
 
         Parameters
@@ -482,6 +482,10 @@ class Model:
             Factor multiplying the standard deviation of the residuals
             to adjust plot limits.
 
+        update_fig: matplotlib.pyplot.Figure
+            Re-use limits from figure, to ease repetitive
+            investigation of a sub-region.
+
         errorbar_kwargs : dict
             Customize the data points plot by passing a dictionary to
             be used as keyword arguments to
@@ -501,9 +505,20 @@ class Model:
         enough_samples = max(10000, len(spec.wavelength))
         mnlam, mxlam = min(lam), max(lam)
         lam_mod = np.logspace(np.log10(mnlam), np.log10(mxlam), enough_samples)
+        sp_unit = units.intensity.to_string().replace(" ", "")
 
-        fig, axs = plt.subplots(ncols=1, nrows=2, figsize=(10, 7),
-                                gridspec_kw={"height_ratios": [3, 1]}, sharex=True, **kwargs)
+        if update_fig:
+            fig = update_fig
+            if len(fig.axes) > 2:
+                fig.axes[-1].remove()  # attenuation right axis
+            axs = fig.axes
+            limits = [{'xlim': ax.get_xlim(), 'ylim': ax.get_ylim()} for ax in axs]
+            for ax in axs:
+                ax.set_xscale("linear")  # avoid log warning
+                ax.clear()
+        else:
+            fig, axs = plt.subplots(ncols=1, nrows=2, figsize=(10, 7),
+                                    gridspec_kw={"height_ratios": [3, 1]}, sharex=True, **kwargs)
 
         # spectrum and best fit model
         ax = axs[0]
@@ -512,15 +527,8 @@ class Model:
 
         plot_kwargs = plot_kwargs or {}
         errorbar_kwargs = errorbar_kwargs or {}
-        default_kwargs = dict(
-            fmt="o",
-            markeredgecolor="k",
-            markerfacecolor="none",
-            ecolor="k",
-            elinewidth=0.2,
-            capsize=0.5,
-            markersize=4,
-        )
+        default_kwargs = dict(fmt="o", markeredgecolor="k", markerfacecolor="none",
+                              ecolor="k", elinewidth=0.2, capsize=0.5, markersize=4)
 
         ax.errorbar(lam, flux, yerr=unc, **(default_kwargs | errorbar_kwargs))
         ax.set_ylim(0)
@@ -625,22 +633,17 @@ class Model:
 
         ax.plot(lam_mod, self.tabulate(inst, z, lam_mod).flux.value, "#FE6100", alpha=1)
 
-        ax.legend(
-            Leg_lines,
-            [
-                "Attenuation/Absorption",
-                "Spectrum",
-                "Dust Features",
-                r"Lines",
-                "Total Continuum",
-                "Continuum Components",
-            ],
-            prop={"size": 10},
-            loc="best",
-            facecolor="white",
-            framealpha=1,
-            ncol=3,
-        )
+        ax.legend(Leg_lines,
+                  [
+                      "Attenuation/Absorption",
+                      "Spectrum",
+                      "Dust Features",
+                      r"Lines",
+                      "Total Continuum",
+                      "Continuum Components",
+                  ],
+                  prop={"size": 10}, loc="best",
+                  facecolor="white", framealpha=1, ncol=3,)
 
         # residuals = data in rest frame - (model evaluated at rest frame wavelengths)
         res = flux - self.tabulate(inst, 0, lam).flux.value
@@ -655,16 +658,10 @@ class Model:
                        direction="in", length=5)
         ax.minorticks_on()
         ax.axhline(0, linestyle="--", color="gray", zorder=0)
-        ax.plot(
-            lam,
-            res,
-            "ko",
-            fillstyle="none",
-            zorder=1,
-            markersize=errorbar_kwargs.get("markersize", None),
-            alpha=errorbar_kwargs.get("alpha", None),
-            linestyle="none",
-        )
+        ax.plot(lam, res, "ko", fillstyle="none", zorder=1,
+                markersize=errorbar_kwargs.get("markersize", None),
+                alpha=errorbar_kwargs.get("alpha", None),
+                linestyle="none")
         ax.set_ylim(-scalefac_resid * std, scalefac_resid * std)
         ax.set_xlabel(r"$\lambda$ [$\mu m$]")
         ax.set_ylabel("Residuals [%]")
@@ -674,6 +671,12 @@ class Model:
         ax.xaxis.set_minor_formatter(mpl.ticker.ScalarFormatter())
         fig.subplots_adjust(hspace=0)
         fig.tight_layout()
+
+        if update_fig:
+            for lim, ax in zip(limits, axs):
+                ax.set_xlim(*lim['xlim'])
+                ax.set_ylim(*lim['ylim'])
+
         return fig
 
     def copy(self):
