@@ -287,15 +287,13 @@ class Model:
 
         if integrate_line_flux:
             # calc line power using instrumental fwhm and integral over data
-            loop_over_non_fixed(
-                "line", "power", lambda row: power_guess(row, line_fwhm_guess(row))
-            )
+            loop_over_non_fixed("line", "power",
+                                lambda row: power_guess(row, line_fwhm_guess(row)))
         else:
-            loop_over_non_fixed(
-                "line", "power", lambda row: median_flux * line_fwhm_guess(row)
-            )
+            loop_over_non_fixed("line", "power",
+                                lambda row: median_flux * line_fwhm_guess(row))
 
-        # Set the fwhms in the features table. Slightly different logic,
+        # Override the fwhms in the features table. Slightly different logic,
         # as the fwhm for lines are masked by default. TODO: leave FWHM
         # masked for lines, and instead have a sigma_v option. Any
         # requirements to guess and fit the line width, should be
@@ -304,14 +302,17 @@ class Model:
         if calc_line_fwhm:
             for row_index in np.where(self.features["kind"] == "line")[0]:
                 row = self.features[row_index]
-                if row["fwhm"] is np.ma.masked:
-                    self.features[row_index]["fwhm"] = (
-                        line_fwhm_guess(row),
-                        np.nan,
-                        np.nan,
-                    )
+                if row["fwhm"] is np.ma.masked:  # masked: overrideable by features table.
+                    # A structured masked array is masked if _any_ of
+                    # its elements is masked.  Table prevents setting
+                    # values in such a masked array element, so we
+                    # access the underlying array itself with .data
+                    self.features["fwhm"].data[row_index]['val'] = line_fwhm_guess(row)
+                    for b in ('min', 'max'):
+                        self.features["fwhm"].data[row_index][b] = np.nan
+                    self.features["fwhm"].data[row_index]['frozen'] = False
                 elif not bounded_is_fixed(row["fwhm"]):
-                    self.features[row_index]["fwhm"]["val"] = line_fwhm_guess(row)
+                    self.features["fwhm"].data[row_index]["val"] = line_fwhm_guess(row)
 
     @staticmethod
     def _convert_spec_data(spec, z):
@@ -500,7 +501,7 @@ class Model:
             :func:`matplotlib.pyplot.subplots` and must be valid
             keywords for this function.
         """
-        inst, z = self._parse_instrument_and_redshift(spec, redshift)
+        instrument, z = self._parse_instrument_and_redshift(spec, redshift)
         _, _, _, lam, flux, unc = self._convert_spec_data(spec, z)
         enough_samples = max(10000, len(spec.wavelength))
         mnlam, mxlam = min(lam), max(lam)
@@ -565,61 +566,63 @@ class Model:
             ax_att.tick_params(which="minor", direction="in", length=5)
             ax_att.tick_params(which="major", direction="in", length=10)
             ax_att.minorticks_on()
-            ax_att.plot(lam_mod, ext_model, "k--", alpha=0.7, **plot_kwargs)
+            ln_att, = ax_att.plot(lam_mod, ext_model, "k--", alpha=0.7, **plot_kwargs,
+                                  label='Attenuation & Absorption')
             ax_att.set_ylabel("Attenuation")
             ax_att.set_ylim(0, 1.1)
         else:
+            ln_att = None
             ext_model = np.ones(len(lam_mod))
 
         # Define legend lines
-        Leg_lines = [
-            mpl.lines.Line2D([0], [0], color="k", linestyle="--", lw=2),
-            mpl.lines.Line2D([0], [0], color="#FE6100", lw=2),
-            mpl.lines.Line2D([0], [0], color="#648FFF", lw=2, alpha=0.7),
-            mpl.lines.Line2D([0], [0], color="#DC267F", lw=2, alpha=0.7),
-            mpl.lines.Line2D([0], [0], color="#785EF0", lw=2, alpha=1),
-            mpl.lines.Line2D([0], [0], color="#FFB000", lw=2, alpha=0.7),
-        ]
+        # Leg_lines = [
+        #     mpl.lines.Line2D([0], [0], color="k", linestyle="--", lw=2),
+        #     mpl.lines.Line2D([0], [0], color="#FE6100", lw=2),
+        #     mpl.lines.Line2D([0], [0], color="#648FFF", lw=2, alpha=0.7),
+        #     mpl.lines.Line2D([0], [0], color="#DC267F", lw=2, alpha=0.7),
+        #     mpl.lines.Line2D([0], [0], color="#785EF0", lw=2, alpha=1),
+        #     mpl.lines.Line2D([0], [0], color="#FFB000", lw=2, alpha=0.7),
+        # ]
 
         # local utility
         def tabulate_components(kind):
             ss = {}
             for name in self.features[self.features["kind"] == kind]["name"]:
-                ss[name] = self.tabulate(inst, z, lam_mod,
+                ss[name] = self.tabulate(instrument, z, lam_mod,
                                          self.features["name"] == name)
             return {name: s.flux.value for name, s in ss.items()}
 
-        cont_y = np.zeros(len(lam_mod))
+        total_cont = np.zeros_like(lam_mod)
         if "dust_continuum" in self.features["kind"]:
             # one plot for every component
-            for y in tabulate_components("dust_continuum").values():
-                ax.plot(lam_mod, y * ext_model, "#FFB000", alpha=0.7, **plot_kwargs)
+            for i, y in enumerate(tabulate_components("dust_continuum").values()):
+                ax.plot(lam_mod, y * ext_model, "#FFB000", alpha=0.7,
+                        label=('Dust Continua' if i == 0 else None),
+                        **plot_kwargs)
+
                 # keep track of total continuum
-                cont_y += y
+                total_cont += y
 
         if "starlight" in self.features["kind"]:
-            star_y = self.tabulate(
-                inst, z, lam_mod, self.features["kind"] == "starlight"
-            ).flux.value
-            ax.plot(lam_mod, star_y * ext_model, "#ffB000", alpha=0.7, **plot_kwargs)
-            cont_y += star_y
-
-        # total continuum
-        ax.plot(lam_mod, cont_y * ext_model, "#785EF0", alpha=1, **plot_kwargs)
+            star_y = self.tabulate(instrument, z, lam_mod,
+                                   self.features["kind"] == "starlight").flux.value
+            ax.plot(lam_mod, star_y * ext_model, "magenta", alpha=0.7,
+                    label='Stellar Continuum', **plot_kwargs)
+            total_cont += star_y
 
         # now plot the dust bands and lines
+        total_df = np.zeros_like(lam_mod)
         if "dust_feature" in self.features["kind"]:
-            for y in tabulate_components("dust_feature").values():
-                ax.plot(
-                    lam_mod,
-                    (cont_y + y) * ext_model,
-                    "#648FFF",
-                    alpha=0.7, **plot_kwargs
-                )
+            for i, y in enumerate(tabulate_components("dust_feature").values()):
+                total_df += y
+                ax.plot(lam_mod, (total_cont + y) * ext_model, "#648FFF",
+                        label=('Dust Features' if i == 0 else None),
+                        alpha=0.7, **plot_kwargs)
 
         if "line" in self.features["kind"]:
-            for name, y in tabulate_components("line").items():
-                ax.plot(lam_mod, (cont_y + y) * ext_model, "#DC267F",
+            for i, (name, y) in enumerate(tabulate_components("line").items()):
+                ax.plot(lam_mod, (total_cont + y) * ext_model, "#DC267F",
+                        label=('Lines' if i == 0 else None),
                         alpha=0.7, **plot_kwargs)
                 if label_lines:
                     i = np.argmax(y)
@@ -630,22 +633,20 @@ class Model:
                                 rotation="vertical",
                                 bbox=dict(facecolor="white", alpha=0.75, pad=0))
 
-        ax.plot(lam_mod, self.tabulate(inst, z, lam_mod).flux.value, "#FE6100", alpha=1)
+        # total continuum
+        ax.plot(lam_mod, total_cont * ext_model, "#785EF0", alpha=1,
+                label='Total Continuum', **plot_kwargs)
 
-        ax.legend(Leg_lines,
-                  [
-                      "Attenuation/Absorption",
-                      "Spectrum",
-                      "Dust Features",
-                      r"Lines",
-                      "Total Continuum",
-                      "Continuum Components",
-                  ],
-                  prop={"size": 10}, loc="best",
-                  facecolor="white", framealpha=1, ncol=3,)
+        ax.plot(lam_mod, self.tabulate(instrument, z, lam_mod).flux.value, "#11AA11",
+                label='Model', alpha=1)
+
+        handles = [ln for ln in ax.lines if not ln.get_label().startswith('_')]
+        if ln_att:
+            handles.insert(0, ln_att)
+        ax.legend(handles=handles, prop={"size": 10}, loc="best")
 
         # residuals = data in rest frame - (model evaluated at rest frame wavelengths)
-        res = flux - self.tabulate(inst, 0, lam).flux.value
+        res = flux - self.tabulate(instrument, 0, lam).flux.value
         std = np.nanstd(res)
         ax = axs[1]
 
@@ -669,12 +670,12 @@ class Model:
         ax.set_xlim(mnlam, mxlam)
         ax.xaxis.set_minor_formatter(mpl.ticker.ScalarFormatter())
         fig.subplots_adjust(hspace=0)
-        fig.tight_layout()
 
         if update_fig:
             for lim, ax in zip(limits, axs):
                 ax.set_xlim(*lim['xlim'])
                 ax.set_ylim(*lim['ylim'])
+        fig.tight_layout()
 
         return fig
 
