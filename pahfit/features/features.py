@@ -349,7 +349,7 @@ class Features(Table):
             return
         if where is None:
             if keys:
-                where = np.zeros_like(self.colnames, dtype=np.bool)
+                where = np.zeros((len(self[param])), dtype=np.bool)
                 for k, v in keys.items():
                     if k in self.colnames:
                         col = self[k]

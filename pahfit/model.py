@@ -138,13 +138,8 @@ class Model:
     def _repr_html_(self):
         return self._status_message() + self.features._repr_html_()
 
-    def guess(
-        self,
-        spec: Spectrum1D,
-        redshift=None,
-        integrate_line_flux=False,
-        calc_line_fwhm=True,
-    ):
+    def guess(self, spec: Spectrum1D, redshift=None, integrate_line_flux=False,
+              calc_line_fwhm=True):
         """Make an initial guess of the physics, based on the given
         observational data.
 
