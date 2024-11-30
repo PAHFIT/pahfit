@@ -342,14 +342,8 @@ class Model:
         unc = unc_obs * (1 + z)  # uncertainty scales with flux
         return lam_obs, flux_obs, unc_obs, lam, flux, unc
 
-    def fit(
-        self,
-        spec: Spectrum1D,
-        redshift=None,
-        maxiter=1000,
-        verbose=True,
-        use_instrument_fwhm=True,
-    ):
+    def fit(self, spec: Spectrum1D, redshift=None, maxiter=1000, verbose=True,
+            use_instrument_fwhm=True):
         """Fit the observed data.
 
         The model setup is based on the features table and instrument
@@ -830,9 +824,8 @@ class Model:
 
         return is_outside & is_excludable
 
-    def _set_up_fitter(
-        self, instrumentname, redshift, lam=None, use_instrument_fwhm=True
-    ):
+    def _set_up_fitter(self, instrumentname, redshift, lam=None,
+                       use_instrument_fwhm=True):
         """Convert features table to Fitter instance, set self.fitter.
 
         For every row of the features table, calls a function of Fitter
