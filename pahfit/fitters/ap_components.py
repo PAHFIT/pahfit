@@ -11,6 +11,14 @@ from astropy import units as u
 __all__ = ["BlackBody1D", "ModifiedBlackBody1D", "S07_attenuation", "att_Drude1D"]
 
 
+def bb(x, temperature):
+    return (
+        3.9728917e13  # 2 h c/µm^3 -> MJy
+        / x**3
+        / (np.exp(1.4387752e4 / x / temperature) - 1.0)
+    )  # h c/micron k K
+
+
 class BlackBody1D(Fittable1DModel):
     """
     A blackbody component.
@@ -22,15 +30,13 @@ class BlackBody1D(Fittable1DModel):
     amplitude = Parameter()
     temperature = Parameter()
 
+    norm = bb(3, 5000)
+    print("norm for bb is", norm)
+
     @staticmethod
     def evaluate(x, amplitude, temperature):
         """ """
-        return (
-            amplitude
-            * 3.9728917e13 # 2 h c/µm^3 -> MJy
-            / x**3 
-            / (np.exp(1.4387752e4 / x / temperature) - 1.0)  # h c/micron k K
-        )
+        return amplitude * bb(x, temperature) / BlackBody1D.norm
 
 
 class ModifiedBlackBody1D(BlackBody1D):
