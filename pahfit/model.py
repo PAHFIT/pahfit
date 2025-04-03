@@ -1,6 +1,7 @@
 from specutils import Spectrum1D
 from astropy import units as u
 from astropy import constants
+from astropy.table import vstack
 import copy
 import matplotlib as mpl
 from matplotlib import pyplot as plt
@@ -70,21 +71,23 @@ class Model:
         self.fit_info = None
 
     @classmethod
-    def from_yaml(cls, pack_file):
+    def from_yaml(cls, *pack_files):
         """
-        Generate feature table from YAML file.
+        Generate feature table from YAML file(s).
 
         Parameters
         ----------
-        pack_file : str
-            Path to YAML file, or name of one of the default YAML files.
+        pack_files : str, ...
+            Path to YAML file, or name of default YAML file. When more
+            than one is given, multiple packs will be combined. All
+            features in the given packs must have unique names.
 
         Returns
         -------
         Model instance
 
         """
-        features = Features.read(pack_file)
+        features = vstack([Features.read(pack_file) for pack_file in pack_files])
         return cls(features)
 
     @classmethod
