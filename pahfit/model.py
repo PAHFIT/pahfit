@@ -231,7 +231,7 @@ class Model:
             bb = ModifiedBlackBody1D(1, temp)
             flux_ref = np.median(flux[(lam > lam_ref - 0.2) & (lam < lam_ref + 0.2)])
             amp_guess = flux_ref / bb(lam_ref)
-            return amp_guess / nbb        #np.clip(amp_guess / nbb, 0, 1.)
+            return amp_guess / nbb  # np.clip(amp_guess / nbb, 0, 1.)
 
         loop_over_non_fixed("dust_continuum", "tau", dust_continuum_guess)
 
@@ -285,8 +285,19 @@ class Model:
             loop_over_non_fixed("line", "power",
                                 lambda row: power_guess(row, line_fwhm_guess(row)))
         else:
-            loop_over_non_fixed("line", "power",
-                                lambda row: median_flux * line_fwhm_guess(row))
+            loop_over_non_fixed(
+                "line",
+                "power",
+                # approximate power = fnu * dlambda * c / lambda**2 = intensity * fwhm * c / lambda**2
+                lambda row: (
+                    (median_flux * units.intensity)
+                    * (line_fwhm_guess(row) * units.wavelength)
+                    * constants.c
+                    / (row["wavelength"]["val"] * units.wavelength) ** 2
+                )
+                .to(units.intensity_power)
+                .value,
+            )
 
         # Override the fwhms in the features table. Slightly different logic,
         # as the fwhm for lines are masked by default. TODO: leave FWHM
@@ -302,10 +313,10 @@ class Model:
                     # its elements is masked.  Table prevents setting
                     # values in such a masked array element, so we
                     # access the underlying array itself with .data
-                    self.features["fwhm"].data[row_index]['val'] = line_fwhm_guess(row)
-                    for b in ('min', 'max'):
+                    self.features["fwhm"].data[row_index]["val"] = line_fwhm_guess(row)
+                    for b in ("min", "max"):
                         self.features["fwhm"].data[row_index][b] = np.nan
-                    self.features["fwhm"].data[row_index]['frozen'] = False
+                    self.features["fwhm"].data[row_index]["frozen"] = False
                 elif not bounded_is_fixed(row["fwhm"]):
                     self.features["fwhm"].data[row_index]["val"] = line_fwhm_guess(row)
 
@@ -444,8 +455,6 @@ class Model:
                     # do not update disabled attributes (e.g. line fwhm is usually masked)
                     if not bounded_is_disabled(self.features[column][i]):
                         self.features[column]["val"][i] = value
-                    else:
-                        self.features[column][i] = (value, np.nan, np.nan)
                 except Exception as e:
                     print(f"Could not assign to attribute {name} in features table.")
                     print(f"Index {i=}")
