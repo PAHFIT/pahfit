@@ -24,6 +24,7 @@ packs = {}
 def read_instrument_packs():
     """Read all instrument packs into the 'packs' variable."""
     global packs
+    packs = {}
     for pack in (resources.files("pahfit") / "packs/instrument").glob("*.yaml"):
         try:
             with open(pack) as fd:
