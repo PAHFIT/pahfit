@@ -34,8 +34,7 @@ def read_instrument_packs():
                 "Error reading instrument pack file\n" f"\t{pack}\n\t{repr(e)}"
             )
         else:
-            telescope = os.path.basename(pack).rstrip(".yaml")
-            packs[telescope] = p
+            packs[pack.stem] = p
     packs = dict(_ins_items("", packs))  # Flatten list
 
 
