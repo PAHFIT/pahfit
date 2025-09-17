@@ -64,8 +64,7 @@ class SpecialModifiedBlackBody1D(BlackBody1D):
 
     """
 
-    absorption_curve = G23()
-    Rv = 5.5
+    absorption_curve = G23(Rv=5.5)
 
     # a spline interpolation of a log-grid sampling with 14 points is
     # already accurate up to 3%. Let's see if evaluating this way will
@@ -89,7 +88,7 @@ class SpecialModifiedBlackBody1D(BlackBody1D):
             29.99954211,
         ]
     )
-    _interp_y = absorption_curve.evaluate(_interp_grid * u.micron, Rv=5.5)
+    _interp_y = absorption_curve.extinguish(_interp_grid * u.micron, Av=1, Rv=5.5)
     _interp = interpolate.CubicSpline(_interp_grid, _interp_y)
     print("prepared cubic spline for special continuum")
 
