@@ -88,7 +88,7 @@ class SpecialModifiedBlackBody1D(BlackBody1D):
             29.99954211,
         ]
     )
-    _interp_y = absorption_curve.extinguish(_interp_grid * u.micron, Av=1)
+    _interp_y = absorption_curve(_interp_grid * u.micron)
     _interp = interpolate.CubicSpline(_interp_grid, _interp_y)
     print("prepared cubic spline for special continuum")
 
