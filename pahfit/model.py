@@ -426,8 +426,91 @@ class Model:
         # copy the fit results to the features table
         self._ingest_fit_result_to_features()
 
+        # calculate and store fit statistics
+        self.stats = self._get_statistics()
+
         if verbose:
             print(self.fitter.message)
+
+    def _get_statistics(self):
+        """Get the statistics of the fit
+        
+        This method extracts statistics from the fitter's fit_info dictionary.
+        For LevMarLSQFitter, fit_info is a dictionary with keys from scipy.optimize.leastsq.
+        
+        Returns
+        -------
+        dict : Dictionary containing the statistics of the fit
+            - free_parameters : int
+                The number of free parameters in the fit
+            - chi_squared : float
+                The chi-squared of the fit
+            - reduced_chi_squared : float
+                The reduced chi-squared of the fit
+            - degrees_of_freedom : int
+                The degrees of freedom of the fit
+            - fit_success : bool
+                Whether the fit converged successfully
+        """
+        if self.fitter.fit_info is None or not isinstance(self.fitter.fit_info, dict):
+            return None
+        
+        fit_info = self.fitter.fit_info
+        
+        # For LevMarLSQFitter, fit_info is a dictionary
+        # fvec contains the function values (residuals) at the solution
+        # These are already weighted residuals (weights * (model - data))
+        if 'fvec' not in fit_info or fit_info['fvec'] is None:
+            return None
+        
+        residuals = fit_info['fvec']
+        n_data_points = len(residuals)
+        # Chi-squared is the sum of squared weighted residuals
+        chi_squared = np.sum(residuals**2) 
+        # Count free parameters
+        # First try to get from covariance matrix (most reliable)
+        if 'cov_x' in fit_info and fit_info['cov_x'] is not None:
+            cov_x = fit_info['cov_x']
+            if hasattr(cov_x, 'shape') and len(cov_x.shape) >= 2:
+                free_parameters = cov_x.shape[0]
+            else:
+                free_parameters = 0
+        elif self.fitter.model is not None:
+            # Fallback: count from the fitted model
+            # Free parameters are those that are not fixed and not tied
+            free_parameters = 0
+            for param_name in self.fitter.model.param_names:
+                param = getattr(self.fitter.model, param_name)
+                # Check if parameter is not fixed and not tied
+                if not param.fixed and param.tied is False:
+                    free_parameters += 1
+        else:
+            # Last resort: cannot determine
+            free_parameters = 0
+        
+        # Degrees of freedom = number of data points - number of free parameters
+        degrees_of_freedom = n_data_points - free_parameters
+        
+        # Reduced chi-squared = chi-squared / degrees_of_freedom
+        # Use max(1, degrees_of_freedom) to avoid division by zero
+        reduced_chi_squared = chi_squared / max(1, degrees_of_freedom)
+        
+        # Fit success: ierr codes 1-4 indicate success for scipy.optimize.leastsq
+        # ierr = 1: Both actual and predicted relative reductions in the sum of squares are at most ftol
+        # ierr = 2: Relative error between two consecutive iterates is at most xtol
+        # ierr = 3: Both conditions above are satisfied
+        # ierr = 4: The cosine of the angle between fvec and any column of the jacobian is at most gtol in absolute value
+        ierr = fit_info.get('ierr', 0)
+        fit_success = ierr in [1, 2, 3, 4]
+        
+        return {
+            'free_parameters': free_parameters,
+            'chi_squared': chi_squared,
+            'reduced_chi_squared': reduced_chi_squared,
+            'degrees_of_freedom': degrees_of_freedom,
+            'fit_success': fit_success,
+            'function_evaluations': fit_info.get('nfev', 0),
+        }
 
     def _ingest_fit_result_to_features(self):
         """Copy the results from the Fitter to the features table
@@ -509,8 +592,8 @@ class Model:
         fig, axs = plt.subplots(
             ncols=1,
             nrows=2,
-            figsize=(10, 10),
-            gridspec_kw={"height_ratios": [3, 1]},
+            figsize=(13, 11),
+            gridspec_kw={"height_ratios": [3, 1], "hspace": 0.05},
             sharex=True,
         )
 
@@ -552,12 +635,12 @@ class Model:
 
         # Define legend lines
         Leg_lines = [
-            mpl.lines.Line2D([0], [0], color="k", linestyle="--", lw=2),
-            mpl.lines.Line2D([0], [0], color="#FE6100", lw=2),
-            mpl.lines.Line2D([0], [0], color="#648FFF", lw=2, alpha=0.5),
-            mpl.lines.Line2D([0], [0], color="#DC267F", lw=2, alpha=0.5),
-            mpl.lines.Line2D([0], [0], color="#785EF0", lw=2, alpha=1),
-            mpl.lines.Line2D([0], [0], color="#FFB000", lw=2, alpha=0.5),
+            mpl.lines.Line2D([0], [0], color="k", linestyle="--", lw=2, label="S07 Attenuation"),
+            mpl.lines.Line2D([0], [0], color="#FE6100", lw=1.3, alpha=0.6, label="Continum Components"), #continum components
+            mpl.lines.Line2D([0], [0], color="#F862A6", lw=1.8, alpha=0.5, label="Dust Features"), #dust features
+            mpl.lines.Line2D([0], [0], color="#72B6FF", lw=1.5, alpha=0.5, label="Lines"), #lines
+            mpl.lines.Line2D([0], [0], color="#02511C", lw=2, alpha=1, label="Total Continuum"), #total continuum
+            mpl.lines.Line2D([0], [0], color="#056534", lw=2.2, alpha=0.5, label="Spectrum Fit"), # spectrum fit
         ]
 
         # local utility
@@ -573,7 +656,7 @@ class Model:
         if "dust_continuum" in self.features["kind"]:
             # one plot for every component
             for y in tabulate_components("dust_continuum").values():
-                ax.plot(lam_mod, y * ext_model, "#FFB000", alpha=0.5)
+                ax.plot(lam_mod, y * ext_model, Leg_lines[1].get_color(), Leg_lines[1].get_alpha())
                 # keep track of total continuum
                 cont_y += y
 
@@ -581,7 +664,7 @@ class Model:
             star_y = self.tabulate(
                 inst, z, lam_mod, self.features["kind"] == "starlight"
             ).flux.value
-            ax.plot(lam_mod, star_y * ext_model, "#ffB000", alpha=0.5)
+            ax.plot(lam_mod, star_y * ext_model, Leg_lines[1].get_color(), Leg_lines[1].get_alpha())
             cont_y += star_y
 
         # total continuum
@@ -593,8 +676,8 @@ class Model:
                 ax.plot(
                     lam_mod,
                     (cont_y + y) * ext_model,
-                    "#648FFF",
-                    alpha=0.5,
+                    Leg_lines[2].get_color(),
+                    Leg_lines[2].get_alpha(),
                 )
 
         if "line" in self.features["kind"]:
@@ -602,8 +685,8 @@ class Model:
                 ax.plot(
                     lam_mod,
                     (cont_y + y) * ext_model,
-                    "#DC267F",
-                    alpha=0.5,
+                    Leg_lines[3].get_color(),
+                    Leg_lines[3].get_alpha(),
                 )
                 if label_lines:
                     i = np.argmax(y)
@@ -620,7 +703,7 @@ class Model:
                             bbox=dict(facecolor="white", alpha=0.75, pad=0),
                         )
 
-        ax.plot(lam_mod, self.tabulate(inst, z, lam_mod).flux.value, "#FE6100", alpha=1)
+        ax.plot(lam_mod, self.tabulate(inst, z, lam_mod).flux.value, Leg_lines[5].get_color(), Leg_lines[5].get_alpha())
 
         # data
         default_kwargs = dict(
@@ -630,35 +713,30 @@ class Model:
             ecolor="k",
             elinewidth=0.2,
             capsize=0.5,
-            markersize=6,
+            markersize=3,
         )
 
         ax.errorbar(lam, flux, yerr=unc, **(default_kwargs | errorbar_kwargs))
 
         ax.set_ylim(0)
         ax.set_ylabel(r"$\nu F_{\nu}$")
-
+        ax.grid(True, 'both', ls='--', alpha=0.3)
         ax.legend(
             Leg_lines,
-            [
-                "S07_attenuation",
-                "Spectrum Fit",
-                "Dust Features",
-                r"Atomic and $H_2$ Lines",
-                "Total Continuum Emissions",
-                "Continuum Components",
-            ],
+            [line.get_label() for line in Leg_lines],
             prop={"size": 10},
             loc="best",
             facecolor="white",
             framealpha=1,
-            ncol=3,
+            ncol=2,
         )
 
         # residuals = data in rest frame - (model evaluated at rest frame wavelengths)
+        # detach the residuals plot from the spectrum
+
+        ax = axs[1]
         res = flux - self.tabulate(inst, 0, lam).flux.value
         std = np.nanstd(res)
-        ax = axs[1]
 
         ax.set_yscale("linear")
         ax.set_xscale("log")
@@ -669,10 +747,10 @@ class Model:
             axis="both", which="minor", top="on", right="on", direction="in", length=5
         )
         ax.minorticks_on()
-
+        ax.grid(True, 'both', ls='--', alpha=0.3)
         # Custom X axis ticks
         ax.xaxis.set_ticks(
-            [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 14, 16, 20, 25, 30, 40]
+            [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 14, 16, 20, 25, 30, 35, 40]
         )
 
         ax.axhline(0, linestyle="--", color="gray", zorder=0)
