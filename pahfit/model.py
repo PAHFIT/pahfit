@@ -426,8 +426,91 @@ class Model:
         # copy the fit results to the features table
         self._ingest_fit_result_to_features()
 
+        # calculate and store fit statistics
+        self.stats = self._get_statistics()
+
         if verbose:
             print(self.fitter.message)
+
+    def _get_statistics(self):
+        """Get the statistics of the fit
+        
+        This method extracts statistics from the fitter's fit_info dictionary.
+        For LevMarLSQFitter, fit_info is a dictionary with keys from scipy.optimize.leastsq.
+        
+        Returns
+        -------
+        dict : Dictionary containing the statistics of the fit
+            - free_parameters : int
+                The number of free parameters in the fit
+            - chi_squared : float
+                The chi-squared of the fit
+            - reduced_chi_squared : float
+                The reduced chi-squared of the fit
+            - degrees_of_freedom : int
+                The degrees of freedom of the fit
+            - fit_success : bool
+                Whether the fit converged successfully
+        """
+        if self.fitter.fit_info is None or not isinstance(self.fitter.fit_info, dict):
+            return None
+        
+        fit_info = self.fitter.fit_info
+        
+        # For LevMarLSQFitter, fit_info is a dictionary
+        # fvec contains the function values (residuals) at the solution
+        # These are already weighted residuals (weights * (model - data))
+        if 'fvec' not in fit_info or fit_info['fvec'] is None:
+            return None
+        
+        residuals = fit_info['fvec']
+        n_data_points = len(residuals)
+        # Chi-squared is the sum of squared weighted residuals
+        chi_squared = np.sum(residuals**2) 
+        # Count free parameters
+        # First try to get from covariance matrix (most reliable)
+        if 'cov_x' in fit_info and fit_info['cov_x'] is not None:
+            cov_x = fit_info['cov_x']
+            if hasattr(cov_x, 'shape') and len(cov_x.shape) >= 2:
+                free_parameters = cov_x.shape[0]
+            else:
+                free_parameters = 0
+        elif self.fitter.model is not None:
+            # Fallback: count from the fitted model
+            # Free parameters are those that are not fixed and not tied
+            free_parameters = 0
+            for param_name in self.fitter.model.param_names:
+                param = getattr(self.fitter.model, param_name)
+                # Check if parameter is not fixed and not tied
+                if not param.fixed and param.tied is False:
+                    free_parameters += 1
+        else:
+            # Last resort: cannot determine
+            free_parameters = 0
+        
+        # Degrees of freedom = number of data points - number of free parameters
+        degrees_of_freedom = n_data_points - free_parameters
+        
+        # Reduced chi-squared = chi-squared / degrees_of_freedom
+        # Use max(1, degrees_of_freedom) to avoid division by zero
+        reduced_chi_squared = chi_squared / max(1, degrees_of_freedom)
+        
+        # Fit success: ierr codes 1-4 indicate success for scipy.optimize.leastsq
+        # ierr = 1: Both actual and predicted relative reductions in the sum of squares are at most ftol
+        # ierr = 2: Relative error between two consecutive iterates is at most xtol
+        # ierr = 3: Both conditions above are satisfied
+        # ierr = 4: The cosine of the angle between fvec and any column of the jacobian is at most gtol in absolute value
+        ierr = fit_info.get('ierr', 0)
+        fit_success = ierr in [1, 2, 3, 4]
+        
+        return {
+            'free_parameters': free_parameters,
+            'chi_squared': chi_squared,
+            'reduced_chi_squared': reduced_chi_squared,
+            'degrees_of_freedom': degrees_of_freedom,
+            'fit_success': fit_success,
+            'function_evaluations': fit_info.get('nfev', 0),
+        }
 
     def _ingest_fit_result_to_features(self):
         """Copy the results from the Fitter to the features table
