@@ -34,6 +34,8 @@ dust_cont: # Modified Blackbodies
 H2_lines:
     kind: line
     wavelength:
+        H2_S(9):    4.6947
+        H2_S(8):    5.0529
         H2_S(7):    5.5115
         H2_S(6):    6.1088
         H2_S(5):    6.9091
@@ -41,7 +43,7 @@ H2_lines:
         H2_S(3):    9.6649
         H2_S(2):   12.2785
         H2_S(1):   17.0346
-        H2_S(0):   28.2207
+#        H2_S(0):   28.2207
 
 ################################
 # Ionic Line Emission Features #
@@ -49,21 +51,63 @@ H2_lines:
 ionic_lines:
     kind: line
     wavelength:
+        'Bra':     4.0523
+        '[FeII]':     5.3401
+#       '[Mg V]':     5.6100  
         '[ArII]':     6.985274
+#       '[NeVI]':     7.6524
+#       '[ArV]':      7.9016
         '[ArIII]':    8.99138
         '[SIV]':     10.5105
         '[NeII]':    12.813
+        '[NeV]':     14.3217
         '[NeIII]':   15.555
-        '[SIII]_18': 18.713
-        '[OIV]':     25.91
-        '[FeII]_26': 25.989
-        '[SIII]_33': 33.480
-        '[SiII]':    34.8152
-        '[FeII]_35': 35.349
+#        '[SIII]_18': 18.713
+#        '[OIV]':     25.91
+#        '[FeII]_26': 25.989
+#        '[SIII]_33': 33.480
+#        '[SiII]':    34.8152
+#        '[FeII]_35': 35.349
 
 #################
 # Dust Features #
 #################
+PAH_3.40:
+     kind: dust_feature 
+     wavelength: 3.4030
+     fwhm: 0.0412
+
+PAH_3.46: 
+     kind: dust_feature 
+     wavelength: 3.4610 
+     fwhm: 0.0435
+
+PAH_3.51: 
+     kind: dust_feature 
+     wavelength: 3.5150 
+     fwhm: 0.0520
+
+PAH_3.56: 
+    kind: dust_feature 
+    wavelength: 3.5640 
+    fwhm: 0.0480
+
+PAH_4.40: 
+    kind: dust_feature 
+    wavelength: 4.4010 
+    fwhm: 0.0880
+
+PAH_4.63: 
+    kind: dust_feature 
+    wavelength: 4.6320 
+    fwhm: 0.0950
+
+PAH_4.75: 
+    kind: dust_feature 
+    wavelength: 4.7480 
+    fwhm: 0.1120
+
+
 PAH_5.3:
     kind: dust_feature
     wavelength: 5.27
@@ -122,20 +166,59 @@ PAH_11.3_cmp:
             wavelength: 11.33
             fwhm: 0.36256
 
-PAH_12:
-    kind: dust_feature
-    wavelength: 11.99
-    fwhm: 0.53955
+#PAH_12:
+#    kind: dust_feature
+#    wavelength: 11.99
+#    fwhm: 0.53955
 
-PAH_12.6_cmp:
+#PAH_12.6_cmp:
+#    kind: dust_feature
+#    features:    
+#        PAH_12.6a:
+#            wavelength: 12.62
+#            fwhm: 0.53004
+#        PAH_12.6b:
+#            wavelength: 12.69
+#            fwhm: 0.16497
+
+
+PAH_12.7_cmp:
     kind: dust_feature
-    features:    
-        PAH_12.6a:
-            wavelength: 12.62
-            fwhm: 0.53004
-        PAH_12.6b:
-            wavelength: 12.69
-            fwhm: 0.16497
+    features:
+        PAH_12.7_blue:
+            wavelength:
+                value: 12.55
+                bounds: [12.45, 12.67]
+            fwhm:
+                value: 0.20
+                bounds: [0.08, 0.45]
+            power:
+                value: 0.01
+                bounds: [0.0, .inf]
+
+        PAH_12.7_main:
+            wavelength:
+                value: 12.72
+                bounds: [12.62, 12.85]
+            fwhm:
+                value: 0.35
+                bounds: [0.12, 0.80]
+            power:
+                value: 0.03
+                bounds: [0.0, .inf]
+
+        PAH_12.7_red:
+            wavelength:
+                value: 12.95
+                bounds: [12.82, 13.15]
+            fwhm:
+                value: 0.35
+                bounds: [0.12, 0.90]
+            power:
+                value: 0.01
+                bounds: [0.0, .inf]
+
+
 
 PAH_13.48:
     kind: dust_feature
@@ -179,15 +262,47 @@ PAH_17_cmp:
 #    wavelength: 18.92
 #    fwhm: 0.35948
 
-PAH_33.1:
-    kind: dust_feature
-    wavelength: 33.1
-    fwhm: 1.655
+#PAH_33.1:
+#    kind: dust_feature
+#    wavelength: 33.1
+#    fwhm: 1.655
+
 
 ##########################
 # Attenuation Model      #
 ##########################
-silicate:
-    kind: attenuation
-    model: S07_attenuation
-    geometry: mixed
+#silicate:
+#    kind: attenuation
+#    model: S07_attenuation
+#    geometry: mixed
+
+
+##########################
+# Silicate Emission Model      #
+##########################
+silicate_emission:
+    kind: emission
+    features:
+        Si_9.7:
+            model: kvt9
+            wavelength:
+                value: 9.75
+                bounds: [9.20, 10.30]
+            fwhm:
+                value: 2.00
+                bounds: [1.00, 3.50]
+            power:
+                value: 2.00
+                bounds: [0.0, .inf]
+
+        Si_18:
+            model: drude
+            wavelength:
+                value: 18.00
+                bounds: [17.20, 19.30]
+            fwhm:
+                value: 5.50
+                bounds: [3.00, 8.50]
+            power:
+                value: 1.00
+                bounds: [0.0, .inf]
