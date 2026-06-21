@@ -1,5 +1,5 @@
 import os
-from importlib import resources
+from pathlib import Path
 
 from pahfit import units
 
@@ -32,7 +32,7 @@ def find_packfile(packfile):
     if os.path.isfile(packfile):
         packfile_found = packfile
     else:
-        test_packfile = resources.files("pahfit") / "packs/science" / packfile
+        test_packfile = Path(__file__).parent / "packs" / "science" / packfile
         if os.path.isfile(test_packfile):
             packfile_found = test_packfile
         else:
@@ -62,7 +62,7 @@ def read_spectrum(specfile, format=None):
     """
     # resolve filename
     if not os.path.isfile(specfile):
-        test_specfile = resources.files("pahfit") / "data" / specfile
+        test_specfile = Path(__file__).parent / "data" / specfile
         if os.path.isfile(test_specfile):
             specfile = test_specfile
         else:

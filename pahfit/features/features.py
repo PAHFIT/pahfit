@@ -18,12 +18,12 @@ tables are therefore also available for pahfit.features.Features.
 """
 
 import os
+from pathlib import Path
 from warnings import warn
 from astropy.table.table import MaskedColumn
 import numpy as np
 from astropy.table import vstack, Table, TableAttribute
 from astropy.io.misc.yaml import yaml
-from importlib import resources
 
 from pahfit.errors import PAHFITFeatureError, PAHFITWarning
 from pahfit.features.features_format import BoundedParTableFormatter
@@ -118,7 +118,7 @@ class Features(Table):
         feat_tables = dict()
 
         if not os.path.isfile(file):
-            file = resources.files("pahfit") / "packs/science" / file
+            file = Path(__file__).parent.parent / "packs" / "science" / file
         try:
             with open(file) as fd:
                 scipack = yaml.load(fd, Loader=UniqueKeyLoader)

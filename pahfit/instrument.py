@@ -14,7 +14,6 @@ from pathlib import Path
 import numpy as np
 from numpy.polynomial import Polynomial
 from astropy.io.misc import yaml
-from importlib import resources
 from pahfit.errors import PAHFITPackError, PAHFITWarning
 from warnings import warn
 
@@ -25,7 +24,8 @@ def read_instrument_packs():
     """Read all instrument packs into the 'packs' variable."""
     global packs
     packs = {}
-    for pack in (resources.files("pahfit") / "packs/instrument").glob("*.yaml"):
+    pack_dir = Path(__file__).parent / "packs" / "instrument"
+    for pack in pack_dir.glob("*.yaml"):
         try:
             with open(pack) as fd:
                 p = yaml.load(fd)
