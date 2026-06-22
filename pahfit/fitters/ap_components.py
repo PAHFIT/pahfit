@@ -5,8 +5,23 @@ from astropy.modeling import Fittable1DModel
 from astropy.modeling import Parameter
 from astropy import constants
 from pahfit import units
+from dust_extinction.parameter_averages import G23
+from astropy import units as u
 
-__all__ = ["BlackBody1D", "ModifiedBlackBody1D", "S07_attenuation", "att_Drude1D"]
+__all__ = ["BlackBody1D", 
+           "ModifiedBlackBody1D", 
+           "S07_attenuation", 
+           "att_Drude1D", 
+           "PowerDrude1D",
+           "PowerGaussian1D"]
+
+
+def bb(x, temperature):
+    return (
+        3.9728917e13  # 2 h c/µm^3 -> MJy
+        / x**3
+        / (np.exp(1.4387752e4 / x / temperature) - 1.0)
+    )  # h c/micron k K
 
 
 class BlackBody1D(Fittable1DModel):
@@ -20,15 +35,13 @@ class BlackBody1D(Fittable1DModel):
     amplitude = Parameter()
     temperature = Parameter()
 
+    norm = bb(3, 5000)
+    print("norm for bb is", norm)
+
     @staticmethod
     def evaluate(x, amplitude, temperature):
         """ """
-        return (
-            amplitude
-            * 3.9728917e13 # 2 h c/µm^3 -> MJy
-            / x**3 
-            / (np.exp(1.4387752e4 / x / temperature) - 1.0)  # h c/micron k K
-        )
+        return amplitude * bb(x, temperature) / BlackBody1D.norm
 
 
 class ModifiedBlackBody1D(BlackBody1D):
@@ -38,7 +51,9 @@ class ModifiedBlackBody1D(BlackBody1D):
 
     @staticmethod
     def evaluate(x, amplitude, temperature):
-        return BlackBody1D.evaluate(x, amplitude, temperature) * ((9.7 / x) ** 2)
+        bb = BlackBody1D.evaluate(x, 1, temperature) * ((9.7 / x) ** 2)
+        bb_ref = BlackBody1D.evaluate(17, 1, temperature) * ((9.7 / 17) ** 2)
+        return amplitude * bb / bb_ref
 
 
 class S07_attenuation(Fittable1DModel):
@@ -223,7 +238,6 @@ class PowerDrude1D(Fittable1DModel):
         g = fwhm / x_0
         b = power * x_0 / g * self.intensity_amplitude_factor
         return b * g**2 / ((x / x_0 - x_0 / x) ** 2 + g**2)
-
 
 class PowerGaussian1D(Fittable1DModel):
     """

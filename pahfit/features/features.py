@@ -32,8 +32,8 @@ import pahfit.units
 
 # Feature kinds and associated parameters
 KIND_PARAMS = {'starlight': {'temperature', 'tau'},
-               'dust_continuum': {'temperature', 'tau'},
-               'line': {'wavelength', 'power'},  # 'fwhm', Instrument Pack detail!
+               'dust_continuum': {'model', 'temperature', 'tau'},
+               'line': {'wavelength', 'fwhm', 'power'},  
                'dust_feature': {'wavelength', 'fwhm', 'power'},
                'attenuation': {'model', 'tau', 'geometry'},
                'absorption': {'wavelength', 'fwhm', 'tau', 'geometry'}}
@@ -82,7 +82,7 @@ class Features(Table):
                       'wavelength', 'fwhm', 'geometry', 'model'}
     _bounds_dtype = np.dtype([("val", float), ("min", float),  # bounded param type
                               ("max", float), ("frozen", bool)])
-    _param_defaults = dict(geometry='mixed')
+    _param_defaults = dict(geometry='mixed', model='kvt9')
 
     @classmethod
     def read(cls, file, *args, **kwargs):

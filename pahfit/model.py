@@ -1,6 +1,7 @@
 from specutils import Spectrum1D
 from astropy import units as u
 from astropy import constants
+from astropy.table import vstack
 import copy
 import matplotlib as mpl
 from matplotlib import pyplot as plt
@@ -15,7 +16,7 @@ from pahfit.errors import PAHFITModelError
 from pahfit.fitters.ap_components import (BlackBody1D, ModifiedBlackBody1D,
                                           S07_attenuation, att_Drude1D)
 from pahfit.fitters.ap_fitter import APFitter
-
+from astropy.nddata import StdDevUncertainty
 
 class Model:
     """This class acts as the main API for PAHFIT.
@@ -70,21 +71,23 @@ class Model:
         self.fit_info = None
 
     @classmethod
-    def from_yaml(cls, pack_file):
+    def from_yaml(cls, *pack_files):
         """
-        Generate feature table from YAML file.
+        Generate feature table from YAML file(s).
 
         Parameters
         ----------
-        pack_file : str
-            Path to YAML file, or name of one of the default YAML files.
+        pack_files : str, ...
+            Path to YAML file, or name of default YAML file. When more
+            than one is given, multiple packs will be combined. All
+            features in the given packs must have unique names.
 
         Returns
         -------
         Model instance
 
         """
-        features = Features.read(pack_file)
+        features = vstack([Features.read(pack_file) for pack_file in pack_files])
         return cls(features)
 
     @classmethod
@@ -138,7 +141,7 @@ class Model:
     def _repr_html_(self):
         return self._status_message() + self.features._repr_html_()
 
-    def guess(self, spec: Spectrum1D, redshift=None, integrate_line_flux=False,
+    def guess(self, spec: Spectrum1D, redshift=None, integrate_line_flux=True,
               calc_line_fwhm=True):
         """Make an initial guess of the physics, based on the given
         observational data.
@@ -231,7 +234,7 @@ class Model:
             bb = ModifiedBlackBody1D(1, temp)
             flux_ref = np.median(flux[(lam > lam_ref - 0.2) & (lam < lam_ref + 0.2)])
             amp_guess = flux_ref / bb(lam_ref)
-            return np.clip(amp_guess / nbb, 0, 1.)
+            return amp_guess / nbb  # np.clip(amp_guess / nbb, 0, 1.)
 
         loop_over_non_fixed("dust_continuum", "tau", dust_continuum_guess)
 
@@ -285,8 +288,17 @@ class Model:
             loop_over_non_fixed("line", "power",
                                 lambda row: power_guess(row, line_fwhm_guess(row)))
         else:
-            loop_over_non_fixed("line", "power",
-                                lambda row: median_flux * line_fwhm_guess(row))
+            loop_over_non_fixed(
+                "line",
+                "power",
+                # approximate power = fnu * dlambda * c / lambda**2 = intensity * fwhm * c / lambda**2
+                lambda row: (
+                    (median_flux * units.intensity)
+                    * (line_fwhm_guess(row) * units.wavelength)
+                    * constants.c
+                    / (row["wavelength"]["val"] * units.wavelength) ** 2)
+                .to(units.intensity_power)
+                .value)
 
         # Override the fwhms in the features table. Slightly different logic,
         # as the fwhm for lines are masked by default. TODO: leave FWHM
@@ -302,10 +314,10 @@ class Model:
                     # its elements is masked.  Table prevents setting
                     # values in such a masked array element, so we
                     # access the underlying array itself with .data
-                    self.features["fwhm"].data[row_index]['val'] = line_fwhm_guess(row)
-                    for b in ('min', 'max'):
+                    self.features["fwhm"].data[row_index]["val"] = line_fwhm_guess(row)
+                    for b in ("min", "max"):
                         self.features["fwhm"].data[row_index][b] = np.nan
-                    self.features["fwhm"].data[row_index]['frozen'] = False
+                    self.features["fwhm"].data[row_index]["frozen"] = False
                 elif not bounded_is_fixed(row["fwhm"]):
                     self.features["fwhm"].data[row_index]["val"] = line_fwhm_guess(row)
 
@@ -342,8 +354,14 @@ class Model:
         unc = unc_obs * (1 + z)  # uncertainty scales with flux
         return lam_obs, flux_obs, unc_obs, lam, flux, unc
 
-    def fit(self, spec: Spectrum1D, redshift=None, maxiter=1000, verbose=True,
-            use_instrument_fwhm=True):
+    def fit(
+        self,
+        spec: Spectrum1D,
+        redshift=None,
+        maxiter=1000,
+        verbose=True,
+        use_instrument_fwhm=True,
+        method=None):
         """Fit the observed data.
 
         The model setup is based on the features table and instrument
@@ -391,6 +409,9 @@ class Model:
             bounds are provided on the fwhm for a line, the fwhm for
             this line will be fit to the data.
 
+        method : str
+            String to select fitting backend and algorithm (developer option)
+
         """
         # parse spectral data
         self.features.meta["user_unit"]["flux"] = spec.flux.unit
@@ -405,13 +426,81 @@ class Model:
         instrument.check_range([min(x), max(x)], inst)
 
         self._set_up_fitter(inst, z, lam=x, use_instrument_fwhm=use_instrument_fwhm)
-        self.fitter.fit(lam, flux, unc, maxiter=maxiter)
+        self.fitter.fit(lam, flux, unc, maxiter=maxiter, method=method)
+        self.fit_info = self.fitter.fit_info
 
         # copy the fit results to the features table
         self._ingest_fit_result_to_features()
 
         if verbose:
             print(self.fitter.message)
+
+
+    def fit_broad_then_all(self, spec: Spectrum1D, redshift=None, maxiter=100000,
+                           verbose=True, use_instrument_fwhm=True, method="trf",
+                           stage1_freeze_kind="line", stage1_freeze_parameter="power",
+                           stage1_mask_lines=True, stage1_line_width_factor=4.0):
+        self.guess(spec, redshift=redshift, integrate_line_flux=True, calc_line_fwhm=False)
+
+        freeze_indices = np.where(self.features["kind"] == stage1_freeze_kind)[0]
+
+        saved_val = np.array(self.features[stage1_freeze_parameter].data["val"][freeze_indices], copy=True)
+        saved_min = np.array(self.features[stage1_freeze_parameter].data["min"][freeze_indices], copy=True)
+        saved_max = np.array(self.features[stage1_freeze_parameter].data["max"][freeze_indices], copy=True)
+        saved_frozen = np.array(self.features[stage1_freeze_parameter].data["frozen"][freeze_indices], copy=True)
+
+        self.features[stage1_freeze_parameter].data["val"][freeze_indices] = 0.0
+        self.features[stage1_freeze_parameter].data["frozen"][freeze_indices] = True
+
+        stage1_spec = spec
+        if stage1_mask_lines:
+            line_mask = self.line_pixel_mask(spec, redshift=redshift, width_factor=stage1_line_width_factor)
+            stage1_spec = self.spectrum_with_inflated_uncertainty(spec, line_mask)
+
+        self.fit(stage1_spec, redshift=redshift, maxiter=maxiter, verbose=verbose,
+                 use_instrument_fwhm=use_instrument_fwhm, method=method)
+
+        stage1_features = self.features.copy()
+
+        self.features[stage1_freeze_parameter].data["val"][freeze_indices] = saved_val
+        self.features[stage1_freeze_parameter].data["min"][freeze_indices] = saved_min
+        self.features[stage1_freeze_parameter].data["max"][freeze_indices] = saved_max
+        self.features[stage1_freeze_parameter].data["frozen"][freeze_indices] = saved_frozen
+
+        self.fit(spec, redshift=redshift, maxiter=maxiter, verbose=verbose,
+                 use_instrument_fwhm=use_instrument_fwhm, method=method)
+
+        return stage1_features, self.features.copy()
+
+    def relax_line_parameters(self, velocity_window=300.0, fwhm_min_velocity=80.0,
+                              fwhm_max_velocity=800.0, names=None):
+        c_kms = constants.c.to("km/s").value
+
+        for i in np.where(self.features["kind"] == "line")[0]:
+            name = str(self.features["name"][i])
+            if names is not None and name not in names:
+                continue
+
+            lam0 = float(self.features["wavelength"].data["val"][i])
+            if not np.isfinite(lam0):
+                continue
+
+            dlam = lam0 * velocity_window / c_kms
+            self.features["wavelength"].data["min"][i] = lam0 - dlam
+            self.features["wavelength"].data["max"][i] = lam0 + dlam
+            self.features["wavelength"].data["frozen"][i] = False
+
+            fwhm_min = lam0 * fwhm_min_velocity / c_kms
+            fwhm_max = lam0 * fwhm_max_velocity / c_kms
+            fwhm_val = self.features["fwhm"].data["val"][i]
+
+            if not np.isfinite(fwhm_val) or fwhm_val <= 0:
+                fwhm_val = np.sqrt(fwhm_min * fwhm_max)
+
+            self.features["fwhm"].data["val"][i] = np.clip(fwhm_val, fwhm_min, fwhm_max)
+            self.features["fwhm"].data["min"][i] = fwhm_min
+            self.features["fwhm"].data["max"][i] = fwhm_max
+            self.features["fwhm"].data["frozen"][i] = False
 
     def _ingest_fit_result_to_features(self):
         """Copy the results from the Fitter to the features table
@@ -434,8 +523,6 @@ class Model:
                     # do not update disabled attributes (e.g. line fwhm is usually masked)
                     if not bounded_is_disabled(self.features[column][i]):
                         self.features[column]["val"][i] = value
-                    else:
-                        self.features[column][i] = (value, np.nan, np.nan)
                 except Exception as e:
                     print(f"Could not assign to attribute {name} in features table.")
                     print(f"Index {i=}")
@@ -443,8 +530,9 @@ class Model:
                     raise e
 
     def plot(self, spec, redshift=None, use_instrument_fwhm=False,
-             label_lines=False, scalefac_resid=2, update_fig=None,
-             errorbar_kwargs=None, plot_kwargs=None, **kwargs):
+         label_lines=False, scalefac_resid=2, update_fig=None,
+         errorbar_kwargs=None, plot_kwargs=None, residual="percent",
+         residual_floor=None, **kwargs):
         """Plot model, and optionally compare to observational data.
 
         Parameters
@@ -634,26 +722,36 @@ class Model:
             handles.insert(0, ln_att)
         ax.legend(handles=handles, prop={"size": 10}, loc="best")
 
-        # residuals = data in rest frame - (model evaluated at rest frame wavelengths)
-        res = flux - self.tabulate(instrument, 0, lam).flux.value
-        std = np.nanstd(res)
+        
+        model_flux = self.tabulate(instrument, 0, lam).flux.value
+        res = flux - model_flux
+
+        if residual == "percent":
+            if residual_floor is None:
+                residual_floor = 0.01 * np.nanpercentile(np.abs(model_flux), 95)
+            denom = np.where(np.abs(model_flux) > residual_floor, np.abs(model_flux), residual_floor)
+            res_plot = 100.0 * res / denom
+            res_label = "Residuals (%)"
+        else:
+            res_plot = res
+            res_label = f"Residuals ({sp_unit})"
+
+        std = np.nanstd(res_plot)
         ax = axs[1]
 
         ax.set_yscale("linear")
         ax.set_xscale("log")
-        ax.tick_params(axis="both", which="major", top="on", right="on",
-                       direction="in", length=10)
-        ax.tick_params(axis="both", which="minor", top="on", right="on",
-                       direction="in", length=5)
+        ax.tick_params(axis="both", which="major", top="on", right="on", direction="in", length=10)
+        ax.tick_params(axis="both", which="minor", top="on", right="on", direction="in", length=5)
         ax.minorticks_on()
         ax.axhline(0, linestyle="--", color="gray", zorder=0)
-        ax.plot(lam, res, "ko", fillstyle="none", zorder=1,
+        ax.plot(lam, res_plot, "ko", fillstyle="none", zorder=1,
                 markersize=errorbar_kwargs.get("markersize", None),
                 alpha=errorbar_kwargs.get("alpha", None),
                 linestyle="none")
         ax.set_ylim(-scalefac_resid * std, scalefac_resid * std)
         ax.set_xlabel(r"$\lambda$ [$\mu m$]")
-        ax.set_ylabel(f"Residuals ({sp_unit})")
+        ax.set_ylabel(res_label)
 
         # Refine x-axis
         ax.set_xlim(mnlam, mxlam)
@@ -813,14 +911,12 @@ class Model:
         # also apply observed range if provided
         if lam_obs is not None:
             is_outside |= (lam_feature_obs < np.amin(lam_obs)) | (
-                lam_feature_obs > np.amax(lam_obs)
-            )
+                lam_feature_obs > np.amax(lam_obs))
 
         # restriction on the kind of feature that can be excluded
         excludable = ["line", "dust_feature", "absorption"]
         is_excludable = np.logical_or.reduce(
-            [kind == self.features["kind"] for kind in excludable]
-        )
+            [kind == self.features["kind"] for kind in excludable])
 
         return is_outside & is_excludable
 
@@ -882,14 +978,14 @@ class Model:
             name = row["name"]
 
             if kind == "starlight":
-                self.fitter.add_feature_starlight(
-                    name, cleaned(row["temperature"]), cleaned(row["tau"])
-                )
+                self.fitter.add_feature_starlight(name, cleaned(row["temperature"]), cleaned(row["tau"]))
 
             elif kind == "dust_continuum":
                 self.fitter.add_feature_dust_continuum(
-                    name, cleaned(row["temperature"]), cleaned(row["tau"])
-                )
+                    name,
+                    cleaned(row["temperature"]),
+                    cleaned(row["tau"]),
+                    model=row["model"])
 
             elif kind == "line":
                 # be careful with lines that have masked FWHM values here
@@ -922,16 +1018,14 @@ class Model:
                     fwhm = cleaned(row["fwhm"])
 
                 self.fitter.add_feature_line(
-                    name, cleaned(row["power"]), cleaned(row["wavelength"]), fwhm
-                )
+                    name, cleaned(row["power"]), cleaned(row["wavelength"]), fwhm)
 
             elif kind == "dust_feature":
                 self.fitter.add_feature_dust_feature(
                     name,
                     cleaned(row["power"]),
                     cleaned(row["wavelength"]),
-                    cleaned(row["fwhm"]),
-                )
+                    cleaned(row["fwhm"]))
 
             elif kind == "attenuation":
                 self.fitter.add_feature_attenuation(name, cleaned(row["tau"]))
@@ -941,14 +1035,7 @@ class Model:
                     name,
                     cleaned(row["tau"]),
                     cleaned(row["wavelength"]),
-                    cleaned(row["fwhm"]),
-                )
-
-            else:
-                raise PAHFITModelError(
-                    f"Model components of kind {kind} are not implemented!"
-                )
-
+                    cleaned(row["fwhm"]))
         self.fitter.finalize()
 
     @staticmethod
@@ -965,3 +1052,39 @@ class Model:
             raise PAHFITModelError("No instrument! Please set spec.meta['instrument'].")
 
         return inst, z
+
+    def line_pixel_mask(self, spec: Spectrum1D, redshift=None, width_factor=4.0):
+        inst, z = self._parse_instrument_and_redshift(spec, redshift)
+        lam_obs = spec.spectral_axis.to(u.micron).value
+        mask = np.zeros(lam_obs.shape, dtype=bool)
+
+        for row in self.features[self.features["kind"] == "line"]:
+            line_obs = row["wavelength"]["val"] * (1.0 + z)
+            if not np.isfinite(line_obs) or not instrument.within_segment(line_obs, inst):
+                continue
+
+            fwhm_obs = instrument.fwhm(inst, line_obs, as_bounded=True)[0][0]
+            if np.ma.is_masked(fwhm_obs) or not np.isfinite(fwhm_obs) or fwhm_obs <= 0:
+                continue
+
+            mask |= np.abs(lam_obs - line_obs) <= width_factor * float(fwhm_obs)
+
+        return mask
+
+    def spectrum_with_inflated_uncertainty(self, spec: Spectrum1D, mask, inflate_factor=1.0e9):
+        new_unc = np.array(spec.uncertainty.array, dtype=float, copy=True)
+        good_unc = new_unc[np.isfinite(new_unc) & (new_unc > 0)]
+        floor_unc = np.nanmedian(good_unc) if len(good_unc) > 0 else 1.0
+
+        new_unc[mask] = np.maximum(new_unc[mask], floor_unc) * inflate_factor
+
+        stage1_spec = Spectrum1D(flux=spec.flux.copy(),
+                         spectral_axis=spec.spectral_axis.to(u.micron).value * u.micron,
+                         uncertainty=StdDevUncertainty(new_unc),
+                         meta=copy.deepcopy(spec.meta))
+
+        z = getattr(spec.redshift, "value", spec.redshift)
+        if z is not None:
+            stage1_spec.set_redshift_to(z)
+
+        return stage1_spec

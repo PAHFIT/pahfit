@@ -6,9 +6,8 @@ from .ap_components import (
     S07_attenuation,
     att_Drude1D,
     PowerDrude1D,
-    PowerGaussian1D,
-)
-from astropy.modeling.fitting import LevMarLSQFitter
+    PowerGaussian1D)
+from astropy.modeling.fitting import LevMarLSQFitter, TRFLSQFitter
 import numpy as np
 
 
@@ -69,6 +68,7 @@ class APFitter(Fitter):
         self.feature_types = {}
         self.model = None
         self.message = None
+        self.methods = ["lm", "trf"]
 
     def finalize(self):
         """Sum the registered components into one CompoundModel.
@@ -137,18 +137,26 @@ class APFitter(Fitter):
         )
         self._add_component(BlackBody1D, **kwargs)
 
-    def add_feature_dust_continuum(self, name, temperature, tau):
+    def add_feature_dust_continuum(self, name, temperature, tau, model="default"):
         """Register a ModifiedBlackBody1D.
 
         Analogous. Temperature and tau are used as temperature and
         amplitude
 
+        Parameters
+        ----------
+        model : str (available values: 'default' and 'special')
+            Keyword to activate alternate continuum shapes. 'default' is
+            a modified blackbody with a lambda**-2 factor. With
+            model='special', the modification factor is the MW average
+            extinction law for Rv=5.5.
+
         """
         self.feature_types[name] = "dust_continuum"
         kwargs = self._astropy_model_kwargs(
-            name, ["temperature", "amplitude"], [temperature, tau]
-        )
-        self._add_component(ModifiedBlackBody1D, **kwargs)
+            name, ["temperature", "amplitude"], [temperature, tau])
+        ap_class = ModifiedBlackBody1D
+        self._add_component(ap_class, **kwargs)
 
     def add_feature_line(self, name, power, wavelength, fwhm):
         """Register a PowerGaussian1D
@@ -202,10 +210,9 @@ class APFitter(Fitter):
 
         """
         self.feature_types[name] = "absorption"
-        kwargs = self._astropy_model_kwargs(
-            name, ["tau", "x_0", "fwhm"], [tau, wavelength, fwhm]
-        )
+        kwargs = self._astropy_model_kwargs(name, ["tau", "x_0", "fwhm"], [tau, wavelength, fwhm])
         self._add_component(att_Drude1D, multiplicative=True, **kwargs)
+
 
     def evaluate(self, lam):
         """Evaluate internal astropy model with its current parameters.
@@ -222,7 +229,10 @@ class APFitter(Fitter):
         """
         return self.model(lam)
 
-    def fit(self, lam, flux, unc, maxiter=10000):
+    def fit_methods_available(self):
+        return self.methods
+
+    def fit(self, lam, flux, unc, maxiter=10000, method=None):
         """Fit the internal model using the astropy fitter.
 
         The fitter class is unit agnostic, and deal with the numbers the
@@ -254,6 +264,10 @@ class APFitter(Fitter):
         unc : array
             Uncertainty on rest frame flux. Same units as flux.
 
+        method : str
+            Fit method. Available options: "lm" will use
+            LevMarLSQFitter. "trf" will use TRFLSQFitter.
+
         """
         # clean, because astropy does not like nan
         w = 1 / unc
@@ -263,19 +277,35 @@ class APFitter(Fitter):
 
         self.fit_info = []
 
-        fit = LevMarLSQFitter(calc_uncertainties=True)
-        astropy_result = fit(
+        # select method based on given string or pick default if None
+        method_str = self.methods[0] if method is None else method
+        if method_str not in self.methods:
+            PAHFITModelError(
+                f"Selected method {method} not available for APFitter backend."
+            )
+
+        fitter_call_kwargs = dict(acc=1e-10)
+        if method_str == "lm":
+            fitter_cls = LevMarLSQFitter
+        elif method_str == "trf":
+            fitter_cls = TRFLSQFitter
+            fitter_call_kwargs["acc"] = 1e-15
+
+        print(f"Running {method_str}lsq fit")
+        fit = fitter_cls(calc_uncertainties=True)
+        temp_result = fit(
             self.model,
             lam[mask],
             flux[mask],
             weights=w[mask],
             maxiter=maxiter,
             epsilon=1e-10,
-            acc=1e-10,
+            **fitter_call_kwargs,
         )
+
         self.fit_info = fit.fit_info
-        self.model = astropy_result
         self.message = fit.fit_info["message"]
+        self.model = temp_result
 
     def get_result(self, component_name):
         """Retrieve results from astropy model component.
@@ -315,28 +345,24 @@ class APFitter(Fitter):
         if c_type == "starlight" or c_type == "dust_continuum":
             return {
                 "temperature": component.temperature.value,
-                "tau": component.amplitude.value,
-            }
+                "tau": component.amplitude.value}
         elif c_type == "line":
             return {
                 "power": component.power.value,
                 "wavelength": component.mean.value,
-                "fwhm": component.stddev.value * 2.355,
-            }
-        elif c_type == "dust_feature":
+                "fwhm": component.stddev.value * 2.355}
+        elif c_type in "dust_feature":
             return {
                 "power": component.power.value,
                 "wavelength": component.x_0.value,
-                "fwhm": component.fwhm.value,
-            }
+                "fwhm": component.fwhm.value}
         elif c_type == "attenuation":
             return {"tau": component.tau_sil.value}
         elif c_type == "absorption":
             return {
                 "tau": component.tau.value,
                 "wavelength": component.x_0.value,
-                "fwhm": component.fwhm.value,
-            }
+                "fwhm": component.fwhm.value}
         else:
             raise PAHFITModelError(f"Unsupported component type: {c_type}")
 
