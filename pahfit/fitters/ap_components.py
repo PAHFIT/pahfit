@@ -9,6 +9,14 @@ from pahfit import units
 __all__ = ["BlackBody1D", "ModifiedBlackBody1D", "S07_attenuation", "att_Drude1D"]
 
 
+def bb(x, temperature):
+    return (
+        3.9728917e13  # 2 h c/µm^3 -> MJy
+        / x**3
+        / (np.exp(1.4387752e4 / x / temperature) - 1.0)
+    )  # h c/micron k K
+
+
 class BlackBody1D(Fittable1DModel):
     """
     A blackbody component.
@@ -20,15 +28,12 @@ class BlackBody1D(Fittable1DModel):
     amplitude = Parameter()
     temperature = Parameter()
 
+    norm = bb(3, 5000)
+
     @staticmethod
     def evaluate(x, amplitude, temperature):
         """ """
-        return (
-            amplitude
-            * 3.9728917e13 # 2 h c/µm^3 -> MJy
-            / x**3 
-            / (np.exp(1.4387752e4 / x / temperature) - 1.0)  # h c/micron k K
-        )
+        return amplitude * bb(x, temperature) / BlackBody1D.norm
 
 
 class ModifiedBlackBody1D(BlackBody1D):
@@ -38,7 +43,9 @@ class ModifiedBlackBody1D(BlackBody1D):
 
     @staticmethod
     def evaluate(x, amplitude, temperature):
-        return BlackBody1D.evaluate(x, amplitude, temperature) * ((9.7 / x) ** 2)
+        bb_val = BlackBody1D.evaluate(x, 1, temperature) * ((9.7 / x) ** 2)
+        bb_ref = BlackBody1D.evaluate(17, 1, temperature) * ((9.7 / 17) ** 2)
+        return amplitude * bb_val / bb_ref
 
 
 class S07_attenuation(Fittable1DModel):
