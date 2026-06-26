@@ -8,12 +8,11 @@ import numpy as np
 from scipy import interpolate, integrate
 
 from pahfit import units
-from pahfit.features.util import bounded_is_fixed, bounded_is_disabled
+from pahfit.features.util import bounded_is_fixed, bounded_is_missing
 from pahfit.features import Features
 from pahfit import instrument
 from pahfit.errors import PAHFITModelError
-from pahfit.fitters.ap_components import (BlackBody1D, ModifiedBlackBody1D,
-                                          S07_attenuation, att_Drude1D)
+from pahfit.fitters.ap_components import BlackBody1D, S07_attenuation
 from pahfit.fitters.ap_fitter import APFitter
 
 
@@ -138,8 +137,13 @@ class Model:
     def _repr_html_(self):
         return self._status_message() + self.features._repr_html_()
 
-    def guess(self, spec: Spectrum1D, redshift=None, integrate_line_flux=False,
-              calc_line_fwhm=True):
+    def guess(
+        self,
+        spec: Spectrum1D,
+        redshift=None,
+        integrate_line_flux=False,
+        calc_line_fwhm=True,
+    ):
         """Make an initial guess of the physics, based on the given
         observational data.
 
@@ -227,11 +231,18 @@ class Model:
 
         def dust_continuum_guess(row):
             temp = row["temperature"][0]
-            lam_ref = np.clip(2898.0 / temp, lam_min, lam_max)
-            bb = ModifiedBlackBody1D(1, temp)
+            fmax_lam = 2898.0 / temp
+            bb = BlackBody1D(1, temp)
+            if fmax_lam >= lam_min and fmax_lam <= lam_max:
+                lam_ref = fmax_lam
+            elif fmax_lam > lam_max:
+                lam_ref = lam_max
+            else:
+                lam_ref = lam_min
+
             flux_ref = np.median(flux[(lam > lam_ref - 0.2) & (lam < lam_ref + 0.2)])
             amp_guess = flux_ref / bb(lam_ref)
-            return np.clip(amp_guess / nbb, 0, 1.)
+            return amp_guess / nbb
 
         loop_over_non_fixed("dust_continuum", "tau", dust_continuum_guess)
 
@@ -282,13 +293,15 @@ class Model:
 
         if integrate_line_flux:
             # calc line power using instrumental fwhm and integral over data
-            loop_over_non_fixed("line", "power",
-                                lambda row: power_guess(row, line_fwhm_guess(row)))
+            loop_over_non_fixed(
+                "line", "power", lambda row: power_guess(row, line_fwhm_guess(row))
+            )
         else:
-            loop_over_non_fixed("line", "power",
-                                lambda row: median_flux * line_fwhm_guess(row))
+            loop_over_non_fixed(
+                "line", "power", lambda row: median_flux * line_fwhm_guess(row)
+            )
 
-        # Override the fwhms in the features table. Slightly different logic,
+        # Set the fwhms in the features table. Slightly different logic,
         # as the fwhm for lines are masked by default. TODO: leave FWHM
         # masked for lines, and instead have a sigma_v option. Any
         # requirements to guess and fit the line width, should be
@@ -297,17 +310,14 @@ class Model:
         if calc_line_fwhm:
             for row_index in np.where(self.features["kind"] == "line")[0]:
                 row = self.features[row_index]
-                if row["fwhm"] is np.ma.masked:  # masked: overrideable by features table.
-                    # A structured masked array is masked if _any_ of
-                    # its elements is masked.  Table prevents setting
-                    # values in such a masked array element, so we
-                    # access the underlying array itself with .data
-                    self.features["fwhm"].data[row_index]['val'] = line_fwhm_guess(row)
-                    for b in ('min', 'max'):
-                        self.features["fwhm"].data[row_index][b] = np.nan
-                    self.features["fwhm"].data[row_index]['frozen'] = False
+                if row["fwhm"] is np.ma.masked:
+                    self.features[row_index]["fwhm"] = (
+                        line_fwhm_guess(row),
+                        np.nan,
+                        np.nan,
+                    )
                 elif not bounded_is_fixed(row["fwhm"]):
-                    self.features["fwhm"].data[row_index]["val"] = line_fwhm_guess(row)
+                    self.features[row_index]["fwhm"]["val"] = line_fwhm_guess(row)
 
     @staticmethod
     def _convert_spec_data(spec, z):
@@ -342,8 +352,15 @@ class Model:
         unc = unc_obs * (1 + z)  # uncertainty scales with flux
         return lam_obs, flux_obs, unc_obs, lam, flux, unc
 
-    def fit(self, spec: Spectrum1D, redshift=None, maxiter=1000, verbose=True,
-            use_instrument_fwhm=True):
+    def fit(
+        self,
+        spec: Spectrum1D,
+        redshift=None,
+        maxiter=1000,
+        verbose=True,
+        use_instrument_fwhm=True,
+        method=None,
+    ):
         """Fit the observed data.
 
         The model setup is based on the features table and instrument
@@ -391,6 +408,10 @@ class Model:
             bounds are provided on the fwhm for a line, the fwhm for
             this line will be fit to the data.
 
+	method : str
+            String to select fitting backend and algorithm (developer option)
+
+
         """
         # parse spectral data
         self.features.meta["user_unit"]["flux"] = spec.flux.unit
@@ -405,7 +426,7 @@ class Model:
         instrument.check_range([min(x), max(x)], inst)
 
         self._set_up_fitter(inst, z, lam=x, use_instrument_fwhm=use_instrument_fwhm)
-        self.fitter.fit(lam, flux, unc, maxiter=maxiter)
+        self.fitter.fit(lam, flux, unc, maxiter=maxiter, method=method)
 
         # copy the fit results to the features table
         self._ingest_fit_result_to_features()
@@ -431,20 +452,28 @@ class Model:
             for column, value in self.fitter.get_result(name).items():
                 try:
                     i = np.where(self.features["name"] == name)[0]
-                    # do not update disabled attributes (e.g. line fwhm is usually masked)
-                    if not bounded_is_disabled(self.features[column][i]):
+                    # deal with fwhm usually being masked
+                    if not bounded_is_missing(self.features[column][i]):
                         self.features[column]["val"][i] = value
                     else:
                         self.features[column][i] = (value, np.nan, np.nan)
                 except Exception as e:
-                    print(f"Could not assign to attribute {name} in features table.")
-                    print(f"Index {i=}")
+                    print(
+                        f"Could not assign to name {name} in features table. Some diagnostic output below"
+                    )
+                    print(f"Index i is {i}")
                     print("Features table:", self.features)
                     raise e
 
-    def plot(self, spec, redshift=None, use_instrument_fwhm=False,
-             label_lines=False, scalefac_resid=2, update_fig=None,
-             errorbar_kwargs=None, plot_kwargs=None, **kwargs):
+    def plot(
+        self,
+        spec=None,
+        redshift=None,
+        use_instrument_fwhm=False,
+        label_lines=False,
+        scalefac_resid=2,
+        **errorbar_kwargs,
+    ):
         """Plot model, and optionally compare to observational data.
 
         Parameters
@@ -472,200 +501,204 @@ class Model:
             Factor multiplying the standard deviation of the residuals
             to adjust plot limits.
 
-        update_fig: matplotlib.pyplot.Figure
-            Re-use limits from figure, to ease repetitive
-            investigation of a sub-region.
-
         errorbar_kwargs : dict
-            Customize the data points plot by passing a dictionary to
-            be used as keyword arguments to
-            :func:`matplotlib.pyplot.errorbar`.
+            Customize the data points plot by passing the given keyword
+            arguments to matplotlib.pyplot.errorbar.
 
-        plot_kwargs : dict
-            Additional keyword arguments to pass to
-            :func:`matplotlib.pyplot.plot`.
-
-        kwargs: dict
-            Any additional keyword arguments are passed to
-            :func:`matplotlib.pyplot.subplots` and must be valid
-            keywords for this function.
         """
-        instrument, z = self._parse_instrument_and_redshift(spec, redshift)
+        inst, z = self._parse_instrument_and_redshift(spec, redshift)
         _, _, _, lam, flux, unc = self._convert_spec_data(spec, z)
         enough_samples = max(10000, len(spec.wavelength))
-        mnlam, mxlam = min(lam), max(lam)
-        lam_mod = np.logspace(np.log10(mnlam), np.log10(mxlam), enough_samples)
-        sp_unit = units.intensity.to_string().replace(" ", "")
+        lam_mod = np.logspace(np.log10(min(lam)), np.log10(max(lam)), enough_samples)
 
-        if update_fig:
-            fig = update_fig
-            if len(fig.axes) > 2:
-                fig.axes[-1].remove()  # attenuation right axis
-            axs = fig.axes
-            limits = [{'xlim': ax.get_xlim(), 'ylim': ax.get_ylim()} for ax in axs]
-            for ax in axs:
-                ax.set_xscale("linear")  # avoid log warning
-                ax.clear()
-        else:
-            fig, axs = plt.subplots(ncols=1, nrows=2, figsize=(10, 7),
-                                    gridspec_kw={"height_ratios": [3, 1]}, sharex=True, **kwargs)
+        fig, axs = plt.subplots(
+            ncols=1,
+            nrows=2,
+            figsize=(10, 10),
+            gridspec_kw={"height_ratios": [3, 1]},
+            sharex=True,
+        )
 
         # spectrum and best fit model
         ax = axs[0]
         ax.set_yscale("linear")
         ax.set_xscale("log")
-
-        plot_kwargs = plot_kwargs or {}
-        errorbar_kwargs = errorbar_kwargs or {}
-        default_kwargs = dict(fmt="o", markeredgecolor="k", markerfacecolor="none",
-                              ecolor="k", elinewidth=0.2, capsize=0.5, markersize=4)
-
-        ax.errorbar(lam, flux, yerr=unc, **(default_kwargs | errorbar_kwargs))
-        ax.set_ylim(0)
-        ax.set_ylabel(r"$I_{\nu}$ " + f"({sp_unit})")
-        ax.get_xaxis().set_major_formatter(mpl.ticker.ScalarFormatter())
         ax.minorticks_on()
-        ax.tick_params(axis="both", which="major", top="on", right="on",
-                       direction="in", length=10)
-        ax.tick_params(axis="both", which="minor", top="on", right="on",
-                       direction="in", length=5)
+        ax.tick_params(
+            axis="both", which="major", top="on", right="on", direction="in", length=10
+        )
+        ax.tick_params(
+            axis="both", which="minor", top="on", right="on", direction="in", length=5
+        )
 
         ext_model = None
         has_att = "attenuation" in self.features["kind"]
+        has_abs = "absorption" in self.features["kind"]
         if has_att:
             row = self.features[self.features["kind"] == "attenuation"][0]
-            tau = row["tau"]['val']
+            tau = row["tau"][0]
             ext_model = S07_attenuation(tau_sil=tau)(lam_mod)
 
-        has_abs = "absorption" in self.features["kind"]
         if has_abs:
-            abs_model = np.ones_like(lam_mod)
-            for fa in self.features[self.features['kind'] == "absorption"]:
-                abs_func = att_Drude1D(tau=fa['tau']['val'],
-                                       x_0=fa['wavelength']['val'],
-                                       fwhm=fa['fwhm']['val'])
-                abs_model *= abs_func(lam_mod)
-            if ext_model is not None:
-                ext_model *= abs_model
-            else:
-                ext_model = abs_model
+            raise NotImplementedError(
+                "plotting absorption features not implemented yet"
+            )
 
-        if ext_model is not None:
-            ax_att = ax.twinx()  # y-axis for plotting the extinction curve
+        if has_att or has_abs:
+            ax_att = ax.twinx()  # axis for plotting the extinction curve
             ax_att.tick_params(which="minor", direction="in", length=5)
             ax_att.tick_params(which="major", direction="in", length=10)
             ax_att.minorticks_on()
-            ln_att, = ax_att.plot(lam_mod, ext_model, "k--", alpha=0.7, **plot_kwargs,
-                                  label='Attenuation & Absorption')
+            ax_att.plot(lam_mod, ext_model, "k--", alpha=0.5)
             ax_att.set_ylabel("Attenuation")
             ax_att.set_ylim(0, 1.1)
         else:
-            ln_att = None
             ext_model = np.ones(len(lam_mod))
 
         # Define legend lines
-        # Leg_lines = [
-        #     mpl.lines.Line2D([0], [0], color="k", linestyle="--", lw=2),
-        #     mpl.lines.Line2D([0], [0], color="#FE6100", lw=2),
-        #     mpl.lines.Line2D([0], [0], color="#648FFF", lw=2, alpha=0.7),
-        #     mpl.lines.Line2D([0], [0], color="#DC267F", lw=2, alpha=0.7),
-        #     mpl.lines.Line2D([0], [0], color="#785EF0", lw=2, alpha=1),
-        #     mpl.lines.Line2D([0], [0], color="#FFB000", lw=2, alpha=0.7),
-        # ]
+        Leg_lines = [
+            mpl.lines.Line2D([0], [0], color="k", linestyle="--", lw=2),
+            mpl.lines.Line2D([0], [0], color="#FE6100", lw=2),
+            mpl.lines.Line2D([0], [0], color="#648FFF", lw=2, alpha=0.5),
+            mpl.lines.Line2D([0], [0], color="#DC267F", lw=2, alpha=0.5),
+            mpl.lines.Line2D([0], [0], color="#785EF0", lw=2, alpha=1),
+            mpl.lines.Line2D([0], [0], color="#FFB000", lw=2, alpha=0.5),
+        ]
 
         # local utility
         def tabulate_components(kind):
             ss = {}
             for name in self.features[self.features["kind"] == kind]["name"]:
-                ss[name] = self.tabulate(instrument, z, lam_mod,
-                                         self.features["name"] == name)
+                ss[name] = self.tabulate(
+                    inst, z, lam_mod, self.features["name"] == name
+                )
             return {name: s.flux.value for name, s in ss.items()}
 
-        total_cont = np.zeros_like(lam_mod)
+        cont_y = np.zeros(len(lam_mod))
         if "dust_continuum" in self.features["kind"]:
             # one plot for every component
-            for i, y in enumerate(tabulate_components("dust_continuum").values()):
-                ax.plot(lam_mod, y * ext_model, "#FFB000", alpha=0.7,
-                        label=('Dust Continua' if i == 0 else None),
-                        **plot_kwargs)
-
+            for y in tabulate_components("dust_continuum").values():
+                ax.plot(lam_mod, y * ext_model, "#FFB000", alpha=0.5)
                 # keep track of total continuum
-                total_cont += y
+                cont_y += y
 
         if "starlight" in self.features["kind"]:
-            star_y = self.tabulate(instrument, z, lam_mod,
-                                   self.features["kind"] == "starlight").flux.value
-            ax.plot(lam_mod, star_y * ext_model, "magenta", alpha=0.7,
-                    label='Stellar Continuum', **plot_kwargs)
-            total_cont += star_y
+            star_y = self.tabulate(
+                inst, z, lam_mod, self.features["kind"] == "starlight"
+            ).flux.value
+            ax.plot(lam_mod, star_y * ext_model, "#ffB000", alpha=0.5)
+            cont_y += star_y
+
+        # total continuum
+        ax.plot(lam_mod, cont_y * ext_model, "#785EF0", alpha=1)
 
         # now plot the dust bands and lines
-        total_df = np.zeros_like(lam_mod)
         if "dust_feature" in self.features["kind"]:
-            for i, y in enumerate(tabulate_components("dust_feature").values()):
-                total_df += y
-                ax.plot(lam_mod, (total_cont + y) * ext_model, "#648FFF",
-                        label=('Dust Features' if i == 0 else None),
-                        alpha=0.7, **plot_kwargs)
+            for y in tabulate_components("dust_feature").values():
+                ax.plot(
+                    lam_mod,
+                    (cont_y + y) * ext_model,
+                    "#648FFF",
+                    alpha=0.5,
+                )
 
         if "line" in self.features["kind"]:
-            for i, (name, y) in enumerate(tabulate_components("line").items()):
-                ax.plot(lam_mod, (total_cont + y) * ext_model, "#DC267F",
-                        label=('Lines' if i == 0 else None),
-                        alpha=0.7, **plot_kwargs)
+            for name, y in tabulate_components("line").items():
+                ax.plot(
+                    lam_mod,
+                    (cont_y + y) * ext_model,
+                    "#DC267F",
+                    alpha=0.5,
+                )
                 if label_lines:
                     i = np.argmax(y)
                     # ignore out of range lines
                     if i > 0 and i < len(y) - 1:
                         w = lam_mod[i]
-                        ax.text(w, y[i], name, va="center", ha="center",
-                                rotation="vertical",
-                                bbox=dict(facecolor="white", alpha=0.75, pad=0))
+                        ax.text(
+                            w,
+                            y[i],
+                            name,
+                            va="center",
+                            ha="center",
+                            rotation="vertical",
+                            bbox=dict(facecolor="white", alpha=0.75, pad=0),
+                        )
 
-        # total continuum
-        ax.plot(lam_mod, total_cont * ext_model, "#785EF0", alpha=1,
-                label='Total Continuum', **plot_kwargs)
+        ax.plot(lam_mod, self.tabulate(inst, z, lam_mod).flux.value, "#FE6100", alpha=1)
 
-        ax.plot(lam_mod, self.tabulate(instrument, z, lam_mod).flux.value, "#11AA11",
-                label='Model', alpha=1)
+        # data
+        default_kwargs = dict(
+            fmt="o",
+            markeredgecolor="k",
+            markerfacecolor="none",
+            ecolor="k",
+            elinewidth=0.2,
+            capsize=0.5,
+            markersize=6,
+        )
 
-        handles = [ln for ln in ax.lines if not ln.get_label().startswith('_')]
-        if ln_att:
-            handles.insert(0, ln_att)
-        ax.legend(handles=handles, prop={"size": 10}, loc="best")
+        ax.errorbar(lam, flux, yerr=unc, **(default_kwargs | errorbar_kwargs))
+
+        ax.set_ylim(0)
+        ax.set_ylabel(r"$\nu F_{\nu}$")
+
+        ax.legend(
+            Leg_lines,
+            [
+                "S07_attenuation",
+                "Spectrum Fit",
+                "Dust Features",
+                r"Atomic and $H_2$ Lines",
+                "Total Continuum Emissions",
+                "Continuum Components",
+            ],
+            prop={"size": 10},
+            loc="best",
+            facecolor="white",
+            framealpha=1,
+            ncol=3,
+        )
 
         # residuals = data in rest frame - (model evaluated at rest frame wavelengths)
-        res = flux - self.tabulate(instrument, 0, lam).flux.value
+        res = flux - self.tabulate(inst, 0, lam).flux.value
         std = np.nanstd(res)
         ax = axs[1]
 
         ax.set_yscale("linear")
         ax.set_xscale("log")
-        ax.tick_params(axis="both", which="major", top="on", right="on",
-                       direction="in", length=10)
-        ax.tick_params(axis="both", which="minor", top="on", right="on",
-                       direction="in", length=5)
+        ax.tick_params(
+            axis="both", which="major", top="on", right="on", direction="in", length=10
+        )
+        ax.tick_params(
+            axis="both", which="minor", top="on", right="on", direction="in", length=5
+        )
         ax.minorticks_on()
+
+        # Custom X axis ticks
+        ax.xaxis.set_ticks(
+            [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 14, 16, 20, 25, 30, 40]
+        )
+
         ax.axhline(0, linestyle="--", color="gray", zorder=0)
-        ax.plot(lam, res, "ko", fillstyle="none", zorder=1,
-                markersize=errorbar_kwargs.get("markersize", None),
-                alpha=errorbar_kwargs.get("alpha", None),
-                linestyle="none")
+        ax.plot(
+            lam,
+            res,
+            "ko",
+            fillstyle="none",
+            zorder=1,
+            markersize=errorbar_kwargs.get("markersize", None),
+            alpha=errorbar_kwargs.get("alpha", None),
+            linestyle="none",
+        )
         ax.set_ylim(-scalefac_resid * std, scalefac_resid * std)
+        ax.set_xlim(np.floor(np.amin(lam)), np.ceil(np.amax(lam)))
         ax.set_xlabel(r"$\lambda$ [$\mu m$]")
-        ax.set_ylabel(f"Residuals ({sp_unit})")
+        ax.set_ylabel("Residuals [%]")
 
-        # Refine x-axis
-        ax.set_xlim(mnlam, mxlam)
-        ax.xaxis.set_minor_formatter(mpl.ticker.ScalarFormatter())
+        # scalar x-axis marks
+        ax.xaxis.set_major_formatter(mpl.ticker.ScalarFormatter())
         fig.subplots_adjust(hspace=0)
-
-        if update_fig:
-            for lim, ax in zip(limits, axs):
-                ax.set_xlim(*lim['xlim'])
-                ax.set_ylim(*lim['ylim'])
-        fig.tight_layout()
-
         return fig
 
     def copy(self):
@@ -824,8 +857,9 @@ class Model:
 
         return is_outside & is_excludable
 
-    def _set_up_fitter(self, instrumentname, redshift, lam=None,
-                       use_instrument_fwhm=True):
+    def _set_up_fitter(
+        self, instrumentname, redshift, lam=None, use_instrument_fwhm=True
+    ):
         """Convert features table to Fitter instance, set self.fitter.
 
         For every row of the features table, calls a function of Fitter
@@ -868,13 +902,13 @@ class Model:
         excluded = self._excluded_features(instrumentname, redshift, lam)
         self.enabled_features = self.features["name"][~excluded]
 
-        def cleaned(value):
-            val = value['val']
-            if bounded_is_fixed(value):
+        def cleaned(features_tuple3):
+            val = features_tuple3[0]
+            if bounded_is_fixed(features_tuple3):
                 return val
             else:
-                vmin = -np.inf if np.isnan(value['min']) else value['min']
-                vmax = np.inf if np.isnan(value['max']) else value['max']
+                vmin = -np.inf if np.isnan(features_tuple3[1]) else features_tuple3[1]
+                vmax = np.inf if np.isnan(features_tuple3[2]) else features_tuple3[2]
                 return np.array([val, vmin, vmax])
 
         for row in self.features[~excluded]:

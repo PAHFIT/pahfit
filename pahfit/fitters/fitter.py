@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 
 
 class Fitter(ABC):
-    """Abstract base class for internal Fitter API.
+    """Abstract base class for interal Fitter API.
 
     All shared methods should have the same arguments, enforced by this
     abstract class. Any API-specific options preferably go into the
@@ -10,20 +10,16 @@ class Fitter(ABC):
     dictionaries could also be used if absolutely necessary.
 
     The main functionalities of a Fitter subclass:
-
     1. Convert the numbers that are in the Features table to a fittable
        model configuration for a certain framework. The details of the
        fitting framework are hidden behind the respective subclass.
-
-    2. Fit the model to the spectrum without any additional
-       assumptions.  The Fitter will fit the given data using the
-       given model without needing to be aware of redshift, units, or
-       other instrumental effects.
-    
+    2. Fit the model to the spectrum without any additional assumptions.
+       The Fitter will fit the given data using the given model without
+       thinking about redshift, units, instrumental effects.
     3. Retrieve the fitted quantities, which are the values that were
-       passed during step 1.  When fit uncertainties are implemented,
-       they will also need to be retrieved through this API.
-
+       passed during step 1. When fit result uncertainties are
+       implemented, they will also need to be retrieved through this
+       API.
     4. Access to the evaluation of the underlying model (again with no
        assumptions like in step 2.).
 
@@ -31,25 +27,23 @@ class Fitter(ABC):
 
     For the model setup, there is one function per type of component
     supported by PAHFIT, and the arguments of these functions will ask
-    for certain standard parameters (in practice, these are the values
-    stored in the Features table). This abstract Fitter class ensures
-    that the function signatures are the same between different Fitter
-    implementations, so that uniform logic can be implemented outside
-    of the Fitter (in practice, this is a loop over the Features table
-    implemented in :class:`pahfit.model.Model`).
+    for certain standard PAHFIT quantities (in practice, these are the
+    values stored in the Features table). The abstract Fitter class
+    ensure that the function signatures are the same between different
+    Fitter implementations, so that only a single logic has to be
+    implemented to up the Fitter (in practice, this is a loop over the
+    Features table implemented in Model).
 
     During the Fitter setup, the initial values, bounds, and "fixed"
     flags are passed using one function call for each component, e.g.
-    :meth:`~pahfit.fitters.Fitter.add_feature_line`.  Once all
-    components have been added, the
-    :meth:`~pahfit.fitters.Fitter.finalize` function should be called;
-    some subclasses (e.g. :class:`pahfit.fitters.APFitter`) need to
-    consolidate the registered components to prepare the model that
-    they manage for fitting. After this,
-    :meth:`~pahfit.fitters.Fitter.fit` can be called to apply the
-    model and the fitter to the data. The results will then be
-    retrievable for one component at a time, by passing the component
-    name to get_result().
+    add_feature_line()). Once all components have been added, the
+    finalize() function should be called; some subclasses (e.g.
+    APFitter) need to consolidate the registered components to prepare
+    the model that they manage for fitting. After this, fit() can be
+    called to apply the model and the astropy fitter to the data. The
+    results will then be retrievable for one component at a time, by
+    passing the component name to get_result().
+
     """
 
     @abstractmethod
@@ -115,8 +109,9 @@ class Fitter(ABC):
     def add_feature_attenuation(self, name, tau, model="S07", geometry="screen"):
         """Register the S07 attenuation component.
 
-        Other types of attenuation might be possible in the
-        future. Multiplicative.
+        Other types of attenuation might be possible in the future. Is
+        multiplicative.
+
         """
         pass
 
@@ -124,7 +119,7 @@ class Fitter(ABC):
     def add_feature_absorption(self, name, tau, wavelength, fwhm, geometry="screen"):
         """Register an absorption feature.
 
-        Modeled by a Drude profile.  Multiplicative.
+        Modeled by a Drude profile. Is multiplicative.
 
         """
         pass
@@ -145,53 +140,59 @@ class Fitter(ABC):
 
         """
         pass
+    @abstractmethod
+    def fit_methods_available(self):
+        return [None]
 
     @abstractmethod
-    def fit(self, lam, flux, unc, maxiter=1000):
+    def fit(self, lam, flux, unc, maxiter=1000, method=None):
         """Perform the fit using the framework of the subclass.
 
-        :class:`~pahfit.fitters.Fitter` is unit agnostic, and deals
-        with the numbers the :class:`~pahfit.model.Model` tells it to
-        deal with.  In practice, the input spectrum should be expected
-        in internal units (see :mod:`pahfit.units`), and corrected for
-        redshift (models operate in the rest frame).
+        Fitter is unit agnostic, and deals with the numbers the Model
+        tells it to deal with. In practice, the input spectrum is
+        expected to be in internal units, and corrected for redshift
+        (models operate in the rest frame).
 
         After the fit, the results can be retrieved via get_result().
 
         Parameters
         ----------
         lam : array
-            Rest frame wavelengths in microns.
+            Rest frame wavelengths in micron
 
         flux : array
             Rest frame flux in internal units.
 
         unc : array
-            Uncertainty in the rest-frame flux.  Same units as flux.
+            Uncertainty on rest frame flux. Same units as flux.
+
+        method : str
+            Override fit method. Available options are returned by
+            fit_methods_available, of which the output depends on the
+            subclass.
+
+
         """
         pass
 
     @abstractmethod
     def get_result(self, feature_name):
-        """Retrieve results from the underlying model after fit.
+        """Retrieve results from underlying model after fit.
 
         Parameters
         ----------
         component_name : str
-            One of the names provided to any of the
-            :meth:`~pahfit.fitters.Fitter.add_feature` calls made
-            during setup.
+            One of the names provided to any of the add_feature_() calls
+            made during setup.
 
         Returns
         -------
-        feature_info : dict
-           feature parameters according to the relevant PAHFIT
-           definitions. Key names are the same as the function
-           arguments of the relevant register function. Values are in
-           the same format as :class:`~pahfit.feature.Features`, and
-           can therefore be directly filled in.
+        dict : parameters according to the PAHFIT definitions. Keys are
+        the same as the function signature of the relevant register
+        function. Values are in the same format as Features, and can
+        therefore be directly filled in.
 
-           E.g. ``{'name': 'line0', 'power': value, 'fwhm': value,
-        'wavelength': value}``.
+        e.g. {'name': 'line0', 'power': value, 'fwhm': value, 'wavelength': value}
+
         """
         pass
