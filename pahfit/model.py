@@ -231,7 +231,7 @@ class Model:
             bb = ModifiedBlackBody1D(1, temp)
             flux_ref = np.median(flux[(lam > lam_ref - 0.2) & (lam < lam_ref + 0.2)])
             amp_guess = flux_ref / bb(lam_ref)
-            return amp_guess / nbb
+            return np.clip(amp_guess / nbb, 0, None)
 
         loop_over_non_fixed("dust_continuum", "tau", dust_continuum_guess)
 

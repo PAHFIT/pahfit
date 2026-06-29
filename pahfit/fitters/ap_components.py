@@ -43,8 +43,8 @@ class ModifiedBlackBody1D(BlackBody1D):
 
     @staticmethod
     def evaluate(x, amplitude, temperature):
-        bb_val = BlackBody1D.evaluate(x, 1, temperature) * ((9.7 / x) ** 2)
-        bb_ref = BlackBody1D.evaluate(17, 1, temperature) * ((9.7 / 17) ** 2)
+        bb_val = bb(x, temperature) * ((9.7 / x) ** 2)
+        bb_ref = bb(17, temperature) * ((9.7 / 17) ** 2)
         return amplitude * bb_val / bb_ref
 
 
