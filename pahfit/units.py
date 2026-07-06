@@ -1,3 +1,4 @@
+import numpy as np
 import astropy.units as u
 from astropy.units import CompositeUnit
 
@@ -43,8 +44,13 @@ def get_quantity(features, name, column):
 
     Returns
     -------
-    astropy.units.Quantity
+    astropy.units.Quantity, or None
         The fitted value, with its unit attached (e.g. "5.2 mJy").
+        Returns None if this parameter is masked (not set/not
+        applicable) for this feature, instead of silently returning
+        an incorrect 0.
     """
     row = features.loc[name]
+    if row[column] is np.ma.masked:
+        return None
     return row[column]["val"] * features[column].unit
