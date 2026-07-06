@@ -15,3 +15,16 @@ intensity_power = CompositeUnit(1e-10, (u.W, u.m, u.sr), (1, -2, -1))
 # Note: integrated power units of 1e-22 W/m^2 (from flux) corresponds
 # to the unit 1e-10 W/m^2/sr (from intensity) if it occurs uniformly
 # over a solid angle 0.21" on a side (about a small JWST IFU pixel)
+
+def is_surface_brightness(unit):
+    """Return True if `unit` is a surface brightness, False if a flux.
+
+    Surface brightness units carry a per-solid-angle component (e.g.
+    MJy/sr). We detect this by decomposing the unit to its base units
+    and checking for an inverse-solid-angle term. Steradian decomposes
+    to rad**2, so "per steradian" shows up as (u.rad, -2).
+
+    Method suggested by J.D. Smith in issue #28.
+    """
+    decomposed = unit.decompose()
+    return (u.rad, -2) in zip(decomposed.bases, decomposed.powers)
