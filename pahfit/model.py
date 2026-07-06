@@ -328,13 +328,22 @@ class Model:
             corrected for redshift
 
         """
-        if not spec.flux.unit.is_equivalent(units.intensity):
+        # ASSUMPTION (revisit w/ Dr. Smith): choose the working unit from
+        # the input. Surface brightness -> MJy/sr, flux density -> mJy.
+        # The fitter operates on bare numbers, so it doesn't care which,
+        # as long as we convert consistently here.
+        if units.is_surface_brightness(spec.flux.unit):
+            working_unit = units.intensity        # MJy / sr
+        elif spec.flux.unit.is_equivalent(units.flux_density):
+            working_unit = units.flux_density     # mJy
+        else:
             raise PAHFITModelError(
-                "For now, PAHFIT only supports intensity units, i.e. convertible to MJy / sr."
+                "PAHFIT input must be a flux density (e.g. mJy) or a "
+                "surface brightness (e.g. MJy / sr)."
             )
-        flux_obs = spec.flux.to(units.intensity).value
+        flux_obs = spec.flux.to(working_unit).value
         lam_obs = spec.spectral_axis.to(u.micron).value
-        unc_obs = (spec.uncertainty.array * spec.flux.unit).to(units.intensity).value
+        unc_obs = (spec.uncertainty.array * spec.flux.unit).to(working_unit).value
 
         # transform observed wavelength to "physical" wavelength
         lam = lam_obs / (1 + z)  # wavelength shorter
