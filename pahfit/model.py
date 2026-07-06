@@ -2,6 +2,7 @@ from specutils import Spectrum1D
 from astropy import units as u
 from astropy import constants
 import copy
+import warnings
 import matplotlib as mpl
 from matplotlib import pyplot as plt
 import numpy as np
@@ -429,6 +430,17 @@ class Model:
         where Fitter.fit() has been applied.
 
         """
+        # ASSUMPTION (flag for Dr. Smith): power values are only
+        # calculated correctly for surface-brightness input right now.
+        # If the input was flux, warn instead of silently mislabeling.
+        if not units.is_surface_brightness(self.features.meta["user_unit"]["flux"]):
+            warnings.warn(
+                "Input spectrum is flux density (not surface brightness). "
+                "Fitted 'power' values are not yet dimensionally correct "
+                "for this case — this is a known limitation, not a bug in "
+                "your data. See PowerDrude1D/PowerGaussianSum1D docstring."
+            )
+            
         # iterate over the list stored in fitter, so we only get
         # components that were set up by _set_up_fitter. Having an
         # ENABLED/DISABLED flag for every feature would be a nice
