@@ -86,7 +86,7 @@ def read_spectrum(specfile, format=None):
     # Convert to intensity units by assuming an arbitrary solid angle
     # for now. To be removed when dual unit support (intensity and flux
     # density) is supported.
-    if s.flux.unit.is_equivalent(units.flux_density):
+    if not units.is_surface_brightness(s.flux.unit):
         solid_angle = (3 * u.arcsec) ** 2
         alt_flux = (s.flux / solid_angle).to(units.intensity)
         alt_unc_array = (s.uncertainty.array * s.flux.unit / solid_angle).to(
