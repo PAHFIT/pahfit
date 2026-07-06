@@ -28,3 +28,23 @@ def is_surface_brightness(unit):
     """
     decomposed = unit.decompose()
     return (u.rad, -2) in zip(decomposed.bases, decomposed.powers)
+
+def get_quantity(features, name, column):
+    """Get one feature's parameter value, with its unit attached.
+
+    Parameters
+    ----------
+    features : Features table
+        The PAHFIT features table (e.g. model.features).
+    name : str
+        Feature name, e.g. '[NeII]'.
+    column : str
+        Parameter name, e.g. 'power', 'wavelength', 'fwhm'.
+
+    Returns
+    -------
+    astropy.units.Quantity
+        The fitted value, with its unit attached (e.g. "5.2 mJy").
+    """
+    row = features.loc[name]
+    return row[column]["val"] * features[column].unit
