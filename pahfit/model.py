@@ -343,7 +343,7 @@ class Model:
         return lam_obs, flux_obs, unc_obs, lam, flux, unc
 
     def fit(self, spec: Spectrum1D, redshift=None, maxiter=1000, verbose=True,
-            use_instrument_fwhm=True):
+            use_instrument_fwhm=True, method=None, **fit_kwargs):
         """Fit the observed data.
 
         The model setup is based on the features table and instrument
@@ -405,7 +405,10 @@ class Model:
         instrument.check_range([min(x), max(x)], inst)
 
         self._set_up_fitter(inst, z, lam=x, use_instrument_fwhm=use_instrument_fwhm)
-        self.fitter.fit(lam, flux, unc, maxiter=maxiter)
+
+        self.fitter.fit(lam, flux, unc, maxiter=maxiter, method=method, **fit_kwargs)
+        self.fit_info = self.fitter.fit_info
+
 
         # copy the fit results to the features table
         self._ingest_fit_result_to_features()
@@ -431,11 +434,17 @@ class Model:
             for column, value in self.fitter.get_result(name).items():
                 try:
                     i = np.where(self.features["name"] == name)[0]
-                    # do not update disabled attributes (e.g. line fwhm is usually masked)
-                    if not bounded_is_disabled(self.features[column][i]):
-                        self.features[column]["val"][i] = value
+                    idx = int(i[0])
+
+                    is_disabled = np.any(bounded_is_disabled(self.features[column][i]))
+
+                    if not is_disabled:
+                        self.features[column]["val"][idx] = value
                     else:
-                        self.features[column][i] = (value, np.nan, np.nan)
+                        self.features[column].data[idx]["val"] = value
+                        self.features[column].data[idx]["min"] = np.nan
+                        self.features[column].data[idx]["max"] = np.nan
+                        self.features[column].data[idx]["frozen"] = False
                 except Exception as e:
                     print(f"Could not assign to attribute {name} in features table.")
                     print(f"Index {i=}")
