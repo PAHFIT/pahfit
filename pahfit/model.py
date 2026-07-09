@@ -1,6 +1,7 @@
 from specutils import Spectrum1D
 from astropy import units as u
 from astropy import constants
+from astropy.table import vstack
 import copy
 import matplotlib as mpl
 from matplotlib import pyplot as plt
@@ -70,21 +71,23 @@ class Model:
         self.fit_info = None
 
     @classmethod
-    def from_yaml(cls, pack_file):
+    def from_yaml(cls, *pack_files):
         """
-        Generate feature table from YAML file.
+        Generate feature table from YAML file(s).
 
         Parameters
         ----------
-        pack_file : str
-            Path to YAML file, or name of one of the default YAML files.
+        pack_files : str, ...
+            Path to YAML file, or name of default YAML file. When more
+            than one is given, multiple packs will be combined. All
+            features in the given packs must have unique names.
 
         Returns
         -------
         Model instance
 
         """
-        features = Features.read(pack_file)
+        features = vstack([Features.read(pack_file) for pack_file in pack_files])
         return cls(features)
 
     @classmethod
@@ -231,7 +234,7 @@ class Model:
             bb = ModifiedBlackBody1D(1, temp)
             flux_ref = np.median(flux[(lam > lam_ref - 0.2) & (lam < lam_ref + 0.2)])
             amp_guess = flux_ref / bb(lam_ref)
-            return np.clip(amp_guess / nbb, 0, 1.)
+            return amp_guess / nbb  # np.clip(amp_guess / nbb, 0, 1.)
 
         loop_over_non_fixed("dust_continuum", "tau", dust_continuum_guess)
 
@@ -285,8 +288,19 @@ class Model:
             loop_over_non_fixed("line", "power",
                                 lambda row: power_guess(row, line_fwhm_guess(row)))
         else:
-            loop_over_non_fixed("line", "power",
-                                lambda row: median_flux * line_fwhm_guess(row))
+            loop_over_non_fixed(
+                "line",
+                "power",
+                # approximate power = fnu * dlambda * c / lambda**2 = intensity * fwhm * c / lambda**2
+                lambda row: (
+                    (median_flux * units.intensity)
+                    * (line_fwhm_guess(row) * units.wavelength)
+                    * constants.c
+                    / (row["wavelength"]["val"] * units.wavelength) ** 2
+                )
+                .to(units.intensity_power)
+                .value,
+            )
 
         # Override the fwhms in the features table. Slightly different logic,
         # as the fwhm for lines are masked by default. TODO: leave FWHM
@@ -302,10 +316,10 @@ class Model:
                     # its elements is masked.  Table prevents setting
                     # values in such a masked array element, so we
                     # access the underlying array itself with .data
-                    self.features["fwhm"].data[row_index]['val'] = line_fwhm_guess(row)
-                    for b in ('min', 'max'):
+                    self.features["fwhm"].data[row_index]["val"] = line_fwhm_guess(row)
+                    for b in ("min", "max"):
                         self.features["fwhm"].data[row_index][b] = np.nan
-                    self.features["fwhm"].data[row_index]['frozen'] = False
+                    self.features["fwhm"].data[row_index]["frozen"] = False
                 elif not bounded_is_fixed(row["fwhm"]):
                     self.features["fwhm"].data[row_index]["val"] = line_fwhm_guess(row)
 
@@ -342,8 +356,15 @@ class Model:
         unc = unc_obs * (1 + z)  # uncertainty scales with flux
         return lam_obs, flux_obs, unc_obs, lam, flux, unc
 
-    def fit(self, spec: Spectrum1D, redshift=None, maxiter=1000, verbose=True,
-            use_instrument_fwhm=True):
+    def fit(
+        self,
+        spec: Spectrum1D,
+        redshift=None,
+        maxiter=1000,
+        verbose=True,
+        use_instrument_fwhm=True,
+        method=None,
+    ):
         """Fit the observed data.
 
         The model setup is based on the features table and instrument
@@ -391,6 +412,9 @@ class Model:
             bounds are provided on the fwhm for a line, the fwhm for
             this line will be fit to the data.
 
+        method : str
+            String to select fitting backend and algorithm (developer option)
+
         """
         # parse spectral data
         self.features.meta["user_unit"]["flux"] = spec.flux.unit
@@ -405,7 +429,7 @@ class Model:
         instrument.check_range([min(x), max(x)], inst)
 
         self._set_up_fitter(inst, z, lam=x, use_instrument_fwhm=use_instrument_fwhm)
-        self.fitter.fit(lam, flux, unc, maxiter=maxiter)
+        self.fitter.fit(lam, flux, unc, maxiter=maxiter, method=method)
 
         # copy the fit results to the features table
         self._ingest_fit_result_to_features()
@@ -434,8 +458,6 @@ class Model:
                     # do not update disabled attributes (e.g. line fwhm is usually masked)
                     if not bounded_is_disabled(self.features[column][i]):
                         self.features[column]["val"][i] = value
-                    else:
-                        self.features[column][i] = (value, np.nan, np.nan)
                 except Exception as e:
                     print(f"Could not assign to attribute {name} in features table.")
                     print(f"Index {i=}")
@@ -888,7 +910,10 @@ class Model:
 
             elif kind == "dust_continuum":
                 self.fitter.add_feature_dust_continuum(
-                    name, cleaned(row["temperature"]), cleaned(row["tau"])
+                    name,
+                    cleaned(row["temperature"]),
+                    cleaned(row["tau"]),
+                    model=row["model"],
                 )
 
             elif kind == "line":

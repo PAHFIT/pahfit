@@ -5,8 +5,18 @@ from astropy.modeling import Fittable1DModel
 from astropy.modeling import Parameter
 from astropy import constants
 from pahfit import units
+from dust_extinction.parameter_averages import G23
+from astropy import units as u
 
 __all__ = ["BlackBody1D", "ModifiedBlackBody1D", "S07_attenuation", "att_Drude1D"]
+
+
+def bb(x, temperature):
+    return (
+        3.9728917e13  # 2 h c/µm^3 -> MJy
+        / x**3
+        / (np.exp(1.4387752e4 / x / temperature) - 1.0)
+    )  # h c/micron k K
 
 
 class BlackBody1D(Fittable1DModel):
@@ -20,15 +30,13 @@ class BlackBody1D(Fittable1DModel):
     amplitude = Parameter()
     temperature = Parameter()
 
+    norm = bb(3, 5000)
+    print("norm for bb is", norm)
+
     @staticmethod
     def evaluate(x, amplitude, temperature):
         """ """
-        return (
-            amplitude
-            * 3.9728917e13 # 2 h c/µm^3 -> MJy
-            / x**3 
-            / (np.exp(1.4387752e4 / x / temperature) - 1.0)  # h c/micron k K
-        )
+        return amplitude * bb(x, temperature) / BlackBody1D.norm
 
 
 class ModifiedBlackBody1D(BlackBody1D):
@@ -38,7 +46,63 @@ class ModifiedBlackBody1D(BlackBody1D):
 
     @staticmethod
     def evaluate(x, amplitude, temperature):
-        return BlackBody1D.evaluate(x, amplitude, temperature) * ((9.7 / x) ** 2)
+        bb = BlackBody1D.evaluate(x, 1, temperature) * ((9.7 / x) ** 2)
+        bb_ref = BlackBody1D.evaluate(17, 1, temperature) * ((9.7 / 17) ** 2)
+        return amplitude * bb / bb_ref
+
+
+class SpecialModifiedBlackBody1D(BlackBody1D):
+    """Modified blackbody with an emissivity multiplied by an extinction curve.
+
+    Since the extinction curve used has the 20 micron silicate feature,
+    the emissivity curve will have a steepening just past 15 micron.
+    This is just what is needed to reproduce the continuum of the Orion
+    Bar spectra. Note that a regular modified blackbody will typically
+    overestimate the 15 micron region in spectra with a very steep
+    continuum, i.e. those where it ramps up before the 16-18 micron
+    complex.
+
+    """
+
+    absorption_curve = G23(Rv=5.5)
+
+    # a spline interpolation of a log-grid sampling with 14 points is
+    # already accurate up to 3%. Let's see if evaluating this way will
+    # give us extra speed. The following values are optimal to sample
+    # the Rv 5.5 extinction curve (and that function only)
+    _interp_grid = np.array(
+        [
+            2.90447963,
+            3.4699101,
+            4.15219317,
+            4.9752758,
+            5.96774624,
+            7.34165116,
+            8.97727221,
+            9.74637847,
+            10.44168469,
+            14.25551077,
+            17.50407977,
+            20.94021486,
+            25.06515997,
+            29.99954211,
+        ]
+    )
+    _interp_y = absorption_curve(_interp_grid * u.micron)
+    _interp = interpolate.CubicSpline(_interp_grid, _interp_y)
+    print("prepared cubic spline for special continuum")
+
+    wref = 17
+
+    @classmethod
+    def evaluate_not_normalized(cls, x, temperature):
+        return BlackBody1D.evaluate(x, 1, temperature) * cls._interp(x)
+
+    @classmethod
+    def evaluate(cls, x, amplitude, temperature):
+        bb = cls.evaluate_not_normalized(x, temperature)
+        bb_ref = cls.evaluate_not_normalized(cls.wref, temperature)
+        return amplitude * bb / bb_ref
 
 
 class S07_attenuation(Fittable1DModel):
