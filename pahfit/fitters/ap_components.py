@@ -159,22 +159,26 @@ class PowerDrude1D(Fittable1DModel):
     are the internal pahfit units defined in pahfit.units, and
     precalculate a conversion factor.
 
-    TODO: We need to check if the flux is 'intensity' or 'flux_density',
-    and assume the power parameter has 'intensity_power' or
-    'flux_density_power' units respectively. For now, only intensity is
-    supported.
-
+    Both intensity (surface brightness, MJy/sr) and flux density (mJy)
+    inputs are supported. The appropriate amplitude factor is selected
+    at evaluate time based on which unit track is active.
     """
-
     power = Parameter(min=0.0)
     x_0 = Parameter(min=0.0)
     fwhm = Parameter(default=1, min=0.0)
-
+    
     # constant factors in the equation to convert power to amplitude of
-    # the profile.
+    # the profile. Two versions: one for surface brightness input
+    # (intensity_power -> intensity) and one for flux density input
+    # (flux_power -> flux_density).
     intensity_amplitude_factor = (
         (2 * units.intensity_power * units.wavelength / (constants.c * np.pi))
         .to(units.intensity)
+        .value
+    )
+    flux_amplitude_factor = (
+        (2 * units.flux_power * units.wavelength / (constants.c * np.pi))
+        .to(units.flux_density)
         .value
     )
 
@@ -221,7 +225,8 @@ class PowerDrude1D(Fittable1DModel):
         # factor = (2 * unit(power) * unit(wavelength) / (pi * c)).to(unit(intensity))
 
         g = fwhm / x_0
-        b = power * x_0 / g * self.intensity_amplitude_factor
+        factor = self.flux_amplitude_factor if getattr(self, 'is_flux', False) else self.intensity_amplitude_factor
+        b = power * x_0 / g * factor
         return b * g**2 / ((x / x_0 - x_0 / x) ** 2 + g**2)
 
 
@@ -256,6 +261,9 @@ class PowerGaussian1D(Fittable1DModel):
     So the constant factor we can set is
     (unit(power) * unit(wavelength)**2 / (c * unit(wavelength) * sqrt(2 pi))).to(intensity)
 
+    Both intensity (surface brightness, MJy/sr) and flux density (mJy)
+    inputs are supported. The appropriate amplitude factor is selected
+    at evaluate time based on which unit track is active.
     """
 
     power = Parameter(min=0.0)
@@ -271,6 +279,15 @@ class PowerGaussian1D(Fittable1DModel):
         .to(units.intensity)
         .value
     )
+    flux_amplitude_factor = (
+        (
+            units.flux_power
+            * (units.wavelength) ** 2
+            / (constants.c * units.wavelength * np.sqrt(2 * np.pi))
+        )
+        .to(units.flux_density)
+        .value
+    )
 
     def evaluate(self, x, power, mean, stddev):
         """
@@ -278,6 +295,7 @@ class PowerGaussian1D(Fittable1DModel):
 
         See class description for equations and unit notes."""
 
-        # amplitude in intensity units
-        Anu = power * mean**2 / stddev * self.intensity_amplitude_factor
+        # amplitude in intensity or flux density units
+        factor = self.flux_amplitude_factor if getattr(self, 'is_flux', False) else self.intensity_amplitude_factor
+        Anu = power * mean**2 / stddev * factor
         return Anu * np.exp(-0.5 * np.square((x - mean) / stddev))

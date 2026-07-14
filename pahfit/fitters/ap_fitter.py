@@ -69,6 +69,7 @@ class APFitter(Fitter):
         self.feature_types = {}
         self.model = None
         self.message = None
+        self.is_flux = False
 
     def finalize(self):
         """Sum the registered components into one CompoundModel.
@@ -260,6 +261,15 @@ class APFitter(Fitter):
 
         # make sure there are no zero uncertainties either
         mask = np.isfinite(lam) & np.isfinite(flux) & np.isfinite(w)
+
+        if hasattr(self.model, "submodel_names"):
+            components = [self.model[name] for name in self.model.submodel_names]
+        else:
+            components = [self.model]
+
+        for c in components:
+            if isinstance(c, (PowerDrude1D, PowerGaussian1D)):
+                c.is_flux = self.is_flux
 
         self.fit_info = []
 
