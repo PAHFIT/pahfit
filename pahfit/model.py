@@ -413,8 +413,11 @@ class Model:
 
         # check if observed spectrum is compatible with instrument model
         instrument.check_range([min(x), max(x)], inst)
-
         self._set_up_fitter(inst, z, lam=x, use_instrument_fwhm=use_instrument_fwhm)
+
+        # Detect flux vs. surface brightness and set flag on fitter
+        # so Power* components can select the correct amplitude factor.
+        self.fitter.is_flux = not units.is_surface_brightness(spec.flux.unit)
         self.fitter.fit(lam, flux, unc, maxiter=maxiter)
 
         # copy the fit results to the features table
@@ -430,16 +433,18 @@ class Model:
         where Fitter.fit() has been applied.
 
         """
-        # ASSUMPTION (flag for Dr. Smith): power values are only
-        # calculated correctly for surface-brightness input right now.
-        # If the input was flux, warn instead of silently mislabeling.
+        """
+        Power values are now computed correctly for both flux and
+        surface-brightness input (see PowerDrude1D/PowerGaussian1D).
+        The features table's 'power' column is stamped with a default
+        unit at table-creation time (before any spectrum is loaded),
+        so we correct that label here, after the fit, based on what
+        kind of input was actually used.
+
+        """
         if not units.is_surface_brightness(self.features.meta["user_unit"]["flux"]):
-            warnings.warn(
-                "Input spectrum is flux density (not surface brightness). "
-                "Fitted 'power' values are not yet dimensionally correct "
-                "for this case — this is a known limitation, not a bug in "
-                "your data. See PowerDrude1D/PowerGaussianSum1D docstring."
-            )
+            self.features["power"].unit = units.flux_power
+            
             
         # iterate over the list stored in fitter, so we only get
         # components that were set up by _set_up_fitter. Having an
