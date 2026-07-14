@@ -188,9 +188,20 @@ class Model:
         lam_min = min(lam)
         lam_max = max(lam)
 
+        # Pick the working unit and power unit based on the actual
+        # input type, so initial guesses aren't scaled as if flux
+        # data were surface brightness (same pattern as elsewhere
+        # in this PR -- see is_flux in ap_fitter.py).
+        if units.is_surface_brightness(spec.flux.unit):
+            working_unit = units.intensity
+            working_power_unit = units.intensity_power
+        else:
+            working_unit = units.flux_density
+            working_power_unit = units.flux_power
+
         # Some useful quantities for guessing
         median_flux = np.median(flux)
-        Flambda = flux * units.intensity * (lam * units.wavelength) ** -2 * constants.c
+        Flambda = flux * working_unit * (lam * units.wavelength) ** -2 * constants.c
         total_power = integrate.trapezoid(Flambda, lam * units.wavelength)
 
         # simple linear interpolation function for spectrum
@@ -269,15 +280,15 @@ class Model:
             # this is an unphysical power (Fnu * dlambda), but we
             # convert to Fnu dnu = Fnu dnu/dlambda dlambda = Fnu c /
             # lambda **2 dlambda
-            Fnu_dlambda *= units.intensity * units.wavelength
+            Fnu_dlambda *= working_unit * units.wavelength
             Fnu_dnu = Fnu_dlambda * constants.c / (lam_line * units.wavelength) ** 2
-            return Fnu_dnu.to(units.intensity_power).value
+            return Fnu_dnu.to(working_power_unit).value
 
         def drude_power_guess(row):
             # multiply total power by some fraction to guess Drude power
             fwhm = row["fwhm"][0] * units.wavelength
             delta_w = spec.spectral_axis[-1] - spec.spectral_axis[0]
-            return (total_power * fwhm / delta_w).to(units.intensity_power).value
+            return (total_power * fwhm / delta_w).to(working_power_unit).value
 
         loop_over_non_fixed("dust_feature", "power", drude_power_guess)
 
