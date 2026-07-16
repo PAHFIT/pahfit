@@ -170,11 +170,6 @@ class PowerDrude1D(Fittable1DModel):
     def _amplitude_factor(self):
         """Conversion factor from power to profile amplitude, computed
         for whichever unit track (flux or surface brightness) is active.
-
-        # ASSUMPTION (needs Dr. Smith's verification): this generic
-        # formula was verified to reproduce the exact same numeric
-        # values as the old hardcoded intensity_amplitude_factor and
-        # flux_amplitude_factor constants it replaces.
         """
         working_unit, working_power_unit = units.working_units(
             getattr(self, 'is_flux', False)
@@ -275,11 +270,6 @@ class PowerGaussian1D(Fittable1DModel):
     def _amplitude_factor(self):
         """Conversion factor from power to profile amplitude, computed
         for whichever unit track (flux or surface brightness) is active.
-
-        # ASSUMPTION (needs Dr. Smith's verification): this generic
-        # formula was verified to reproduce the exact same numeric
-        # values as the old hardcoded intensity_amplitude_factor and
-        # flux_amplitude_factor constants it replaces.
         """
         working_unit, working_power_unit = units.working_units(
             getattr(self, 'is_flux', False)
