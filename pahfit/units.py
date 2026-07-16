@@ -27,12 +27,17 @@ def is_surface_brightness(unit):
 def get_quantity(features, name, column):
     """Get one feature's parameter value with its unit attached
     (e.g. "5.2 mJy"). Returns None if masked, instead of an
-    incorrect 0."""
-
+    incorrect 0. Columns with no assigned unit (e.g. tau, which
+    is dimensionless) are returned as plain dimensionless
+    Quantities, not multiplied against None.
+    """
     row = features.loc[name]
     if row[column] is np.ma.masked:
         return None
-    return row[column]["val"] * features[column].unit
+    unit = features[column].unit
+    if unit is None:
+        unit = u.dimensionless_unscaled
+    return row[column]["val"] * unit
 
 
 def working_units(is_flux):
