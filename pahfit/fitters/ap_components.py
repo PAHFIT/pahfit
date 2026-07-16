@@ -176,6 +176,10 @@ class PowerDrude1D(Fittable1DModel):
         .to(units.intensity)
         .value
     )
+
+    # ASSUMPTION (needs Dr. Smith's verification): mirrors
+    # intensity_amplitude_factor above, substituting flux_power/
+    # flux_density. Dimensionally valid; not yet physically confirmed.
     flux_amplitude_factor = (
         (2 * units.flux_power * units.wavelength / (constants.c * np.pi))
         .to(units.flux_density)
@@ -279,6 +283,10 @@ class PowerGaussian1D(Fittable1DModel):
         .to(units.intensity)
         .value
     )
+
+    # ASSUMPTION (needs Dr. Smith's verification): mirrors
+    # intensity_amplitude_factor above, substituting flux_power/
+    # flux_density. Dimensionally valid; not yet physically confirmed.
     flux_amplitude_factor = (
         (
             units.flux_power
