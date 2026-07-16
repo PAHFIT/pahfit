@@ -2,7 +2,6 @@ from specutils import Spectrum1D
 from astropy import units as u
 from astropy import constants
 import copy
-import warnings
 import matplotlib as mpl
 from matplotlib import pyplot as plt
 import numpy as np
