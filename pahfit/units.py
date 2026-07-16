@@ -18,38 +18,17 @@ intensity_power = CompositeUnit(1e-10, (u.W, u.m, u.sr), (1, -2, -1))
 # over a solid angle 0.21" on a side (about a small JWST IFU pixel)
 
 def is_surface_brightness(unit):
-    """Return True if `unit` is a surface brightness, False if a flux.
+    """True if `unit` is a surface brightness (has 1/sr), False if a flux.
+    Method suggested by J.D. Smith in issue #28."""
 
-    Surface brightness units carry a per-solid-angle component (e.g.
-    MJy/sr). We detect this by decomposing the unit to its base units
-    and checking for an inverse-solid-angle term. Steradian decomposes
-    to rad**2, so "per steradian" shows up as (u.rad, -2).
-
-    Method suggested by J.D. Smith in issue #28.
-    """
     decomposed = unit.decompose()
     return (u.rad, -2) in zip(decomposed.bases, decomposed.powers)
 
 def get_quantity(features, name, column):
-    """Get one feature's parameter value, with its unit attached.
+    """Get one feature's parameter value with its unit attached
+    (e.g. "5.2 mJy"). Returns None if masked, instead of an
+    incorrect 0."""
 
-    Parameters
-    ----------
-    features : Features table
-        The PAHFIT features table (e.g. model.features).
-    name : str
-        Feature name, e.g. '[NeII]'.
-    column : str
-        Parameter name, e.g. 'power', 'wavelength', 'fwhm'.
-
-    Returns
-    -------
-    astropy.units.Quantity, or None
-        The fitted value, with its unit attached (e.g. "5.2 mJy").
-        Returns None if this parameter is masked (not set/not
-        applicable) for this feature, instead of silently returning
-        an incorrect 0.
-    """
     row = features.loc[name]
     if row[column] is np.ma.masked:
         return None
