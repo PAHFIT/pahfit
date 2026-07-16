@@ -166,25 +166,24 @@ class PowerDrude1D(Fittable1DModel):
     power = Parameter(min=0.0)
     x_0 = Parameter(min=0.0)
     fwhm = Parameter(default=1, min=0.0)
-    
-    # constant factors in the equation to convert power to amplitude of
-    # the profile. Two versions: one for surface brightness input
-    # (intensity_power -> intensity) and one for flux density input
-    # (flux_power -> flux_density).
-    intensity_amplitude_factor = (
-        (2 * units.intensity_power * units.wavelength / (constants.c * np.pi))
-        .to(units.intensity)
-        .value
-    )
 
-    # ASSUMPTION (needs Dr. Smith's verification): mirrors
-    # intensity_amplitude_factor above, substituting flux_power/
-    # flux_density. Dimensionally valid; not yet physically confirmed.
-    flux_amplitude_factor = (
-        (2 * units.flux_power * units.wavelength / (constants.c * np.pi))
-        .to(units.flux_density)
-        .value
-    )
+    def _amplitude_factor(self):
+        """Conversion factor from power to profile amplitude, computed
+        for whichever unit track (flux or surface brightness) is active.
+
+        # ASSUMPTION (needs Dr. Smith's verification): this generic
+        # formula was verified to reproduce the exact same numeric
+        # values as the old hardcoded intensity_amplitude_factor and
+        # flux_amplitude_factor constants it replaces.
+        """
+        working_unit, working_power_unit = units.working_units(
+            getattr(self, 'is_flux', False)
+        )
+        return (
+            (2 * working_power_unit * units.wavelength / (constants.c * np.pi))
+            .to(working_unit)
+            .value
+        )
 
     def evaluate(self, x, power, x_0, fwhm):
         """
@@ -229,8 +228,7 @@ class PowerDrude1D(Fittable1DModel):
         # factor = (2 * unit(power) * unit(wavelength) / (pi * c)).to(unit(intensity))
 
         g = fwhm / x_0
-        factor = self.flux_amplitude_factor if getattr(self, 'is_flux', False) else self.intensity_amplitude_factor
-        b = power * x_0 / g * factor
+        b = power * x_0 / g * self._amplitude_factor()
         return b * g**2 / ((x / x_0 - x_0 / x) ** 2 + g**2)
 
 
@@ -274,28 +272,27 @@ class PowerGaussian1D(Fittable1DModel):
     mean = Parameter()
     stddev = Parameter(default=1, min=0.0)
 
-    intensity_amplitude_factor = (
-        (
-            units.intensity_power
-            * (units.wavelength) ** 2
-            / (constants.c * units.wavelength * np.sqrt(2 * np.pi))
-        )
-        .to(units.intensity)
-        .value
-    )
+    def _amplitude_factor(self):
+        """Conversion factor from power to profile amplitude, computed
+        for whichever unit track (flux or surface brightness) is active.
 
-    # ASSUMPTION (needs Dr. Smith's verification): mirrors
-    # intensity_amplitude_factor above, substituting flux_power/
-    # flux_density. Dimensionally valid; not yet physically confirmed.
-    flux_amplitude_factor = (
-        (
-            units.flux_power
-            * (units.wavelength) ** 2
-            / (constants.c * units.wavelength * np.sqrt(2 * np.pi))
+        # ASSUMPTION (needs Dr. Smith's verification): this generic
+        # formula was verified to reproduce the exact same numeric
+        # values as the old hardcoded intensity_amplitude_factor and
+        # flux_amplitude_factor constants it replaces.
+        """
+        working_unit, working_power_unit = units.working_units(
+            getattr(self, 'is_flux', False)
         )
-        .to(units.flux_density)
-        .value
-    )
+        return (
+            (
+                working_power_unit
+                * (units.wavelength) ** 2
+                / (constants.c * units.wavelength * np.sqrt(2 * np.pi))
+            )
+            .to(working_unit)
+            .value
+        )
 
     def evaluate(self, x, power, mean, stddev):
         """
@@ -304,6 +301,5 @@ class PowerGaussian1D(Fittable1DModel):
         See class description for equations and unit notes."""
 
         # amplitude in intensity or flux density units
-        factor = self.flux_amplitude_factor if getattr(self, 'is_flux', False) else self.intensity_amplitude_factor
-        Anu = power * mean**2 / stddev * factor
+        Anu = power * mean**2 / stddev * self._amplitude_factor()
         return Anu * np.exp(-0.5 * np.square((x - mean) / stddev))

@@ -187,16 +187,10 @@ class Model:
         lam_min = min(lam)
         lam_max = max(lam)
 
-        # Pick the working unit and power unit based on the actual
-        # input type, so initial guesses aren't scaled as if flux
-        # data were surface brightness (same pattern as elsewhere
-        # in this PR -- see is_flux in ap_fitter.py).
-        if units.is_surface_brightness(spec.flux.unit):
-            working_unit = units.intensity
-            working_power_unit = units.intensity_power
-        else:
-            working_unit = units.flux_density
-            working_power_unit = units.flux_power
+        # Working unit and power unit chosen based on input type --
+        # see units.working_units().
+        is_flux = not units.is_surface_brightness(spec.flux.unit)
+        working_unit, working_power_unit = units.working_units(is_flux)
 
         # Some useful quantities for guessing
         median_flux = np.median(flux)
@@ -339,22 +333,24 @@ class Model:
             corrected for redshift
 
         """
-        # ASSUMPTION (revisit w/ Dr. Smith): choose the working unit from
-        # the input. Surface brightness -> MJy/sr, flux density -> mJy.
-        # The fitter operates on bare numbers, so it doesn't care which,
-        # as long as we convert consistently here.
-        if units.is_surface_brightness(spec.flux.unit):
-            working_unit = units.intensity        # MJy / sr
-        elif spec.flux.unit.is_equivalent(units.flux_density):
-            working_unit = units.flux_density     # mJy
-        else:
+        # Working unit chosen based on input type -- see
+        # units.working_units().
+        is_flux = not units.is_surface_brightness(spec.flux.unit)
+        if is_flux and not spec.flux.unit.is_equivalent(
+            units.flux_density, equivalencies=u.spectral_density(spec.spectral_axis)
+        ):
             raise PAHFITModelError(
-                "PAHFIT input must be a flux density (e.g. mJy) or a "
-                "surface brightness (e.g. MJy / sr)."
+                "PAHFIT input must be a flux density (e.g. mJy or erg/s/cm^2/Angstrom) "
+                "or a surface brightness (e.g. MJy / sr)."
             )
-        flux_obs = spec.flux.to(working_unit).value
+        working_unit, _ = units.working_units(is_flux)
+        flux_obs = spec.flux.to(
+            working_unit, equivalencies=u.spectral_density(spec.spectral_axis)
+        ).value
         lam_obs = spec.spectral_axis.to(u.micron).value
-        unc_obs = (spec.uncertainty.array * spec.flux.unit).to(working_unit).value
+        unc_obs = (spec.uncertainty.array * spec.flux.unit).to(
+            working_unit, equivalencies=u.spectral_density(spec.spectral_axis)
+        ).value
 
         # transform observed wavelength to "physical" wavelength
         lam = lam_obs / (1 + z)  # wavelength shorter

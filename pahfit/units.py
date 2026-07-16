@@ -33,3 +33,18 @@ def get_quantity(features, name, column):
     if row[column] is np.ma.masked:
         return None
     return row[column]["val"] * features[column].unit
+
+
+def working_units(is_flux):
+    """Return (value_unit, power_unit) for the given track.
+
+    is_flux=True  -> (flux_density, flux_power)       e.g. mJy, 1e-22 W/m^2
+    is_flux=False -> (intensity, intensity_power)      e.g. MJy/sr, 1e-10 W/m^2/sr
+
+    Centralizes the flux-vs-surface-brightness unit choice that was
+    previously duplicated across _convert_spec_data, guess(), and the
+    Power* fitting components.
+    """
+    if is_flux:
+        return flux_density, flux_power
+    return intensity, intensity_power
