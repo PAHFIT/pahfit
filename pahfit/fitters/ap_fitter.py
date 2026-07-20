@@ -220,7 +220,7 @@ class APFitter(Fitter):
         Returns
         -------
         flux : array
-            Rest frame flux in internal units
+            Rest frame flux in internal units.
         """
         return self.model(lam)
 
@@ -252,9 +252,11 @@ class APFitter(Fitter):
             ``TRFLSQFitter``. If None, the first available method,
             currently ``"lm"``, is used.
         """
+        # clean, because astropy does not like nan
         w = 1 / unc
 
-        mask = (np.isfinite(lam) & np.isfinite(flux) & np.isfinite(w))
+        # make sure there are no zero uncertainties either
+        mask = np.isfinite(lam) & np.isfinite(flux) & np.isfinite(w)
         method_str = self.methods[0] if method is None else method
 
         if method_str not in self.methods:
