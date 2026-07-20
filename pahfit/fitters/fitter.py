@@ -147,7 +147,12 @@ class Fitter(ABC):
         pass
 
     @abstractmethod
-    def fit(self, lam, flux, unc, maxiter=1000):
+    def fit_methods_available(self):
+        """Return the fitting methods available for this backend."""
+        return [None]
+
+    @abstractmethod
+    def fit(self, lam, flux, unc, maxiter=1000, method=None):
         """Perform the fit using the framework of the subclass.
 
         :class:`~pahfit.fitters.Fitter` is unit agnostic, and deals
@@ -168,6 +173,10 @@ class Fitter(ABC):
 
         unc : array
             Uncertainty in the rest-frame flux.  Same units as flux.
+
+        method : str or None
+            Override the fitting method. Available values are returned
+            by ``fit_methods_available()`` for the selected backend.
         """
         pass
 

@@ -8,7 +8,7 @@ from .ap_components import (
     PowerDrude1D,
     PowerGaussian1D,
 )
-from astropy.modeling.fitting import LevMarLSQFitter
+from astropy.modeling.fitting import LevMarLSQFitter, TRFLSQFitter
 import numpy as np
 
 
@@ -69,6 +69,8 @@ class APFitter(Fitter):
         self.feature_types = {}
         self.model = None
         self.message = None
+        self.fit_info = None
+        self.methods = ["lm", "trf"]
 
     def finalize(self):
         """Sum the registered components into one CompoundModel.
@@ -222,60 +224,69 @@ class APFitter(Fitter):
         """
         return self.model(lam)
 
-    def fit(self, lam, flux, unc, maxiter=10000):
-        """Fit the internal model using the astropy fitter.
+    def fit_methods_available(self):
+        """Return the fitting methods available for this backend."""
+        return self.methods
 
-        The fitter class is unit agnostic, and deal with the numbers the
-        Model tells it to deal with. Internal renormalizations could be
-        good to consider, as long as any values are converted back to
-        the original system before returning them. In practice, the
-        input spectrum is expected to be in internal units, and orrected
-        for redshift (models operate in the rest frame).
-
-        After the fit, the results can be retrieved via get_result().
-
-        Retrieval of uncertainties and fit details is yet to be
-        implemented.
-
-        CAVEAT: flux unit (flux) is still ambiguous, since it can be
-        flux density or intensity, according to the options defined in
-        pahfit.units. After the fit, the return units of "power" in
-        get_results depend on the given spectrum (they will be flux unit
-        times wavelength unit).
+    def fit(self, lam, flux, unc, maxiter=10000, method=None):
+        """Fit the internal model using an Astropy fitter.
 
         Parameters
         ----------
         lam : array
-            Rest frame wavelengths in micron
+            Rest-frame wavelengths in micron.
 
         flux : array
-            Rest frame flux in internal units.
+            Rest-frame flux in PAHFIT internal units.
 
         unc : array
-            Uncertainty on rest frame flux. Same units as flux.
+            Uncertainty on the rest-frame flux.
 
+        maxiter : int
+            Maximum number of fitting iterations or function
+            evaluations.
+
+        method : {"lm", "trf"} or None
+            Astropy fitting method. ``"lm"`` uses
+            ``LevMarLSQFitter`` and ``"trf"`` uses
+            ``TRFLSQFitter``. If None, the first available method,
+            currently ``"lm"``, is used.
         """
-        # clean, because astropy does not like nan
-        w = 1 / unc
+        weights = 1.0 / unc
 
-        # make sure there are no zero uncertainties either
-        mask = np.isfinite(lam) & np.isfinite(flux) & np.isfinite(w)
+        mask = (
+            np.isfinite(lam)
+            & np.isfinite(flux)
+            & np.isfinite(weights))
 
-        self.fit_info = []
+        method_str = self.methods[0] if method is None else method
 
-        fit = LevMarLSQFitter(calc_uncertainties=True)
-        astropy_result = fit(
+        if method_str not in self.methods:
+            raise PAHFITModelError(
+                f"Selected method {method} not available "
+                "for APFitter backend.")
+
+        if method_str == "lm":
+            fitter_cls = LevMarLSQFitter
+        else:
+            fitter_cls = TRFLSQFitter
+
+        fitter = fitter_cls(calc_uncertainties=True)
+
+        fitted_model = fitter(
             self.model,
             lam[mask],
             flux[mask],
-            weights=w[mask],
+            weights=weights[mask],
             maxiter=maxiter,
             epsilon=1e-10,
-            acc=1e-10,
-        )
-        self.fit_info = fit.fit_info
-        self.model = astropy_result
-        self.message = fit.fit_info["message"]
+            acc=1e-10)
+
+        self.model = fitted_model
+        self.fit_info = fitter.fit_info
+        self.message = fitter.fit_info["message"]
+
+
 
     def get_result(self, component_name):
         """Retrieve results from astropy model component.
