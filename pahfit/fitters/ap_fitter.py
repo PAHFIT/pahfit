@@ -277,8 +277,8 @@ class APFitter(Fitter):
             flux[mask],
             w=w[mask],
             maxiter=maxiter,
-            epsilon=1e-7,
-            acc=1e-7)
+            epsilon=1e-10,
+            acc=1e-10)
 
         self.model = fitted_model
         self.fit_info = fitter.fit_info
