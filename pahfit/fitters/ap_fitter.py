@@ -234,13 +234,13 @@ class APFitter(Fitter):
         Parameters
         ----------
         lam : array
-            Rest-frame wavelengths in micron.
+            Rest frame wavelengths in micron.
 
         flux : array
-            Rest-frame flux in PAHFIT internal units.
+            Rest frame flux in internal units.
 
         unc : array
-            Uncertainty on the rest-frame flux.
+            Uncertainty on rest frame flux. Same units as flux.
 
         maxiter : int
             Maximum number of fitting iterations or function
@@ -252,13 +252,9 @@ class APFitter(Fitter):
             ``TRFLSQFitter``. If None, the first available method,
             currently ``"lm"``, is used.
         """
-        weights = 1.0 / unc
+        w = 1 / unc
 
-        mask = (
-            np.isfinite(lam)
-            & np.isfinite(flux)
-            & np.isfinite(weights))
-
+        mask = (np.isfinite(lam) & np.isfinite(flux) & np.isfinite(w))
         method_str = self.methods[0] if method is None else method
 
         if method_str not in self.methods:
@@ -277,16 +273,14 @@ class APFitter(Fitter):
             self.model,
             lam[mask],
             flux[mask],
-            weights=weights[mask],
+            w=w[mask],
             maxiter=maxiter,
-            epsilon=1e-10,
-            acc=1e-10)
+            epsilon=1e-7,
+            acc=1e-7)
 
         self.model = fitted_model
         self.fit_info = fitter.fit_info
         self.message = fitter.fit_info["message"]
-
-
 
     def get_result(self, component_name):
         """Retrieve results from astropy model component.
