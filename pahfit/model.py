@@ -354,7 +354,7 @@ class Model:
         return lam_obs, flux_obs, unc_obs, lam, flux, unc
 
     def fit(self, spec: Spectrum1D, redshift=None, maxiter=1000, verbose=True,
-            use_instrument_fwhm=True):
+            use_instrument_fwhm=True, method=None):
         """Fit the observed data.
 
         The model setup is based on the features table and instrument
@@ -402,6 +402,10 @@ class Model:
             bounds are provided on the fwhm for a line, the fwhm for
             this line will be fit to the data.
 
+        method : {"lm", "trf"} or None
+            Fitting method passed to the active fitter backend. If None,
+            the backend default is used; for APFitter this remains LM.
+
         """
         # parse spectral data
         self.features.meta["user_unit"]["flux"] = spec.flux.unit
@@ -416,7 +420,7 @@ class Model:
         instrument.check_range([min(x), max(x)], inst)
 
         self._set_up_fitter(inst, z, lam=x, use_instrument_fwhm=use_instrument_fwhm)
-        self.fitter.fit(lam, flux, unc, maxiter=maxiter)
+        self.fitter.fit(lam, flux, unc, maxiter=maxiter, method=method)
 
         # copy the fit results to the features table
         self._ingest_fit_result_to_features()
