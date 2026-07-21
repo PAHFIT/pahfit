@@ -171,14 +171,17 @@ class PowerDrude1D(Fittable1DModel):
         """Conversion factor from power to profile amplitude, computed
         for whichever unit track (flux or surface brightness) is active.
         """
-        working_unit, working_power_unit = units.working_units(
-            getattr(self, 'is_flux', False)
-        )
-        return (
-            (2 * working_power_unit * units.wavelength / (constants.c * np.pi))
-            .to(working_unit)
-            .value
-        )
+        is_flux = getattr(self, 'is_flux', False)
+        cached_is_flux = getattr(self, '_cached_is_flux', None)
+        if cached_is_flux != is_flux:
+            working_unit, working_power_unit = units.working_units(is_flux)
+            self._amplitude_factor_cache = (
+                (2 * working_power_unit * units.wavelength / (constants.c * np.pi))
+                .to(working_unit)
+                .value
+            )
+            self._cached_is_flux = is_flux
+        return self._amplitude_factor_cache
 
     def evaluate(self, x, power, x_0, fwhm):
         """
@@ -271,18 +274,21 @@ class PowerGaussian1D(Fittable1DModel):
         """Conversion factor from power to profile amplitude, computed
         for whichever unit track (flux or surface brightness) is active.
         """
-        working_unit, working_power_unit = units.working_units(
-            getattr(self, 'is_flux', False)
-        )
-        return (
-            (
-                working_power_unit
-                * (units.wavelength) ** 2
-                / (constants.c * units.wavelength * np.sqrt(2 * np.pi))
+        is_flux = getattr(self, 'is_flux', False)
+        cached_is_flux = getattr(self, '_cached_is_flux', None)
+        if cached_is_flux != is_flux:
+            working_unit, working_power_unit = units.working_units(is_flux)
+            self._amplitude_factor_cache = (
+                (
+                    working_power_unit
+                    * (units.wavelength) ** 2
+                    / (constants.c * units.wavelength * np.sqrt(2 * np.pi))
+                )
+                .to(working_unit)
+                .value
             )
-            .to(working_unit)
-            .value
-        )
+            self._cached_is_flux = is_flux
+        return self._amplitude_factor_cache
 
     def evaluate(self, x, power, mean, stddev):
         """
