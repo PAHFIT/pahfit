@@ -270,6 +270,7 @@ class APFitter(Fitter):
         for c in components:
             if isinstance(c, (PowerDrude1D, PowerGaussian1D)):
                 c.is_flux = self.is_flux
+                c._amplitude_factor = c._compute_amplitude_factor()
 
         self.fit_info = []
 

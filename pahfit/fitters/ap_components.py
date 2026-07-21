@@ -167,21 +167,17 @@ class PowerDrude1D(Fittable1DModel):
     x_0 = Parameter(min=0.0)
     fwhm = Parameter(default=1, min=0.0)
 
-    def _amplitude_factor(self):
+    def _compute_amplitude_factor(self):
         """Conversion factor from power to profile amplitude, computed
         for whichever unit track (flux or surface brightness) is active.
         """
         is_flux = getattr(self, 'is_flux', False)
-        cached_is_flux = getattr(self, '_cached_is_flux', None)
-        if cached_is_flux != is_flux:
-            working_unit, working_power_unit = units.working_units(is_flux)
-            self._amplitude_factor_cache = (
-                (2 * working_power_unit * units.wavelength / (constants.c * np.pi))
-                .to(working_unit)
-                .value
-            )
-            self._cached_is_flux = is_flux
-        return self._amplitude_factor_cache
+        working_unit, working_power_unit = units.working_units(is_flux)
+        return (
+            (2 * working_power_unit * units.wavelength / (constants.c * np.pi))
+            .to(working_unit)
+            .value
+        )
 
     def evaluate(self, x, power, x_0, fwhm):
         """
@@ -226,7 +222,7 @@ class PowerDrude1D(Fittable1DModel):
         # factor = (2 * unit(power) * unit(wavelength) / (pi * c)).to(unit(intensity))
 
         g = fwhm / x_0
-        b = power * x_0 / g * self._amplitude_factor()
+        b = power * x_0 / g * self._amplitude_factor
         return b * g**2 / ((x / x_0 - x_0 / x) ** 2 + g**2)
 
 
@@ -270,25 +266,21 @@ class PowerGaussian1D(Fittable1DModel):
     mean = Parameter()
     stddev = Parameter(default=1, min=0.0)
 
-    def _amplitude_factor(self):
+    def _compute_amplitude_factor(self):
         """Conversion factor from power to profile amplitude, computed
         for whichever unit track (flux or surface brightness) is active.
         """
         is_flux = getattr(self, 'is_flux', False)
-        cached_is_flux = getattr(self, '_cached_is_flux', None)
-        if cached_is_flux != is_flux:
-            working_unit, working_power_unit = units.working_units(is_flux)
-            self._amplitude_factor_cache = (
-                (
-                    working_power_unit
-                    * (units.wavelength) ** 2
-                    / (constants.c * units.wavelength * np.sqrt(2 * np.pi))
-                )
-                .to(working_unit)
-                .value
+        working_unit, working_power_unit = units.working_units(is_flux)
+        return (
+            (
+                working_power_unit
+                * (units.wavelength) ** 2
+                / (constants.c * units.wavelength * np.sqrt(2 * np.pi))
             )
-            self._cached_is_flux = is_flux
-        return self._amplitude_factor_cache
+            .to(working_unit)
+            .value
+        )
 
     def evaluate(self, x, power, mean, stddev):
         """
@@ -297,5 +289,5 @@ class PowerGaussian1D(Fittable1DModel):
         See class description for equations and unit notes."""
 
         # amplitude in intensity or flux density units
-        Anu = power * mean**2 / stddev * self._amplitude_factor()
+        Anu = power * mean**2 / stddev * self._amplitude_factor
         return Anu * np.exp(-0.5 * np.square((x - mean) / stddev))
