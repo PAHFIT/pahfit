@@ -463,10 +463,12 @@ class Model:
         kind of input was actually used.
 
         """
-        if not units.is_surface_brightness(self.features.meta["user_unit"]["flux"]):
+        if units.is_surface_brightness(self.features.meta["user_unit"]["flux"]):
+            self.features["power"].unit = units.intensity_power
+        else:
             self.features["power"].unit = units.flux_power
-            
-            
+
+
         # iterate over the list stored in fitter, so we only get
         # components that were set up by _set_up_fitter. Having an
         # ENABLED/DISABLED flag for every feature would be a nice
