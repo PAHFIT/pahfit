@@ -69,7 +69,7 @@ class APFitter(Fitter):
         self.feature_types = {}
         self.model = None
         self.message = None
-        self.is_flux = False
+        self.is_flux = None
         self.fit_info = None
         self.methods = ["lm", "trf"]
 
@@ -267,8 +267,9 @@ class APFitter(Fitter):
 
         for c in components:
             if isinstance(c, (PowerDrude1D, PowerGaussian1D)):
-                c.is_flux = self.is_flux
-                c._amplitude_factor = c._compute_amplitude_factor()
+                if getattr(c, 'is_flux', None) != self.is_flux:
+                    c.is_flux = self.is_flux
+                    c._amplitude_factor = c._compute_amplitude_factor()
 
         self.fit_info = []
         if method_str not in self.methods:
