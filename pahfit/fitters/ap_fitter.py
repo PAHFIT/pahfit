@@ -275,7 +275,7 @@ class APFitter(Fitter):
             self.model,
             lam[mask],
             flux[mask],
-            w=w[mask],
+            weights=w[mask],
             maxiter=maxiter,
             epsilon=1e-10,
             acc=1e-10)
