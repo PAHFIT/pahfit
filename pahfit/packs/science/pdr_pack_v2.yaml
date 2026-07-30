@@ -1,0 +1,334 @@
+#####################################
+#####################################
+# PDR pack v2. Used for Van De Putte et al. 2026A&A...710A..60V. There is no
+# official PDR pack v1; its parameters are given by the table in Van De Putte
+# et al. 2025A&A...701A.111V. For v2, 16-18 um was updated using NGC7023 data.
+#####################################
+#####################################
+
+#################
+# Dust Features #
+#################
+
+# 3.2-3.6
+# -------
+
+PAH_3.2:
+  kind: dust_feature
+  wavelength: 3.243
+  fwhm: 0.018
+
+PAH_3.3_cmp:
+  kind: dust_feature
+  features:
+    PAH_3.3a:
+      wavelength: 3.280
+      fwhm: 0.028
+    PAH_3.3b:
+      wavelength: 3.295
+      fwhm: 0.035
+
+PAH_3.4_cmp:
+  kind: dust_feature
+  features:
+    PAH_3.4a:
+      wavelength: 3.395
+      fwhm: 0.0082
+    PAH_3.4b:
+      wavelength: 3.403
+      fwhm: 0.028
+
+PAH_3.4_3.6_plateau:
+  kind: dust_feature
+  features:
+    PAH_3.42:
+      wavelength: 3.425
+      fwhm: 0.010
+    PAH_3.46:
+      wavelength: 3.463
+      fwhm: 0.095
+    PAH_3.52:
+      wavelength: 3.516
+      fwhm: 0.023
+    PAH_3.56:
+      wavelength: 3.563
+      fwhm: 0.039
+
+# there may be deuterated features here which could be separated
+PAH_3.8_4.8_broad:
+  kind: dust_feature
+  features:
+    PAH_3.8:
+      wavelength: 3.788
+      fwhm: 0.40 # 0.166
+      # bounds:
+        # fwhm: [.2, 0.9]
+    PAH_4.0:
+      wavelength: 4.088
+      fwhm: 0.19
+      # bounds:
+        # fwhm: [.1, 0.4]
+    PAH_4.35:
+      wavelength: 4.347
+      fwhm: 0.34 # 0.137
+      # bounds:
+        # fwhm: [.1, 0.9]
+    PAH_4.75:
+      wavelength: 4.743
+      fwhm: 0.1
+      # bounds:
+        # fwhm: [.1, .2]
+    PAH_4.75p:
+      wavelength: 4.743
+      fwhm: 0.35
+      # bounds:
+        # fwhm: [.5, .9]
+
+# 5.2-6.0
+# -------
+
+PAH_5.18:
+  kind: dust_feature
+  wavelength: 5.185
+  fwhm: 0.016
+
+PAH_5.2_cmp:
+  kind: dust_feature
+  features:
+    PAH_5.2a:
+      wavelength: 5.238
+      fwhm: 0.043
+    PAH_5.2b:
+      wavelength: 5.289
+      fwhm: 0.109
+
+PAH_5.44:
+  kind: dust_feature
+  wavelength: 5.441
+  fwhm: 0.072
+
+PAH_5.53:
+  kind: dust_feature
+  wavelength: 5.526
+  fwhm: 0.046
+
+PAH_5.7_cmp:
+  kind: dust_feature
+  features:
+    PAH_5.7a:
+      wavelength: 5.632
+      fwhm: 0.052
+    PAH_5.7b:
+      wavelength: 5.688
+      fwhm: 0.090
+    PAH_5.7c:
+      wavelength: 5.752
+      fwhm: 0.103
+
+PAH_5.9:
+  kind: dust_feature
+  wavelength: 5.880
+  fwhm: 0.080
+
+PAH_6.0:
+  kind: dust_feature
+  wavelength: 6.028
+  fwhm: 0.077
+
+PAH_6.2_cmp:
+  kind: dust_feature
+  features:
+    PAH_6.2a:
+      wavelength: 6.196
+      fwhm: 0.083
+      bounds:
+        fwhm: [0.058, 0.100]
+    PAH_6.2b:
+      wavelength: 6.239
+      fwhm: 0.118
+      bounds:
+        fwhm: [0.100, 0.160]
+    PAH_6.4:
+      wavelength: 6.341
+      fwhm: 0.252
+
+PAH_6.7:
+    kind: dust_feature
+    wavelength: 6.699
+    fwhm: 0.354
+
+PAH_7.0:
+    kind: dust_feature
+    wavelength: 7.03
+    fwhm: 0.4683
+
+# 7.7 & 8.6
+# ---------
+
+PAH_7.7_cmp:
+  kind: dust_feature
+  features:
+    PAH_7.3:
+      wavelength: 7.255
+      fwhm: 0.116
+    PAH_7.4:
+      wavelength: 7.418
+      fwhm: 0.158
+    PAH_7.7a:
+      wavelength: 7.552
+      fwhm: 0.151
+    PAH_7.7b:
+      wavelength: 7.635
+      fwhm: 0.119
+    PAH_7.7c:
+      wavelength: 7.753
+      fwhm: 0.116
+    PAH_7.7d:
+      wavelength: 7.854
+      fwhm: 0.202
+    PAH_7.9broad:
+      wavelength: 7.823
+      fwhm: 0.629
+
+PAH_8.2:
+  kind: dust_feature
+  wavelength: 8.227
+  fwhm: 0.128
+
+PAH_8.3:
+  kind: dust_feature
+  wavelength: 8.329
+  fwhm: 0.113
+
+PAH_8.6:
+  kind: dust_feature
+  wavelength: 8.604
+  fwhm: 0.300
+
+# 10-15
+# -----
+
+PAH_10.6:
+  kind: dust_feature
+  wavelength: 10.588
+  fwhm: 0.182
+
+PAH_10.8:
+  kind: dust_feature
+  wavelength: 10.759
+  fwhm: 0.120
+
+PAH_11.0:
+  kind: dust_feature
+  wavelength: 11.008
+  fwhm: 0.071
+
+PAH_11.3_cmp:
+  kind: dust_feature
+  features:
+    PAH_11.3a:
+      wavelength: 11.196
+      fwhm: 0.044
+    PAH_11.3b:
+      wavelength: 11.233
+      fwhm: 0.062
+    PAH_11.3c:
+      wavelength: 11.284
+      fwhm: 0.107
+    PAH_11.3d:
+      wavelength: 11.381
+      fwhm: 0.271
+
+PAH_12broad:
+  kind: dust_feature
+  wavelength: 12.027
+  fwhm: 0.864
+
+PAH_12narrow:
+  kind: dust_feature
+  wavelength: 11.952
+  fwhm: 0.095
+
+PAH_12.4:
+  kind: dust_feature
+  wavelength: 12.359
+  fwhm: 0.232
+
+PAH_12.7_cmp:
+  kind: dust_feature
+  features:
+    PAH_12.6:
+      wavelength: 12.611
+      fwhm: 0.222
+    PAH_12.7a:
+      wavelength: 12.727
+      fwhm: 0.101
+    PAH_12.7b:
+      wavelength: 12.804
+      fwhm: 0.116
+
+PAH_13broad:
+  kind: dust_feature
+  wavelength: 13.262
+  fwhm: 1.854
+
+PAH_13.5:
+  kind: dust_feature
+  wavelength: 13.561
+  fwhm: 0.205
+
+PAH_14.0:
+  kind: dust_feature
+  wavelength: 13.973
+  fwhm: 0.081
+
+PAH_14.2:
+  kind: dust_feature
+  wavelength: 14.224
+  fwhm: 0.192
+
+# After this point, features were updated for ngc7023
+
+PAH_15.9:
+  kind: dust_feature
+  wavelength: 15.86
+  fwhm: 0.289
+
+PAH_16.0:
+  kind: dust_feature
+  wavelength: 16.03
+  fwhm: 0.114
+
+PAH_16.4_cmp:
+  kind: dust_feature
+  features:
+    PAH_16.4a:
+      wavelength: 16.402
+      fwhm: 0.040
+    PAH_16.4b:
+      wavelength: 16.439
+      fwhm: 0.182
+
+PAH_17_plateau:
+  kind: dust_feature
+  features:
+    PAH_16.7wide:
+      wavelength: 16.720
+      fwhm: 0.352
+    PAH_17.0wide:
+      wavelength: 16.997
+      fwhm: 0.464
+    PAH_17.2:
+      wavelength: 17.170
+      fwhm: 0.219
+
+PAH_17.4:
+  kind: dust_feature
+  wavelength: 17.374
+  fwhm: 0.224
+
+PAH_17.7:
+  kind: dust_feature
+  wavelength: 17.771
+  fwhm: 0.362
+  
