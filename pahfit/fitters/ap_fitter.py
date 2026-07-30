@@ -69,6 +69,7 @@ class APFitter(Fitter):
         self.feature_types = {}
         self.model = None
         self.message = None
+        self.is_flux = None
         self.fit_info = None
         self.methods = ["lm", "trf"]
 
@@ -259,6 +260,18 @@ class APFitter(Fitter):
         mask = np.isfinite(lam) & np.isfinite(flux) & np.isfinite(w)
         method_str = self.methods[0] if method is None else method
 
+        if hasattr(self.model, "submodel_names"):
+            components = [self.model[name] for name in self.model.submodel_names]
+        else:
+            components = [self.model]
+
+        for c in components:
+            if isinstance(c, (PowerDrude1D, PowerGaussian1D)):
+                if getattr(c, 'is_flux', None) != self.is_flux:
+                    c.is_flux = self.is_flux
+                    c._amplitude_factor = c._compute_amplitude_factor()
+
+        self.fit_info = []
         if method_str not in self.methods:
             raise PAHFITModelError(
                 f"Selected method {method} not available "

@@ -187,9 +187,14 @@ class Model:
         lam_min = min(lam)
         lam_max = max(lam)
 
+        # Working unit and power unit chosen based on input type --
+        # see units.working_units().
+        is_flux = not units.is_surface_brightness(spec.flux.unit)
+        working_unit, working_power_unit = units.working_units(is_flux)
+
         # Some useful quantities for guessing
         median_flux = np.median(flux)
-        Flambda = flux * units.intensity * (lam * units.wavelength) ** -2 * constants.c
+        Flambda = flux * working_unit * (lam * units.wavelength) ** -2 * constants.c
         total_power = integrate.trapezoid(Flambda, lam * units.wavelength)
 
         # simple linear interpolation function for spectrum
@@ -268,15 +273,15 @@ class Model:
             # this is an unphysical power (Fnu * dlambda), but we
             # convert to Fnu dnu = Fnu dnu/dlambda dlambda = Fnu c /
             # lambda **2 dlambda
-            Fnu_dlambda *= units.intensity * units.wavelength
+            Fnu_dlambda *= working_unit * units.wavelength
             Fnu_dnu = Fnu_dlambda * constants.c / (lam_line * units.wavelength) ** 2
-            return Fnu_dnu.to(units.intensity_power).value
+            return Fnu_dnu.to(working_power_unit).value
 
         def drude_power_guess(row):
             # multiply total power by some fraction to guess Drude power
             fwhm = row["fwhm"][0] * units.wavelength
             delta_w = spec.spectral_axis[-1] - spec.spectral_axis[0]
-            return (total_power * fwhm / delta_w).to(units.intensity_power).value
+            return (total_power * fwhm / delta_w).to(working_power_unit).value
 
         loop_over_non_fixed("dust_feature", "power", drude_power_guess)
 
@@ -339,13 +344,24 @@ class Model:
             corrected for redshift
 
         """
-        if not spec.flux.unit.is_equivalent(units.intensity):
+        # Working unit chosen based on input type -- see
+        # units.working_units().
+        is_flux = not units.is_surface_brightness(spec.flux.unit)
+        if is_flux and not spec.flux.unit.is_equivalent(
+            units.flux_density, equivalencies=u.spectral_density(spec.spectral_axis)
+        ):
             raise PAHFITModelError(
-                "For now, PAHFIT only supports intensity units, i.e. convertible to MJy / sr."
+                "PAHFIT input must be a flux density (e.g. mJy or erg/s/cm^2/Angstrom) "
+                "or a surface brightness (e.g. MJy / sr)."
             )
-        flux_obs = spec.flux.to(units.intensity).value
+        working_unit, _ = units.working_units(is_flux)
+        flux_obs = spec.flux.to(
+            working_unit, equivalencies=u.spectral_density(spec.spectral_axis)
+        ).value
         lam_obs = spec.spectral_axis.to(u.micron).value
-        unc_obs = (spec.uncertainty.array * spec.flux.unit).to(units.intensity).value
+        unc_obs = (spec.uncertainty.array * spec.flux.unit).to(
+            working_unit, equivalencies=u.spectral_density(spec.spectral_axis)
+        ).value
 
         # transform observed wavelength to "physical" wavelength
         lam = lam_obs / (1 + z)  # wavelength shorter
@@ -418,8 +434,11 @@ class Model:
 
         # check if observed spectrum is compatible with instrument model
         instrument.check_range([min(x), max(x)], inst)
-
         self._set_up_fitter(inst, z, lam=x, use_instrument_fwhm=use_instrument_fwhm)
+
+        # Detect flux vs. surface brightness and set flag on fitter
+        # so Power* components can select the correct amplitude factor.
+        self.fitter.is_flux = not units.is_surface_brightness(spec.flux.unit)
         self.fitter.fit(lam, flux, unc, maxiter=maxiter, method=method)
 
         # copy the fit results to the features table
@@ -435,6 +454,21 @@ class Model:
         where Fitter.fit() has been applied.
 
         """
+        """
+        Power values are now computed correctly for both flux and
+        surface-brightness input (see PowerDrude1D/PowerGaussian1D).
+        The features table's 'power' column is stamped with a default
+        unit at table-creation time (before any spectrum is loaded),
+        so we correct that label here, after the fit, based on what
+        kind of input was actually used.
+
+        """
+        if units.is_surface_brightness(self.features.meta["user_unit"]["flux"]):
+            self.features["power"].unit = units.intensity_power
+        else:
+            self.features["power"].unit = units.flux_power
+
+
         # iterate over the list stored in fitter, so we only get
         # components that were set up by _set_up_fitter. Having an
         # ENABLED/DISABLED flag for every feature would be a nice
