@@ -297,6 +297,9 @@ class APFitter(Fitter):
         elif method_str == "trf":
             fitter_cls = TRFLSQFitter
             fitter_call_kwargs["acc"] = 1e-15
+        else:
+            raise ValueError(f"fit method \"{method_str}\" is not supported."
+                             "Valid options are \"lm\" or \"trf\"")
 
         print(f"Running {method_str}lsq fit")
         fit = fitter_cls(calc_uncertainties=True)
