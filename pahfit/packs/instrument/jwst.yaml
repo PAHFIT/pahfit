@@ -14,11 +14,11 @@
 # Resolution data from:
 #
 #  NIRSPEC: Fits to the JDox NIRESPEC resolution/dispersion curves [1]
-#  MIRI: From Labiano+ 2021
-#  https://doi.org/10.1051/0004-6361/202140614 (see Fig. 9), with wavelength offset
-#  and polynomial parameters:
+#  MIRI: From Pontoppidan et al. (2024), Table 3; Banzatti et al. (2025), Section 5.1.1, Figure 16, and Appendix F, Table 11.
+#  https://doi.org/10.3847/1538-4357/ad20f0
+#  https://doi.org/10.3847/1538-3881/ada962
 #
-#  resolution = a + b (lam - lam0) + c (lam - lam0)^2  (lam in microns)
+#  R = A + B * lambda, with lambda in microns
 #  
 #  lam0   a    b    c
 #  ====================
@@ -38,6 +38,7 @@
 #
 # v0.2 Jul 2022: Initial Version
 # v0.3 Oct 2022: Reproduced nirspec fits without rescaled input
+# v0.4 Sep 2026: Updated MIRI from Labiano 2021 (Ground-test) to Pontoppidan 2024 and Banzatti 2025 (observation-based)
 
 nirspec:
     prism:
@@ -68,41 +69,41 @@ miri:
     mrs:
         ch1:
             A:
-                range: [4.9, 5.74]
-                coefficients: [ 8.4645410e+03, -2.4806001e+03,  2.9600000e+02]
+                range: [4.90, 5.74]
+                coefficients: [ 2.742e+03, 1.50e+02]
             B:
                 range: [5.66, 6.63]
-                coefficients: [ 1.3785873e+04, -3.8733003e+03,  3.6100000e+02]
+                coefficients: [ 2.742e+03, 1.50e+02]
             C:
                 range: [6.53, 7.65]
-                coefficients: [ 9.0737793e+03, -2.0355999e+03,  1.7800000e+02]
+                coefficients: [ -5.43e+02, 6.01e+02]
         ch2:
             A:
-                range: [7.51, 8.76]
-                coefficients: [-1.3392804e+04,  3.8513999e+03, -2.1800000e+02]
+                range: [7.51, 8.77]
+                coefficients: [3.32e+02,  4.00e+02]
             B:
-                range: [8.67, 10.15]
-                coefficients: [-3.0707996e+03,  1.0530000e+03, -4.0000000e+01]
+                range: [8.67, 10.13]
+                coefficients: [-3.31e+02,  4.00e+02]
             C:
-                range: [10.01, 11.71]
-                coefficients: [-1.4632270e+04,  3.0245999e+03, -1.2700000e+02]
+                range: [10.02, 11.70]
+                coefficients: [4.30e+02,  2.64e+02]
         ch3:
             A:
                 range: [11.55, 13.47]
-                coefficients: [-6.9051500e+04,  1.1490000e+04, -4.5800000e+02]
+                coefficients: [-5.120e+03, 6.33e+02]
             B:
-                range: [13.29, 15.52]
-                coefficients: [ 3.2627500e+03, -1.9200000e+02,  9.0000000e+00]
+                range: [13.34, 15.57]
+                coefficients: [ -2.240e+03, 3.12e+02]
             C:
-                range: [15.41, 18.02]
-                coefficients: [-1.2368500e+04,  1.4890000e+03, -3.6000000e+01]
+                range: [15.41, 17.98]
+                coefficients: [-2.240e+03,  2.25e+02]
         ch4:
             A:
-                range: [17.71, 20.94]
-                coefficients: [-1.1510681e+04,  1.2088000e+03, -2.7000000e+01]
+                range: [17.70, 20.95]
+                coefficients: [-2.066e+03,  2.25e+02]
             B:
-                range: [20.69, 24.44]
-                coefficients: [-4.5252500e+03,  5.4800000e+02, -1.2000000e+01]
+                range: [20.69, 24.48]
+                coefficients: [-1.076e+03,  1.50e+02]
             C:
-                range: [23.22, 28.1]
-                coefficients: [-4.9578794e+03,  5.5819995e+02, -1.2000000e+01]
+                range: [24.19, 28.10]
+                coefficients: [-3.451e+03, 2.16e+02]
